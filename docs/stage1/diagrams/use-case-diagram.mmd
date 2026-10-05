@@ -1,0 +1,38 @@
+%% UML use-case notation represented with Mermaid flowchart elements.
+flowchart LR
+  User["<<actor>>\nMeal Planner"]
+  LLM["<<external actor>>\nExternal LLM API"]
+  Data["<<external actor>>\nRecipe / Price Provider"]
+
+  subgraph System["MealIQ System Boundary"]
+    UC1(["UC01\nConfigure profile and constraints"])
+    UC2(["UC02\nManage pantry"])
+    UC3(["UC03\nFind or generate recipe"])
+    UC4(["UC04\nGenerate weekly meal plan"])
+    UC5(["UC05\nAnalyze nutrition"])
+    UC6(["UC06\nGenerate and optimize grocery list"])
+    UC7(["UC07\nSubstitute ingredient / resolve budget conflict"])
+    UC8(["UC08\nModify plan in natural language"])
+    UC9(["UC09\nAdapt affected plan"])
+  end
+
+  User --- UC1
+  User --- UC2
+  User --- UC3
+  User --- UC4
+  User --- UC5
+  User --- UC6
+  User --- UC7
+  User --- UC8
+  User --- UC9
+  LLM --- UC3
+  LLM --- UC4
+  LLM --- UC7
+  LLM --- UC8
+  LLM --- UC9
+  Data --- UC3
+  Data --- UC4
+  Data --- UC6
+
+  UC8 -. "<<include>> refresh affected grocery list" .-> UC6
+  UC7 -. "<<extend>> when a budget conflict needs substitution" .-> UC6

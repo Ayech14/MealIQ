@@ -1,0 +1,22 @@
+# Course reference material is local-only and must not be published.
+docs/dev/
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
+
+# Future implementation artifacts
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+node_modules/
+dist/
+build/
+*.sqlite3
+*.db
