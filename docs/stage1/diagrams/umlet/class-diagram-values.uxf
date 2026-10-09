@@ -1,0 +1,154 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLGeneric</id>
+    <coordinates>
+      <x>20</x>
+      <y>20</y>
+      <w>1610</w>
+      <h>42</h>
+    </coordinates>
+    <panel_attributes>MealIQ proposal, change, event, and repository types  |  UML class view</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>50</x>
+      <y>130</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>PlanImpact
+--
+affectedMeals, affectedItems, conflicts
+bg=#FCF3CF</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>350</x>
+      <y>130</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>PlanRelevantChange
+--
+type, profileId, details
+bg=#FCF3CF</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>50</x>
+      <y>360</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>PlanningProposal
+--
+meals, rationale, conflicts
+bg=#FCF3CF</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>350</x>
+      <y>360</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>PlanChange
+--
+target, changeType, proposal
+bg=#FCF3CF</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>50</x>
+      <y>650</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>ProfileRepository &lt;&lt;interface&gt;&gt;
+--
+save() / findById()
+bg=#EAF2F8</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>350</x>
+      <y>650</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>PantryRepository &lt;&lt;interface&gt;&gt;
+--
+save() / findByProfileId()
+bg=#EAF2F8</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>650</x>
+      <y>650</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>RecipeRepository &lt;&lt;interface&gt;&gt;
+--
+search(criteria)
+bg=#EAF2F8</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>950</x>
+      <y>650</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>MealPlanRepository &lt;&lt;interface&gt;&gt;
+--
+save() / findActiveByProfileId()
+bg=#EAF2F8</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1250</x>
+      <y>650</y>
+      <w>280</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>GroceryListRepository &lt;&lt;interface&gt;&gt;
+--
+save() / findByPlanId()
+bg=#EAF2F8</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>320</x>
+      <y>410</y>
+      <w>40</w>
+      <h>20</h>
+    </coordinates>
+    <panel_attributes>lt=-
+m1=1
+m2=1</panel_attributes>
+    <additional_attributes>30;10;10;10</additional_attributes>
+  </element>
+</diagram>

@@ -25,20 +25,20 @@ The React GUI and Python Typer CLI are thin clients of `MealPlanningFacade`, exp
 
 ## 4. UML use cases and descriptions
 
-The [use-case diagram source](diagrams/use-case-diagram.mmd) identifies the Meal Planner and supporting external LLM API/recipe-price providers. [Detailed use cases](use-cases.md) cover profile/constraints, pantry, recipe retrieval/generation, weekly planning, nutrition, grocery generation/optimization, substitution, natural-language modification, and dynamic adaptation.
+The UMLet [use-case diagram](diagrams/umlet/use-case-diagram.uxf) identifies the Meal Planner and supporting external LLM API/recipe-price providers. Its PNG export is available at [use-case-diagram.png](diagrams/png/use-case-diagram.png). [Detailed use cases](use-cases.md) cover profile/constraints, pantry, recipe retrieval/generation, weekly planning, nutrition, grocery generation/optimization, substitution, natural-language modification, and dynamic adaptation.
 
 ## 5. UML class diagram
 
-The [class diagram source](diagrams/class-diagram.mmd) defines interfaces, important attributes/methods, dependencies, inheritance/realization, composition, and meaningful multiplicities. It explicitly includes UI boundaries, agent/LLM/tool components, deterministic services, commands, observers, repositories, and domain entities.
+The [consolidated class diagram](diagrams/umlet/class-diagram-complete.uxf) ([PNG](diagrams/png/class-diagram-complete.png)) places every class and relationship from the four detailed UMLet views on one large canvas. Its color-coded regions preserve the original layouts and arrow endpoints: architecture and integrations; planning services and patterns; domain entities; and proposals, events, and repositories. The four focused diagrams remain available for legible inspection of their detail: [architecture and integrations](diagrams/umlet/class-diagram.uxf) ([PNG](diagrams/png/class-diagram.png)), [planning services](diagrams/umlet/class-diagram-services.uxf) ([PNG](diagrams/png/class-diagram-services.png)), [domain entities](diagrams/umlet/class-diagram-domain.uxf) ([PNG](diagrams/png/class-diagram-domain.png)), and [proposals, events, and repositories](diagrams/umlet/class-diagram-values.uxf) ([PNG](diagrams/png/class-diagram-values.png)).
 
 ## 6. UML sequence diagrams
 
-The workflows use class-diagram names and show boundary, controller, agent, tools/services, repositories, return values, and alternatives:
+The workflows use class-diagram names and show boundary, controller, agent, tools/services, return values, and alternatives. SD01 also shows persistence through `MealPlanRepository`:
 
-- [SD01 - Generate weekly meal plan](diagrams/sequence-meal-plan.mmd)
-- [SD02 - Generate and optimize grocery list](diagrams/sequence-grocery.mmd)
-- [SD03 - Modify meal plan using natural language](diagrams/sequence-modification.mmd)
-- [SD04 - Adapt after pantry/constraint change](diagrams/sequence-adaptation.mmd)
+- [SD01 - Generate weekly meal plan](diagrams/umlet/sequence-meal-plan.uxf) ([PNG](diagrams/png/sequence-meal-plan.png))
+- [SD02 - Generate and optimize grocery list](diagrams/umlet/sequence-grocery.uxf) ([PNG](diagrams/png/sequence-grocery.png))
+- [SD03 - Modify meal plan using natural language](diagrams/umlet/sequence-modification.uxf) ([PNG](diagrams/png/sequence-modification.png))
+- [SD04 - Adapt after pantry/constraint change](diagrams/umlet/sequence-adaptation.uxf) ([PNG](diagrams/png/sequence-adaptation.png))
 
 ## 7. Feature-to-design mapping and feature realization
 
@@ -64,4 +64,4 @@ See [design decisions and testability](design-decisions.md). It records design d
 
 ## Public repository scope
 
-The repository contains public-facing Stage 1 design artifacts and version-controlled Mermaid sources. 
+The repository contains public-facing Stage 1 design artifacts, editable UMLet `.uxf` diagrams, and PNG exports rendered by UMLet. UMLet is the single maintained diagram format. Local course reference PDFs remain outside the tracked project content through the `docs/dev/` ignore rule.
