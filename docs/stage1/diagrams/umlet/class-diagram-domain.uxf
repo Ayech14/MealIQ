@@ -1,356 +1,646 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <diagram program="umlet" version="15.1">
   <zoom_level>10</zoom_level>
+  <help_text>fontsize=12
+</help_text>
   <element>
-    <id>UMLGeneric</id>
+    <id>UMLPackage</id>
     <coordinates>
       <x>20</x>
-      <y>20</y>
-      <w>1560</w>
-      <h>42</h>
+      <y>260</y>
+      <w>1940</w>
+      <h>850</h>
     </coordinates>
-    <panel_attributes>MealIQ domain entities  |  UML class view</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>50</x>
-      <y>100</y>
-      <w>280</w>
-      <h>120</h>
-    </coordinates>
-    <panel_attributes>UserProfile
+    <panel_attributes>domain  (entities and value objects)
 --
-goals, restrictions, allergies
-mealsPerDay, budget, timeLimits
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
+bg=#FFFCF0</panel_attributes>
+    <additional_attributes></additional_attributes>
   </element>
   <element>
-    <id>UMLClass</id>
+    <id>UMLPackage</id>
     <coordinates>
-      <x>420</x>
-      <y>100</y>
-      <w>280</w>
-      <h>120</h>
+      <x>1960</x>
+      <y>260</y>
+      <w>750</w>
+      <h>330</h>
     </coordinates>
-    <panel_attributes>Pantry
+    <panel_attributes>enumerations
 --
-items; availableQuantity()
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
+bg=#FAFAFA</panel_attributes>
+    <additional_attributes></additional_attributes>
   </element>
   <element>
-    <id>UMLClass</id>
+    <id>Relation</id>
     <coordinates>
-      <x>790</x>
-      <y>100</y>
-      <w>280</w>
-      <h>120</h>
+      <x>1162</x>
+      <y>660</y>
+      <w>136</w>
+      <h>60</h>
     </coordinates>
-    <panel_attributes>PantryItem
---
-ingredient, amount, unit
-expiryDate
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
+    <panel_attributes>lt=-&gt;
+m1=0..*
+m2=1</panel_attributes>
+    <additional_attributes>28;30;108;30</additional_attributes>
   </element>
   <element>
-    <id>UMLClass</id>
+    <id>Relation</id>
     <coordinates>
-      <x>1160</x>
-      <y>100</y>
-      <w>280</w>
-      <h>120</h>
+      <x>1352</x>
+      <y>730</y>
+      <w>56</w>
+      <h>260</h>
     </coordinates>
-    <panel_attributes>Ingredient
---
-ingredientId, name, category
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
+    <panel_attributes>lt=-&gt;
+m1=0..*
+m2=1</panel_attributes>
+    <additional_attributes>28;230;28;30</additional_attributes>
   </element>
   <element>
-    <id>UMLClass</id>
+    <id>Relation</id>
     <coordinates>
-      <x>420</x>
-      <y>330</y>
-      <w>280</w>
-      <h>120</h>
+      <x>582</x>
+      <y>670</y>
+      <w>166</w>
+      <h>60</h>
     </coordinates>
-    <panel_attributes>Recipe
---
-recipeId, ingredients, minutes
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
+    <panel_attributes>lt=-&gt;
+m1=0..*
+m2=1</panel_attributes>
+    <additional_attributes>28;30;138;30</additional_attributes>
   </element>
   <element>
-    <id>UMLClass</id>
+    <id>Relation</id>
     <coordinates>
-      <x>790</x>
-      <y>330</y>
-      <w>280</w>
-      <h>120</h>
-    </coordinates>
-    <panel_attributes>IngredientRequirement
---
-ingredient, quantity: Quantity
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>790</x>
+      <x>145</x>
       <y>500</y>
-      <w>280</w>
-      <h>120</h>
+      <w>70</w>
+      <h>180</h>
     </coordinates>
-    <panel_attributes>Quantity
---
-amount, unit
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
+    <panel_attributes>lt=-&gt;
+m1=1
+m2=0..*
+plans</panel_attributes>
+    <additional_attributes>35;30;35;150</additional_attributes>
   </element>
   <element>
-    <id>UMLClass</id>
+    <id>Relation</id>
     <coordinates>
-      <x>50</x>
+      <x>862</x>
+      <y>690</y>
+      <w>216</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m1=1
+m2=1..*
+requirements</panel_attributes>
+    <additional_attributes>58;30;158;30</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>163</x>
+      <y>990</y>
+      <w>234</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lt=-&gt;
+m1=0..1
+m2=1
+evaluates</panel_attributes>
+    <additional_attributes>187;30;47;30</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1362</x>
+      <y>370</y>
+      <w>56</w>
+      <h>310</h>
+    </coordinates>
+    <panel_attributes>lt=-&gt;
+m1=0..*
+m2=1</panel_attributes>
+    <additional_attributes>28;30;28;280</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>313</x>
+      <y>700</y>
+      <w>184</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
+m1=1
+m2=1..*
+meals</panel_attributes>
+    <additional_attributes>37;30;147;30</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>78</x>
+      <y>780</y>
+      <w>84</w>
+      <h>210</h>
+    </coordinates>
+    <panel_attributes>lt=-&gt;
+m1=0..1
+m2=1
+for plan</panel_attributes>
+    <additional_attributes>42;180;42;30</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1461</x>
+      <y>670</y>
+      <w>208</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>lt=-&gt;
+m2=1
+per 100 g</panel_attributes>
+    <additional_attributes>49;30;159;30</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1145</x>
       <y>330</y>
-      <w>280</w>
-      <h>120</h>
-    </coordinates>
-    <panel_attributes>NutritionSummary
---
-calories, protein, carbs, fat
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>50</x>
-      <y>700</y>
-      <w>280</w>
-      <h>120</h>
-    </coordinates>
-    <panel_attributes>MealPlan
---
-planId, startDate, status
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>420</x>
-      <y>700</y>
-      <w>280</w>
-      <h>120</h>
-    </coordinates>
-    <panel_attributes>PlannedMeal
---
-date, mealType, recipe, servings
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>790</x>
-      <y>700</y>
-      <w>280</w>
-      <h>120</h>
-    </coordinates>
-    <panel_attributes>GroceryList
---
-items, estimatedCost
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>1160</x>
-      <y>700</y>
-      <w>280</w>
-      <h>120</h>
-    </coordinates>
-    <panel_attributes>GroceryItem
---
-ingredient, required, toBuy, price
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>790</x>
-      <y>920</y>
-      <w>280</w>
-      <h>120</h>
-    </coordinates>
-    <panel_attributes>BudgetStatus
---
-estimate, budget, shortfall
-withinBudget
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>320</x>
-      <y>150</y>
-      <w>110</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
-m1=1
-m2=1</panel_attributes>
-    <additional_attributes>10;10;100;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>690</x>
-      <y>150</y>
-      <w>110</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
-m1=1
-m2=0..*</panel_attributes>
-    <additional_attributes>10;10;100;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1060</x>
-      <y>150</y>
-      <w>110</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-
-m1=0..*
-m2=1</panel_attributes>
-    <additional_attributes>10;10;100;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>690</x>
-      <y>380</y>
-      <w>110</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
-m1=1
-m2=1..*</panel_attributes>
-    <additional_attributes>10;10;100;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1060</x>
-      <y>210</y>
       <w>180</w>
-      <h>169</h>
+      <h>60</h>
     </coordinates>
-    <panel_attributes>lt=-
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
 m1=1
-m2=0..*</panel_attributes>
-    <additional_attributes>170;10;10;159</additional_attributes>
+m2=0..*
+items</panel_attributes>
+    <additional_attributes>35;30;145;30</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>920</x>
-      <y>440</y>
-      <w>20</w>
-      <h>70</h>
-    </coordinates>
-    <panel_attributes>lt=-
-m1=0..*
-m2=1</panel_attributes>
-    <additional_attributes>10;10;10;60</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>320</x>
+      <x>286</x>
       <y>380</y>
-      <w>110</w>
-      <h>20</h>
+      <w>548</w>
+      <h>60</h>
     </coordinates>
-    <panel_attributes>lt=-
+    <panel_attributes>lt=-&gt;
 m1=1
-m2=1</panel_attributes>
-    <additional_attributes>10;10;100;10</additional_attributes>
+m2=1
+owns</panel_attributes>
+    <additional_attributes>34;30;514;30</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>320</x>
-      <y>750</y>
-      <w>110</w>
-      <h>20</h>
+      <x>165</x>
+      <y>890</y>
+      <w>1160</w>
+      <h>100</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
 m1=1
-m2=1..*</panel_attributes>
-    <additional_attributes>10;10;100;10</additional_attributes>
+m2=0..*
+items</panel_attributes>
+    <additional_attributes>35;70;35;30;1125;30;1125;70</additional_attributes>
   </element>
   <element>
-    <id>Relation</id>
+    <id>Text</id>
     <coordinates>
-      <x>550</x>
-      <y>440</y>
-      <w>20</w>
-      <h>270</h>
+      <x>20</x>
+      <y>10</y>
+      <w>857</w>
+      <h>30</h>
     </coordinates>
-    <panel_attributes>lt=-
-m1=1
-m2=0..*</panel_attributes>
-    <additional_attributes>10;10;10;260</additional_attributes>
+    <panel_attributes>fontsize=16
+*MealIQ - Class Diagram: Domain Entities and Value Objects*</panel_attributes>
+    <additional_attributes></additional_attributes>
   </element>
   <element>
-    <id>Relation</id>
+    <id>Text</id>
     <coordinates>
-      <x>1060</x>
-      <y>750</y>
-      <w>110</w>
-      <h>20</h>
+      <x>20</x>
+      <y>40</y>
+      <w>857</w>
+      <h>24</h>
     </coordinates>
-    <panel_attributes>lt=&lt;&lt;&lt;&lt;&lt;-
-m1=1
-m2=0..*</panel_attributes>
-    <additional_attributes>10;10;100;10</additional_attributes>
+    <panel_attributes>Profile, pantry, recipe, meal-plan, grocery, nutrition, and budget types with their compositions, associations, multiplicities, and enumerations.</panel_attributes>
+    <additional_attributes></additional_attributes>
   </element>
   <element>
-    <id>Relation</id>
+    <id>UMLNote</id>
+    <coordinates>
+      <x>20</x>
+      <y>90</y>
+      <w>630</w>
+      <h>114</h>
+    </coordinates>
+    <panel_attributes>*Notation*
+Fill colour = package (responsibility area)
+«interface» + italic name = interface;  italic operation = abstract
+Solid line + hollow triangle = generalization;  dashed line + hollow triangle = realization
+Solid open arrow = navigable association;  dashed open arrow = dependency («create» = instantiates)
+Filled diamond = composition;  hollow diamond = aggregation;  [0..1] = optional
+bg=#FFFFFF</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>40</x>
+      <y>300</y>
+      <w>280</w>
+      <h>230</h>
+    </coordinates>
+    <panel_attributes>*UserProfile*
+--
+-profileId: UUID
+-goal: WeightGoal
+-dailyCalorieTarget: int [0..1]
+-dailyProteinTargetG: int [0..1]
+-dietaryRestrictions: Set&lt;String&gt;
+-allergies: Set&lt;String&gt;
+-dislikedFoods: Set&lt;String&gt;
+-preferredFoods: Set&lt;String&gt;
+-mealsPerDay: int
+-weeklyBudget: Decimal
+-maxCookMinutes: Map&lt;DayOfWeek, int&gt;
+--
++isAllowed(ingredient: Ingredient): boolean
++maxMinutesFor(day: DayOfWeek): int [0..1]
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>800</x>
+      <y>300</y>
+      <w>380</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>*Pantry*
+--
+-pantryId: UUID
+-profileId: UUID
+--
++availableQuantity(ingredient: Ingredient, on: Date): Quantity
++updateItem(item: PantryItem): void
++removeItem(ingredientId: UUID): void
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
     <coordinates>
       <x>1290</x>
-      <y>210</y>
-      <w>20</w>
-      <h>500</h>
+      <y>300</y>
+      <w>200</w>
+      <h>100</h>
     </coordinates>
-    <panel_attributes>lt=-
-m1=1
-m2=0..*</panel_attributes>
-    <additional_attributes>10;10;10;490</additional_attributes>
+    <panel_attributes>*PantryItem*
+--
+-ingredient: Ingredient
+-quantity: Quantity
+-expiryDate: Date [0..1]
+--
++isExpired(on: Date): boolean
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
   </element>
   <element>
-    <id>Relation</id>
+    <id>UMLClass</id>
     <coordinates>
-      <x>920</x>
-      <y>810</y>
-      <w>20</w>
+      <x>1620</x>
+      <y>300</y>
+      <w>230</w>
       <h>120</h>
     </coordinates>
-    <panel_attributes>lt=-
-m1=1
-m2=1</panel_attributes>
-    <additional_attributes>10;10;10;110</additional_attributes>
+    <panel_attributes>*Quantity*
+--
+-amount: double
+-unit: String
+--
++convertTo(unit: String): Quantity
++add(other: Quantity): Quantity
++subtract(other: Quantity): Quantity
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>40</x>
+      <y>650</y>
+      <w>310</w>
+      <h>160</h>
+    </coordinates>
+    <panel_attributes>*MealPlan*
+--
+-planId: UUID
+-profileId: UUID
+-startDate: Date
+-days: int
+-status: PlanStatus
+--
++mealsOn(date: Date): List&lt;PlannedMeal&gt;
++findMeal(mealId: UUID): PlannedMeal
++replaceMeal(mealId: UUID, recipe: Recipe): void
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>460</x>
+      <y>650</y>
+      <w>150</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>*PlannedMeal*
+--
+-mealId: UUID
+-date: Date
+-mealType: MealType
+-recipe: Recipe
+-servings: int
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>720</x>
+      <y>650</y>
+      <w>200</w>
+      <h>170</h>
+    </coordinates>
+    <panel_attributes>*Recipe*
+--
+-recipeId: UUID
+-name: String
+-mealTypes: Set&lt;MealType&gt;
+-prepMinutes: int
+-cookMinutes: int
+-servings: int
+-tags: Set&lt;String&gt;
+-source: RecipeSource
+--
++totalMinutes(): int
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1020</x>
+      <y>650</y>
+      <w>170</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>*IngredientRequirement*
+--
+-ingredient: Ingredient
+-quantity: Quantity
+-optional: boolean
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1270</x>
+      <y>650</y>
+      <w>240</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>*Ingredient*
+--
+-ingredientId: UUID
+-name: String
+-category: String
+-allergens: Set&lt;String&gt;
+-nutritionPer100g: NutritionSummary
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1620</x>
+      <y>650</y>
+      <w>320</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>*NutritionSummary*
+--
+-calories: double
+-proteinG: double
+-carbsG: double
+-fatG: double
+-complete: boolean
+--
++add(other: NutritionSummary): NutritionSummary
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>40</x>
+      <y>960</y>
+      <w>170</w>
+      <h>130</h>
+    </coordinates>
+    <panel_attributes>*GroceryList*
+--
+-listId: UUID
+-planId: UUID
+-estimatedCost: Decimal
+-stale: boolean
+--
++markStale(): void
++total(): Decimal
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>350</x>
+      <y>960</y>
+      <w>210</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>*BudgetStatus*
+--
+-estimate: Decimal
+-budget: Decimal
+-shortfall: Decimal
+-withinBudget: boolean
+-partial: boolean
+-costDrivers: List&lt;GroceryItem&gt;
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1285</x>
+      <y>960</y>
+      <w>210</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>*GroceryItem*
+--
+-ingredient: Ingredient
+-required: Quantity
+-inPantry: Quantity
+-toBuy: Quantity
+-estimatedPrice: Decimal [0..1]
+bg=#FFF8E1</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1990</x>
+      <y>300</y>
+      <w>110</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*WeightGoal*
+--
+GAIN
+LOSE
+MAINTAIN
+bg=#F3F3F3</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>2170</x>
+      <y>300</y>
+      <w>110</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*MealType*
+--
+BREAKFAST
+LUNCH
+DINNER
+SNACK
+bg=#F3F3F3</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>2365</x>
+      <y>300</y>
+      <w>110</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*PlanStatus*
+--
+DRAFT
+ACTIVE
+ARCHIVED
+bg=#F3F3F3</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>2555</x>
+      <y>300</y>
+      <w>110</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*RecipeSource*
+--
+CURATED
+EXTERNAL
+GENERATED
+bg=#F3F3F3</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1980</x>
+      <y>450</y>
+      <w>130</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*PlanningMode*
+--
+NUTRITION_GOAL
+BUDGET
+TIME_AWARE
+bg=#F3F3F3</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>2140</x>
+      <y>450</y>
+      <w>170</w>
+      <h>100</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*ChangeType*
+--
+REPLACE_MEAL
+SUBSTITUTE_INGREDIENT
+UPDATE_CONSTRAINT
+bg=#F3F3F3</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>2340</x>
+      <y>450</y>
+      <w>160</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*ChangeEventType*
+--
+PANTRY_CHANGED
+PROFILE_CHANGED
+BUDGET_CHANGED
+TIME_LIMIT_CHANGED
+bg=#F3F3F3</panel_attributes>
+    <additional_attributes></additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>2530</x>
+      <y>450</y>
+      <w>160</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>«enumeration»
+*ResponseStatus*
+--
+SUCCESS
+NEEDS_CONFIRMATION
+NEEDS_CLARIFICATION
+CONFLICT
+FAILED
+bg=#F3F3F3</panel_attributes>
+    <additional_attributes></additional_attributes>
   </element>
 </diagram>

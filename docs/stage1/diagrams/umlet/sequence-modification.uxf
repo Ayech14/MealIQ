@@ -1,508 +1,90 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <diagram program="umlet" version="15.1">
   <zoom_level>10</zoom_level>
+  <help_text>fontsize=12
+</help_text>
   <element>
-    <id>UMLFrame</id>
+    <id>UMLSequenceAllInOne</id>
     <coordinates>
-      <x>15</x>
-      <y>15</y>
-      <w>2400</w>
-      <h>44</h>
+      <x>10</x>
+      <y>10</y>
+      <w>5442</w>
+      <h>2720</h>
     </coordinates>
-    <panel_attributes>SD03 - Modify meal plan using natural language</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>35</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>Meal Planner
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>125</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>250</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>GUI / CLI
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>340</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>465</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>Facade
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>680</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>AgentController
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>770</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>895</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>MealPlanningAgent
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>985</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1110</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>LLMClient
-bg=#E8DAEF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1200</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1325</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>ProviderLLMAdapter
-bg=#E8DAEF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1415</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1540</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>External LLM API
-bg=#E8DAEF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1630</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1755</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>ConstraintValidator
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1845</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1970</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>MealPlanService
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>2060</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>2185</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>PlanChangeCommand
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>2275</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1440</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1430</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>125</x>
-      <y>115</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-natural-language instruction</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>340</x>
-      <y>185</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-modifyPlan(planId, instruction)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>255</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-interpretModification(plan, instruction)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>770</x>
-      <y>325</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-proposeChange(context, instruction)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>985</x>
-      <y>395</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-generateStructured(prompt, schema)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1200</x>
-      <y>465</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-provider-neutral request</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1415</x>
-      <y>535</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-createStructuredResponse(request)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1415</x>
-      <y>605</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-structured response</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1200</x>
-      <y>675</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-PlanChange DTO</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>985</x>
-      <y>745</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-structured change</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>770</x>
-      <y>815</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-PlanChange</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>770</x>
-      <y>885</y>
-      <w>1095</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-validatePlan(change, context)</panel_attributes>
-    <additional_attributes>10;10;1085;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>770</x>
-      <y>955</y>
-      <w>1095</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-validation result / conflicts</panel_attributes>
-    <additional_attributes>1085;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>1025</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-preview PlanChange</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>340</x>
-      <y>1095</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-preview PlanChange</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>125</x>
-      <y>1165</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-confirm change</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>340</x>
-      <y>1235</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-executeChange(planId, change)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>1305</y>
-      <w>1525</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-executeChange(plan, command)</panel_attributes>
-    <additional_attributes>10;10;1515;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>2060</x>
-      <y>1375</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-execute(plan)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>UMLNote</id>
-    <coordinates>
-      <x>35</x>
-      <y>1465</y>
-      <w>2345</w>
-      <h>92</h>
-    </coordinates>
-    <panel_attributes>alt valid and confirmed -&gt; save plan and refresh grocery list; ambiguous or invalid -&gt; request clarification, no mutation
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
+    <panel_attributes>title=SD03 - Modify Meal Plan Using Natural Language   (UC08; F06, F07, F09, F10, F11, F12)\nGUI calls reach the facade through MealPlanningApi (HTTP, as in SD01), the CLI calls it in-process
+obj=Meal Planner~U ACTOR
+obj=:MealPlanningGUI~GUI
+obj=:MealPlanningFacade~F
+obj=:AgentController~AC
+obj=:ConversationMemory~MEM
+obj=:MealPlanningAgent~AG
+obj=:PromptBuilder~PB
+obj=:ProviderLLMAdapter\n«LLMClient»~LLM
+obj=External LLM API\n«external»~EXT
+obj=:ProposalValidator~PV
+obj=:ConstraintValidator~CV
+obj=:MealPlanService~MPS
+obj=cmd:\nReplaceMealCommand~CMD
+obj=plan:MealPlan~MP
+obj=:MealPlanRepository~MPR
+obj=:GroceryService~GS
+
+U-&gt;&gt;&gt;GUI : 1: "Make Wednesday's\ndinner vegetarian"
+GUI-&gt;&gt;&gt;F : 2: modifyPlan(planId,\ninstruction); on=F
+F-&gt;&gt;&gt;MPS : 3: getPlan(planId); on=MPS
+MPS.&gt;F : 4: plan; off=MPS
+F-&gt;&gt;&gt;AC : 5: interpretModification(plan,\ninstruction); on=AC
+AC-&gt;&gt;&gt;AC + : 6:\nbuildContext(\nrequest)
+tick=1
+AC-&gt;&gt;&gt;AG : 7: proposeChange(context, instruction); on=AG
+AG-&gt;&gt;&gt;MEM : 8: retrieveRelevantContext(\nprofileId, instruction); on=MEM
+MEM.&gt;AG : 9: prior confirmed decisions; off=MEM
+AG-&gt;&gt;&gt;PB : 10: buildChangePrompt(\ncontext, instruction); on=PB
+PB.&gt;AG : 11: prompt; off=PB
+combinedFragment=loop~R AG EXT; PB:[until schema-valid output, max 2 attempts]
+AG-&gt;&gt;&gt;LLM : 12: generateStructured(prompt, PlanChange schema); on=LLM
+LLM-&gt;&gt;&gt;EXT : 13: createStructuredResponse(\nrequest); on=EXT
+EXT.&gt;LLM : 14: response, or timeout /\nprovider error; off=EXT
+LLM.&gt;AG : 15: change data, or LLMError (mapProviderError); off=LLM
+--=R
+AG.&gt;AC : 16: PlanChange (target meals, REPLACE_MEAL, rationale); off=AG
+AC-&gt;&gt;&gt;PV : 17: validate(change, context); on=PV
+PV.&gt;AC : 18: ValidationResult; off=PV
+combinedFragment=alt~A1 GUI CV; F:[target ambiguous]
+AC.&gt;F : 19: AgentResponse(\nNEEDS_CLARIFICATION,\nquestion)
+..=A1; F:[provider failed or change infeasible]
+AC.&gt;F : 20: AgentResponse(FAILED\nor CONFLICT, alternatives)
+..=A1; F:[valid]
+AC-&gt;&gt;&gt;CV : 21: validateChange(change, context); on=CV
+text=CV:checks via\nvalidateRestrictions()\nand validateTime()
+CV.&gt;AC : 22: ValidationResult; off=CV
+AC-&gt;&gt;&gt;AC + : 23:\nhold inpending\nChanges
+tick=1
+AC.&gt;F : 24: AgentResponse(\nNEEDS_CONFIRMATION,\nchange); off=AC
+--=A1
+F.&gt;GUI : 25: AgentResponse; off=F
+GUI.&gt;U : 26: preview, clarification\nquestion, or alternatives
+combinedFragment=alt~A2 U GS; GUI:[user confirms]
+U-&gt;&gt;&gt;GUI : 27: Confirm
+GUI-&gt;&gt;&gt;F : 28: executeChange(planId,\nchange); on=F
+F-&gt;&gt;&gt;AC : 29: confirmChange(planId,\nchange); on=AC
+AC-&gt;&gt;&gt;MPS : 30: executeChange(planId, change); on=MPS
+MPS-&gt;&gt;&gt;MPS + : 31:\ncreateCommand(\nchange)
+tick=1
+MPS-&gt;&gt;&gt;CMD : 32: execute(plan); on=CMD
+CMD-&gt;&gt;&gt;MP : 33: replaceMeal(mealId,\nrecipe)
+CMD.&gt;MPS : 34: previous recipe kept for\nundo(); off=CMD
+MPS-&gt;&gt;&gt;MPR : 35: save(plan)
+MPS.&gt;AC : 36: updated MealPlan; off=MPS
+AC-&gt;&gt;&gt;MEM : 37: recordDecision(profileId,\ndecision)
+AC-&gt;&gt;&gt;GS : 38: refreshForPlan(plan); on=GS
+GS.&gt;AC : 39: refreshed GroceryList; off=GS
+AC.&gt;F : 40: AgentResponse(SUCCESS,\nplan, groceryList); off=AC
+F.&gt;GUI : 41: AgentResponse; off=F
+GUI.&gt;U : 42: updated plan, nutrition,\nand grocery list
+..=A2; GUI:[user cancels]
+text=GUI:no command is executed,\nthe active plan is unchanged
+--=A2</panel_attributes>
+    <additional_attributes></additional_attributes>
   </element>
 </diagram>

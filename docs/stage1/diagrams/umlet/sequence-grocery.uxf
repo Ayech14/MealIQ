@@ -1,555 +1,93 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <diagram program="umlet" version="15.1">
   <zoom_level>10</zoom_level>
+  <help_text>fontsize=12
+</help_text>
   <element>
-    <id>UMLFrame</id>
+    <id>UMLSequenceAllInOne</id>
     <coordinates>
-      <x>15</x>
-      <y>15</y>
-      <w>2615</w>
-      <h>44</h>
+      <x>10</x>
+      <y>10</y>
+      <w>5765</w>
+      <h>2580</h>
     </coordinates>
-    <panel_attributes>SD02 - Generate and optimize grocery list</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>35</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>Meal Planner
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>125</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>250</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>GUI / CLI
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>340</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>465</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>Facade
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>680</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>AgentController
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>770</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>895</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>GroceryService
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>985</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1110</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>BudgetService
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1200</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1325</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>MealPlanningAgent
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1415</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1540</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>SubstitutionTool
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1630</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1755</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>LLMClient
-bg=#E8DAEF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1845</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>1970</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>ProviderLLMAdapter
-bg=#E8DAEF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>2060</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>2185</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>External LLM API
-bg=#E8DAEF</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>2275</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>UMLGeneric</id>
-    <coordinates>
-      <x>2400</x>
-      <y>55</y>
-      <w>200</w>
-      <h>60</h>
-    </coordinates>
-    <panel_attributes>GroceryListRepository
-bg=#D6EAF8</panel_attributes>
-    <additional_attributes />
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>2490</x>
-      <y>105</y>
-      <w>20</w>
-      <h>1580</h>
-    </coordinates>
-    <panel_attributes>lt=.</panel_attributes>
-    <additional_attributes>10;10;10;1570</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>125</x>
-      <y>115</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-generateOptimizedGroceryList(planId)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>340</x>
-      <y>185</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-generateOptimizedGroceryList(planId)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>255</y>
-      <w>450</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-generateList(plan, pantry)</panel_attributes>
-    <additional_attributes>10;10;440;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>325</y>
-      <w>450</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-raw GroceryList</panel_attributes>
-    <additional_attributes>440;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>395</y>
-      <w>450</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-optimizeList(list, prices)</panel_attributes>
-    <additional_attributes>10;10;440;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>985</x>
-      <y>465</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-evaluate(list, budget)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>535</y>
-      <w>665</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-BudgetStatus</panel_attributes>
-    <additional_attributes>655;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>985</x>
-      <y>605</y>
-      <w>1525</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-save(list)</panel_attributes>
-    <additional_attributes>10;10;1515;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>985</x>
-      <y>675</y>
-      <w>1525</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-saved list</panel_attributes>
-    <additional_attributes>1515;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>745</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-adaptPlan(plan, budgetImpact)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>770</x>
-      <y>815</y>
-      <w>665</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-proposeAdaptation(context, impact)</panel_attributes>
-    <additional_attributes>10;10;655;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1415</x>
-      <y>885</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-findCandidates(ingredients, context)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1415</x>
-      <y>955</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-substitution candidates</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1415</x>
-      <y>1025</y>
-      <w>450</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-generateStructured(prompt, PlanChange schema)</panel_attributes>
-    <additional_attributes>10;10;440;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1845</x>
-      <y>1095</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-provider-neutral request</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>2060</x>
-      <y>1165</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=-&gt;&gt;
-createStructuredResponse(request)</panel_attributes>
-    <additional_attributes>10;10;225;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>2060</x>
-      <y>1235</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-structured response</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1845</x>
-      <y>1305</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-PlanChange DTO</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>1415</x>
-      <y>1375</y>
-      <w>450</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-structured alternative</panel_attributes>
-    <additional_attributes>440;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>770</x>
-      <y>1445</y>
-      <w>665</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-PlanChange alternatives</panel_attributes>
-    <additional_attributes>655;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
-      <x>555</x>
-      <y>1515</y>
-      <w>235</w>
-      <h>20</h>
-    </coordinates>
-    <panel_attributes>lt=..&gt;
-adaptation options</panel_attributes>
-    <additional_attributes>225;10;10;10</additional_attributes>
-  </element>
-  <element>
-    <id>UMLNote</id>
-    <coordinates>
-      <x>35</x>
-      <y>1605</y>
-      <w>2560</w>
-      <h>92</h>
-    </coordinates>
-    <panel_attributes>alt within budget -&gt; show consolidated list; over budget -&gt; propose alternatives and recalculate
-bg=#FCF3CF</panel_attributes>
-    <additional_attributes />
+    <panel_attributes>title=SD02 - Generate and Optimize Grocery List   (UC06, UC07; F07, F08, F09, F12)\nGUI calls reach the facade through MealPlanningApi (HTTP, as in SD01), the CLI calls it in-process
+obj=Meal Planner~U ACTOR
+obj=:MealPlanningGUI~GUI
+obj=:MealPlanningFacade~F
+obj=:MealPlanService~MPS
+obj=:PantryService~PS
+obj=:GroceryService~GS
+obj=pantry:Pantry~P
+obj=prices:\nPriceDataSource~PDS
+obj=:GroceryListRepository~GLR
+obj=:BudgetService~BS
+obj=:AgentController~AC
+obj=:MealPlanningAgent~AG
+obj=:ToolManager~TM
+obj=:SubstitutionTool~SUB
+obj=:IngredientRepository~IR
+obj=:ProviderLLMAdapter\n«LLMClient»~LLM
+obj=:ConstraintValidator~CV
+
+U-&gt;&gt;&gt;GUI : 1: Generate grocery list
+GUI-&gt;&gt;&gt;F : 2: generateOptimizedGroceryList(\nplanId); on=F
+F-&gt;&gt;&gt;MPS : 3: getPlan(planId); on=MPS
+MPS.&gt;F : 4: plan; off=MPS
+F-&gt;&gt;&gt;PS : 5: getPantry(profileId); on=PS
+PS.&gt;F : 6: pantry; off=PS
+F-&gt;&gt;&gt;GS : 7: generateList(plan, pantry); on=GS
+combinedFragment=loop~L1 GS P; P:[each IngredientRequirement of each PlannedMeal]
+GS-&gt;&gt;&gt;P : 8: availableQuantity(\ningredient, date); on=P
+P.&gt;GS : 9: usable Quantity (expired\nstock excluded); off=P
+GS-&gt;&gt;&gt;GS + : 10:\ntoBuy = required\n- available
+tick=1
+--=L1
+text=GS:incompatible units stop the\naffected item and request a fix
+GS.&gt;F : 11: GroceryList (shortages only); off=GS
+F-&gt;&gt;&gt;GS : 12: optimizeList(list); on=GS
+GS-&gt;&gt;&gt;GS + : 13:\nconsolidate(\nitems)
+tick=1
+combinedFragment=loop~L2 GS PDS; P:[each GroceryItem with toBuy &gt; 0]
+GS-&gt;&gt;&gt;PDS : 14: estimatePrice(ingredient, toBuy); on=PDS
+PDS.&gt;GS : 15: price, or none (partial estimate); off=PDS
+--=L2
+GS-&gt;&gt;&gt;GLR : 16: save(list)
+GS.&gt;F : 17: optimized GroceryList; off=GS
+F-&gt;&gt;&gt;BS : 18: evaluate(list, weeklyBudget); on=BS
+BS.&gt;F : 19: BudgetStatus (estimate, shortfall, costDrivers); off=BS
+combinedFragment=alt~A GUI CV; F:[status.withinBudget]
+F.&gt;GUI : 20: AgentResponse(SUCCESS,\nlist, status)
+..=A; F:[over budget: UC07 extends UC06]
+F-&gt;&gt;&gt;AC : 21: resolveBudgetConflict(plan, status); on=AC
+AC-&gt;&gt;&gt;AG : 22: proposeSubstitution(\ncontext, costDrivers); on=AG
+combinedFragment=loop~T AG LLM; TM:[step &lt;= maxToolSteps and no final PlanChange yet]
+AG-&gt;&gt;&gt;LLM : 23: generateStructured(prompt, NextAction-or-PlanChange schema); on=LLM
+LLM.&gt;AG : 24: tool call, or final PlanChange; off=LLM
+combinedFragment=alt~D AG LLM; TM:[valid tool call: substitution(ingredient)]
+AG-&gt;&gt;&gt;TM : 25: isValidCall(toolName,\nargs); on=TM
+TM.&gt;AG : 26: true; off=TM
+AG-&gt;&gt;&gt;TM : 27: execute(toolName, args); on=TM
+TM-&gt;&gt;&gt;SUB : 28: execute(args); on=SUB
+SUB-&gt;&gt;&gt;SUB + : 29:\nfindCandidates(\ntarget,context)
+tick=1
+SUB-&gt;&gt;&gt;IR : 30: findSubstitutes(\ningredient); on=IR
+IR.&gt;SUB : 31: candidate ingredients; off=IR
+SUB.&gt;TM : 32: ToolResult(candidates); off=SUB
+TM.&gt;AG : 33: ToolResult; off=TM
+..=D; TM:[final PlanChange with cheaper substitutions]
+text=AG:loop ends
+--=D
+--=T
+AG.&gt;AC : 34: PlanChange; off=AG
+AC-&gt;&gt;&gt;CV : 35: validateChange(change, context); on=CV
+CV.&gt;AC : 36: ValidationResult (restrictions, time, recalculated cost); off=CV
+AC.&gt;F : 37: AgentResponse(NEEDS_CONFIRMATION, change); off=AC
+F.&gt;GUI : 38: list, BudgetStatus,\ncheaper alternatives to\npreview
+text=GUI:on confirmation the change is\napplied\nas in SD03 (confirmChange),\nthe list is\nthen recalculated, never\nassumed compliant
+--=A
+off=F
+GUI.&gt;U : 39: grocery list with estimate\nand warnings</panel_attributes>
+    <additional_attributes></additional_attributes>
   </element>
 </diagram>

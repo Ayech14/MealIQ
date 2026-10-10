@@ -8,13 +8,22 @@ MealIQ is designed for an individual household meal planner who wants assistance
 
 ## Agent description
 
-`MealPlanningAgent` receives a normalized request and a bounded planning context containing the profile, pantry, active plan, and relevant prior confirmed decisions. It coordinates multi-step work through `ToolManager`, selects a planning strategy, and returns a structured `PlanningProposal` or `PlanChange` containing proposed meals, substitutions, rationale, and conflicts. It does not directly persist or mutate a `MealPlan`.
+`MealPlanningAgent` receives a normalized request and a bounded planning context containing the profile, pantry, active plan, and relevant prior confirmed decisions. It selects a planning strategy and returns a structured `PlanningProposal` or `PlanChange` containing proposed meals, substitutions, rationale, and conflicts. It does not directly persist or mutate a `MealPlan`.
+
+Tool use is decided by the LLM, not hard-coded. The agent runs a bounded tool loop (`runToolLoop()`, at most `maxToolSteps` iterations):
+
+1. `PromptBuilder.buildToolSelectionPrompt()` describes the goal, the context, the tools reported by `ToolManager.availableTools()`, and the results gathered so far.
+2. `LLMClient.generateStructured()` returns the next action: either a tool call with arguments, or a signal that enough information has been gathered.
+3. `ToolManager.isValidCall()` checks the tool name and arguments; only a valid call is executed. An invalid call is not executed, and the error is fed back to the LLM as an observation.
+4. The `ToolResult` (for example ranked recipe candidates) is added to the results, and the loop repeats.
+
+The loop ends when the LLM signals readiness or the step limit is reached. The agent then requests the final structured proposal. This makes tool selection, argument choice, and recovery from tool errors genuine LLM decisions that Stage 3 can test, while every tool remains deterministic code.
 
 `ConversationMemory` stores only relevant prior requests and confirmed decisions for retrieval. Durable facts such as profiles, pantry items, recipes, meal plans, and grocery lists remain in repositories. This distinction prevents transient conversational context from becoming the source of truth for domain state.
 
 ## AI/LLM integration plan
 
-MealIQ is designed to integrate an **external LLM API in Stage 2**. OpenAI is the initial planned provider; the exact model is intentionally deferred until implementation, where it can be selected according to capability, cost, availability, and structured-output support. The architecture remains compatible with additional provider adapters, including Anthropic or Gemini.
+MealIQ is designed to integrate an **external LLM API in Stage 2**. OpenAI is the initial planned provider: Stage 2 will use an OpenAI GPT model that supports structured (JSON-schema) outputs; the specific model version will be pinned and documented when implementation begins, chosen by structured-output reliability, cost, and availability. The architecture remains compatible with additional provider adapters, including Anthropic or Gemini.
 
 The agent invokes the provider-neutral `LLMClient` interface. At runtime, `ProviderLLMAdapter` translates `PromptBuilder` output and structured response schemas to the selected provider API/SDK, then maps the returned data into internal DTOs. The intended flow is:
 
@@ -37,7 +46,7 @@ The following is an implementation plan, not implemented software.
 | Layer | Proposed technology | Design rationale |
 |---|---|---|
 | Frontend | React + TypeScript | Supports interactive calendar, pantry, recipe, grocery, profile, and plan-change views with typed UI models. |
-| Backend/API | Python + FastAPI | Provides a typed, documented HTTP boundary for shared application use cases. |
+| Backend/API | Python + FastAPI | `MealPlanningApi` provides a typed, documented HTTP boundary for the GUI in front of `MealPlanningFacade`. |
 | CLI | Python + Typer | Exposes the major MealIQ use cases through a scriptable command interface without duplicating business logic. |
 | Database | PostgreSQL | Fits relational profiles, inventory, recipes, plans, grocery lists, and change records. |
 | ORM/data access | SQLAlchemy | Implements repository persistence boundaries and transaction-oriented data access. |
@@ -51,10 +60,11 @@ No queue, cache, message broker, or additional infrastructure is part of the Sta
 ## Overall architecture
 
 ```text
-React GUI                     Python Typer CLI
-     \                           /
-      \      FastAPI boundary   /
-       ---- MealPlanningFacade ----
+React GUI (browser)          Python Typer CLI
+     |  HTTP/JSON                   |
+MealPlanningApi (FastAPI)           |  in-process call
+     |                              |
+     +------ MealPlanningFacade ----+
               | application services
     AgentController / ProfileService / PantryService / MealPlanService
               |
@@ -67,7 +77,7 @@ React GUI                     Python Typer CLI
  deterministic validators and services ---- SQLAlchemy repositories ---- PostgreSQL
 ```
 
-`MealPlanningFacade` is the shared application boundary for GUI and CLI use cases. FastAPI routes are delivery adapters around that boundary rather than an alternate business-logic path. Application services coordinate domain operations; repositories isolate persistence; the agent proposes decisions through stable tool and LLM interfaces; deterministic services calculate and validate facts.
+`MealPlanningFacade` is the shared application boundary for GUI and CLI use cases. The browser-based GUI reaches it through `MealPlanningApi`, the FastAPI route layer, which only translates HTTP requests and responses. The Python CLI calls the facade in-process, so it needs no running HTTP server. Neither path contains business logic. Application services coordinate domain operations; repositories isolate persistence; the agent proposes decisions through stable tool and LLM interfaces; deterministic services calculate and validate facts.
 
 ## Responsibility split
 

@@ -19,8 +19,8 @@ MealIQ is a planned AI-agent-based meal-planning system for individuals who want
 - [Design patterns](#design-patterns)
 - [Project stages](#project-stages)
 - [Design documentation](#design-documentation)
+- [Repository layout](#repository-layout)
 - [Responsible use and limitations](#responsible-use-and-limitations)
-- [AI-assisted development disclosure](#ai-assisted-development-disclosure)
 
 ## Problem and users
 
@@ -72,15 +72,15 @@ deterministic services <----- structured PlanningProposal or PlanChange
 validated MealPlan and GroceryList
 ```
 
-1. The GUI or CLI sends the same request DTOs through `MealPlanningFacade`.
+1. The GUI sends requests through `MealPlanningApi` (FastAPI); the CLI calls `MealPlanningFacade` in-process. Both reach the same facade operations.
 2. `AgentController` gathers profile, pantry, plan, and relevant conversation context.
-3. `MealPlanningAgent` selects tools and a planning strategy, then requests a structured proposal.
+3. `MealPlanningAgent` chooses a planning strategy, then runs a bounded tool loop in which the LLM decides which tool to call next; `ToolManager` validates and executes each call, and the results are fed back until the LLM is ready to propose a plan.
 4. Recipe, nutrition, grocery, and substitution tools provide constrained facts; the external LLM API assists with interpretation, planning, and decision proposals.
 5. `ProposalValidator`, `ConstraintValidator`, and deterministic services validate the proposal before `MealPlanService` applies a confirmed result.
 
 ## AI and external-provider integration
 
-Stage 2 is designed to integrate an external LLM API. OpenAI is the initial planned provider, with the exact model selected and documented during implementation. The application remains portable: `MealPlanningAgent` depends only on the provider-neutral `LLMClient` interface, while `ProviderLLMAdapter` translates structured requests and responses to the selected provider API/SDK. An alternative adapter can support another provider, such as Anthropic or Gemini, without changing agent or domain logic.
+Stage 2 is designed to integrate an external LLM API. OpenAI is the initial planned provider: Stage 2 will use an OpenAI GPT model that supports structured (JSON-schema) outputs; the specific model version will be pinned and documented when implementation begins. The application remains portable: `MealPlanningAgent` depends only on the provider-neutral `LLMClient` interface, while `ProviderLLMAdapter` translates structured requests and responses to the selected provider API/SDK. An alternative adapter can support another provider, such as Anthropic or Gemini, without changing agent or domain logic.
 
 The LLM receives a purpose-built prompt from `PromptBuilder` plus relevant, bounded context. It returns schema-constrained data rather than directly mutating application state:
 
@@ -110,19 +110,19 @@ MealIQ is designed as a modular application with two interface adapters and one 
 |---|---|
 | GUI | React calendar, pantry, recipe, grocery, profile, and plan-change views. |
 | CLI | Typer commands for the same major functions and natural-language modifications. |
-| API/application boundary | FastAPI routes and `MealPlanningFacade` expose the shared use cases without UI-specific business logic. |
+| API/application boundary | `MealPlanningApi` (FastAPI routes for the GUI) and `MealPlanningFacade` (shared by GUI and CLI) expose the use cases without UI-specific business logic. |
 | Agent layer | `AgentController`, `MealPlanningAgent`, `PromptBuilder`, `ConversationMemory`, `ToolManager`, `LLMClient`. |
 | Domain/services | Profile, pantry, meal-plan, nutrition, grocery, budget, validation, and command services. |
 | Data/integrations | SQLAlchemy repositories over PostgreSQL plus LLM/recipe/price provider adapters. |
 
-The editable UMLet files in [diagrams/umlet](docs/stage1/diagrams/umlet/) are the canonical diagram sources. Their corresponding UMLet PNG exports are in [diagrams/png](docs/stage1/diagrams/png/). The complete class model is available as a [single consolidated UMLet diagram](docs/stage1/diagrams/umlet/class-diagram-complete.uxf) and [PNG export](docs/stage1/diagrams/png/class-diagram-complete.png), arranged as four color-coded responsibility regions. The original focused views remain available for closer inspection of architecture/integrations, planning services/patterns, domain entities, and proposal/event/repository types.
+The editable UMLet files in [diagrams/umlet](docs/stage1/diagrams/umlet/) are the canonical diagram sources. Their corresponding UMLet PNG exports are in [diagrams/png](docs/stage1/diagrams/png/). The [complete class diagram](docs/stage1/diagrams/png/class-diagram-complete.png) shows the whole model grouped into packages. Four focused views (architecture, services and patterns, domain, and contracts and persistence) show the same model at a readable scale. Five sequence diagrams (SD01-SD05) and the use-case diagram complete the UML set.
 
 ## Technology plan
 
 | Area | Planned technology | Purpose |
 |---|---|---|
 | Frontend | React + TypeScript | Graphical planning, pantry, recipe, and grocery interfaces. |
-| Backend/API | Python + FastAPI | Typed HTTP API and application boundary for GUI and CLI clients. |
+| Backend/API | Python + FastAPI | Typed HTTP API (`MealPlanningApi`) in front of the shared application facade. |
 | CLI | Python + Typer | Scriptable access to the same application use cases. |
 | Database | PostgreSQL | Durable profiles, pantry items, recipes, plans, and grocery lists. |
 | Data access | SQLAlchemy | Repository persistence mapping and transaction boundaries. |
@@ -162,7 +162,7 @@ Full participants and rationale are documented in [design patterns](docs/stage1/
 | [Design patterns](docs/stage1/design-patterns.md) | Pattern problems, participants, responsibilities, and rationale. |
 | [Traceability](docs/stage1/traceability.md) | Feature-to-use-case-to-class-to-method-to-sequence mapping and realization. |
 | [Design decisions](docs/stage1/design-decisions.md) | Architecture decisions, validation boundaries, provider portability, and testability. |
-| [UMLet source diagrams](docs/stage1/diagrams/umlet/) | Editable `.uxf` use-case, class-model views, and sequence diagrams. |
+| [UMLet source diagrams](docs/stage1/diagrams/umlet/) | Editable `.uxf` use-case diagram, complete and focused class diagrams, and sequence diagrams SD01-SD05. |
 | [Rendered diagrams](docs/stage1/diagrams/png/) | PNG exports generated by UMLet from the `.uxf` sources. |
 
 ## Repository layout

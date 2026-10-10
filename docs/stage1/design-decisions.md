@@ -8,7 +8,7 @@ The external LLM API supports interpretation, tool selection, candidate ranking,
 
 ### D02 - Shared facade and API boundary
 
-The React GUI and Python Typer CLI use the same FastAPI/application boundary and `MealPlanningFacade`. Interface clients collect input and present results, while use-case coordination remains in services and the agent layer. This avoids duplicated business rules and keeps CLI/GUI outcomes consistent.
+The React GUI and the Python Typer CLI share one application boundary, `MealPlanningFacade`. The GUI runs in a browser, so it calls `MealPlanningApi`, a thin FastAPI route layer that forwards each request to the facade. The CLI is written in Python and calls the facade in-process. Interface clients only collect input and present results; use-case coordination stays in the controller, the services, and the agent. This avoids duplicated business rules and keeps GUI and CLI outcomes identical. A considered alternative, routing the CLI through HTTP as well, was rejected because it would require a running server for local scripted use without adding any business value.
 
 ### D03 - Structured proposals before state mutation
 
@@ -20,13 +20,17 @@ Allergies and dietary restrictions are hard constraints. Meals-per-day structure
 
 ### D05 - Provider-neutral external integrations
 
-The Stage 2 plan integrates an external LLM API, initially through an OpenAI-oriented `ProviderLLMAdapter`; the precise provider/model remains configurable. `LLMClient`, `RecipeDataSource`, and provider adapters prevent external API/SDK types from entering domain code. This supports portability, controlled fakes, failure handling, and provider replacement without an architecture rewrite.
+The Stage 2 plan integrates an external LLM API through an OpenAI-oriented `ProviderLLMAdapter`, using an OpenAI GPT model with structured-output support; the model version is pinned in configuration and can be changed without code changes. `LLMClient`, `RecipeDataSource`, and provider adapters prevent external API/SDK types from entering domain code. This supports portability, controlled fakes, failure handling, and provider replacement without an architecture rewrite.
 
 ### D06 - Event-driven impact detection within the application boundary
 
-`PantryService` and `ProfileService` publish `PlanRelevantChange` after a successful update. `MealPlanImpactObserver` identifies affected meals and requests an adaptation proposal; `GroceryListImpactObserver` marks related lists stale. This local Observer mechanism is sufficient for the planned modular application and does not require a message broker.
+`PantryService` and `ProfileService` publish `PlanRelevantChange` after a successful update. `MealPlanImpactObserver` identifies affected meals and records the `PlanImpact` through `MealPlanService.recordImpact()`; `GroceryListImpactObserver` marks related lists stale. Observers do only fast, deterministic work: the LLM adaptation proposal is produced later, when the user chooses to adapt (`MealPlanningFacade.adaptPlan()`). This keeps pantry and profile updates fast and independent of LLM availability. It also avoids a dependency cycle (`AgentController` → `PantryService` → observer → `AgentController`) that would arise if an observer called the controller. This local Observer mechanism is sufficient for the planned modular application and does not require a message broker.
 
-### D07 - Test seams are first-class design elements
+### D07 - LLM-driven tool selection with deterministic tools
+
+The agent does not call tools in a fixed order. In a bounded loop, the LLM chooses the next tool and its arguments from those `ToolManager` reports. `ToolManager.isValidCall()` rejects unknown tools or invalid arguments before execution, and the error is returned to the LLM as an observation. The tools themselves are deterministic. A fixed pipeline was considered and rejected: it would be simpler, but the LLM would then only generate text, and tool selection, argument quality, and recovery from tool errors could not be designed or tested as agent behavior. The step limit (`maxToolSteps`) bounds cost and prevents endless loops.
+
+### D08 - Test seams are first-class design elements
 
 Repository interfaces, injected provider adapters, typed tool results, strategy interfaces, commands, and event observers allow isolated tests with controlled state. Stage 3 can test deterministic services with pytest and evaluate LLM behavior separately with KUMA-style behavioral tests.
 
