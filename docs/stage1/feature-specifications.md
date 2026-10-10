@@ -6,7 +6,7 @@ MealIQ has thirteen features, F01-F13. Every feature is available in the planned
 
 - **Deterministic:** conventional code only.
 - **AI-based:** the result comes from the LLM.
-- **Hybrid:** the external LLM API (through `LLMClient`) interprets, ranks, or proposes. Deterministic services keep authority over calculations, validation, and saved state.
+- **Hybrid:** the external LLM API (through `LLMClient`) interprets requests, chooses tools and options, or proposes changes. Deterministic code (including the `PlanningStrategy` scoring) keeps authority over rankings, calculations, validation, and saved state.
 
 No MealIQ feature is purely AI-based: every LLM output is validated deterministically before it is shown or saved.
 
@@ -70,9 +70,9 @@ CLI command names below are the planned command surface for Stage 2.
 | CLI access | `mealiq recipes find "quick high-protein dinner" --max-minutes 20` |
 | Input | `RecipeQuery` together with the user's profile and pantry. |
 | Output | Ranked compatible recipes, with the reason each was chosen and any excluded or near-match recipes. |
-| AI involvement | Hybrid. Retrieval and filtering are deterministic. The agent ranks the candidates (through the selected `PlanningStrategy`) and writes the explanation. |
+| AI involvement | Hybrid. Retrieval, filtering, and ranking are deterministic: the selected `PlanningStrategy` scores and orders the candidates. The LLM chooses the retrieval tool and its arguments, and explains why the top recipes fit. |
 | Expected workflow | `AgentController.recommendRecipe()` builds a `PlanningContext`. `MealPlanningAgent.recommendRecipes()` calls `RecipeTool` through `ToolManager`. `RecipeTool.searchRecipes()` queries `RecipeRepository` and, when local results are insufficient, `ExternalRecipeAdapter`. The agent then calls `rankRecipes()`, and every returned recipe is checked by `ConstraintValidator.validateRestrictions()` (SD05). |
-| Error / alternative cases | If no recipe fits exactly, near matches are returned with the constraint each violates, or generation (F04) is offered. If the external provider fails, results are limited to the local repository and the user is told. |
+| Error / alternative cases | If no recipe fits exactly, near matches are returned with the constraint each violates, or generation (F04) is offered. If the external provider fails, results are limited to the local repository and the user is told. External recipes whose ingredients cannot all be matched to the ingredient catalogue are excluded (D09). |
 
 ## F04 - AI recipe generation
 
@@ -86,7 +86,7 @@ CLI command names below are the planned command surface for Stage 2.
 | Output | A candidate `Recipe` (`source = GENERATED`) with a calculated `NutritionSummary`. |
 | AI involvement | Hybrid. The LLM produces the recipe. Deterministic code checks its structure, restrictions, and nutrition. |
 | Expected workflow | `MealPlanningAgent.generateRecipe()` uses `PromptBuilder.buildRecipePrompt()` and `LLMClient.generateStructured()` (implemented by `ProviderLLMAdapter`) with a recipe schema. `ConstraintValidator.validateRestrictions()` and `NutritionService.calculateNutrition()` validate the result before it is displayed (SD05). |
-| Error / alternative cases | Malformed output is retried once, then declined with a clear message. A recipe that breaks an allergy or restriction is rejected and never shown as compliant. |
+| Error / alternative cases | Malformed output, or an ingredient not found in the catalogue, is retried once, then declined with a clear message. A recipe that breaks an allergy or restriction is rejected and never shown as compliant. |
 
 ## F05 - Weekly meal-plan generation
 
@@ -98,7 +98,7 @@ CLI command names below are the planned command surface for Stage 2.
 | CLI access | `mealiq plan generate --start 2026-10-12 --days 7 --mode nutrition` |
 | Input | `PlanRequest` (start date, days, `PlanningMode`) together with the profile and pantry. |
 | Output | A saved `MealPlan` with rationale and nutrition totals, or a conflict report with alternatives. |
-| AI involvement | Hybrid. The agent retrieves and ranks candidates and proposes a `PlanningProposal`. Deterministic validators decide whether the plan is accepted. |
+| AI involvement | Hybrid. The LLM chooses tools and composes the `PlanningProposal` from strategy-ranked candidates (balancing variety across the week). Ranking is deterministic, and deterministic validators decide whether the plan is accepted. |
 | Expected workflow | `AgentController.generateWeeklyPlan()` builds the context. `MealPlanningAgent.createPlanProposal()` gets a strategy from `PlanningStrategyFactory`. It then runs its tool loop: the LLM chooses each tool call (for example `recipeSearch`), `ToolManager` validates and executes it, and the strategy ranks the returned candidates. Finally the LLM produces a structured proposal. `ProposalValidator` and `ConstraintValidator.validatePlan()` (with `NutritionService` and `BudgetService`) check it, and `MealPlanService.createFromProposal()` saves it. If validation fails, the violations are fed back for at most one retry (SD01). |
 | Error / alternative cases | Conflicting constraints produce a `CONFLICT` response with prioritized trade-offs and nothing is saved. A plan over budget or over a time limit is never saved silently. |
 
@@ -113,8 +113,8 @@ CLI command names below are the planned command surface for Stage 2.
 | Input | Recipe and servings, a list of meals, or a meal plan. |
 | Output | `NutritionSummary` (totals and a `complete` flag), or daily totals. |
 | AI involvement | Deterministic. |
-| Expected workflow | `MealPlanningFacade.analyzeNutrition()` calls `NutritionService.calculateNutrition()` / `dailyTotals()`. The agent reaches the same service through `NutritionTool`, and `ConstraintValidator` uses it during plan validation (SD01, SD05). |
-| Error / alternative cases | Missing ingredient nutrition data produces a partial result labelled incomplete; values are never invented. |
+| Expected workflow | Nutrition comes from per-ingredient values (`Ingredient.nutritionPer100g`) in the ingredient catalogue; see design decision D09 for the source and matching rules. `MealPlanningFacade.analyzeNutrition()` calls `NutritionService.calculateNutrition()` / `dailyTotals()`, which scale each ingredient's values by its quantity converted to grams and sum them. The agent reaches the same service through `NutritionTool`, and `ConstraintValidator` uses it during plan validation (SD01, SD05). |
+| Error / alternative cases | An ingredient without catalogue nutrition values, or a quantity that cannot be converted to grams, produces a partial result with `complete = false`, labelled incomplete in the interface; values are never invented or estimated by the LLM. |
 
 ## F07 - Grocery-list generation
 
@@ -196,7 +196,7 @@ CLI command names below are the planned command surface for Stage 2.
 | CLI access | `mealiq profile set --budget 60`, `mealiq grocery optimize --plan <planId>` |
 | Input | Weekly budget, price estimates, and plan meals. |
 | Output | Plan and list estimates with `BudgetStatus`, plus trade-off explanations when over budget. |
-| AI involvement | Hybrid. `BudgetStrategy` and the agent rank cheaper options. `BudgetService` calculates and enforces the budget. |
+| AI involvement | Hybrid. `BudgetStrategy` deterministically ranks cheaper, pantry-reusing options higher, and the LLM chooses among them and explains trade-offs. `BudgetService` calculates and enforces the budget. |
 | Expected workflow | `BudgetStrategy.rank()` is selected for budget-first planning. `BudgetService.estimateCost()` checks the proposal during `validatePlan()` (SD01). `BudgetService.evaluate()` produces the final `BudgetStatus` for the grocery list, and over-budget results lead to F08 alternatives (SD02). |
 | Error / alternative cases | An impossible budget reports the exact shortfall and suggested compromises. Missing prices are labelled as partial estimates. |
 

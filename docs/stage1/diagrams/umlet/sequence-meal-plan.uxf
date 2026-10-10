@@ -8,8 +8,8 @@
     <coordinates>
       <x>10</x>
       <y>10</y>
-      <w>6221</w>
-      <h>2870</h>
+      <w>6251</w>
+      <h>2970</h>
     </coordinates>
     <panel_attributes>title=SD01 - Generate Weekly Meal Plan   (UC04; F01, F03, F04, F05, F06, F11, F12)
 obj=Meal Planner~U ACTOR
@@ -40,28 +40,31 @@ AC-&gt;&gt;&gt;AC + : 5:\nbuildContext(\nrequest)
 tick=1
 combinedFragment=loop~L AC BS; AG:[attempt &lt;= 2 and proposal not yet valid]
 AC-&gt;&gt;&gt;AG : 6: createPlanProposal(\ncontext); on=AG
-AG-&gt;&gt;&gt;SF : 7: createStrategy(\nrequest.mode); on=SF
-SF.&gt;AG : 8: NutritionGoal / Budget /\nTimeAware strategy; off=SF
-AG-&gt;&gt;&gt;TM : 9: availableTools(); on=TM
-TM.&gt;AG : 10: recipeSearch, nutrition, grocery, substitution; off=TM
-combinedFragment=loop~T AG EXT; SF:[step &lt;= maxToolSteps and LLM has not signalled "ready to plan"]
-AG-&gt;&gt;&gt;PB : 11: buildToolSelectionPrompt(context, goal, tools, results); on=PB
-PB.&gt;AG : 12: prompt; off=PB
-AG-&gt;&gt;&gt;LLM : 13: generateStructured(prompt, NextAction schema); on=LLM
-LLM-&gt;&gt;&gt;EXT : 14: createStructuredResponse(\nrequest); on=EXT
-EXT.&gt;LLM : 15: structured response; off=EXT
-LLM.&gt;AG : 16: next action: tool call, or "ready to plan"; off=LLM
-combinedFragment=alt~D AG EXT; SF:[valid tool call, e.g. recipeSearch]
-AG-&gt;&gt;&gt;TM : 17: isValidCall(toolName, args); on=TM
-TM.&gt;AG : 18: true; off=TM
-AG-&gt;&gt;&gt;TM : 19: execute(toolName, args); on=TM
-TM-&gt;&gt;&gt;RT : 20: execute(args); on=RT
-RT-&gt;&gt;&gt;RT + : 21:\nsearchRecipes(\nquery)
+AG-&gt;&gt;&gt;SF : 7: strategyFor(context); on=SF
+SF-&gt;&gt;&gt;SF + : 8:\ncreateStrategy(\nmode)
 tick=1
-RT.&gt;TM : 22: ToolResult(candidates); off=RT
-TM.&gt;AG : 23: ToolResult; off=TM
-AG-&gt;&gt;&gt;ST : 24: rank(candidates, context); on=ST
-ST.&gt;AG : 25: ranked candidates added to results; off=ST
+SF-&gt;&gt;&gt;ST : 9: configure(profile)
+SF.&gt;AG : 10: NutritionGoal / Budget /\nTimeAware strategy; off=SF
+AG-&gt;&gt;&gt;TM : 11: availableTools(); on=TM
+TM.&gt;AG : 12: recipeSearch, nutrition, grocery, substitution; off=TM
+combinedFragment=loop~T AG EXT; SF:[step &lt;= maxToolSteps and LLM has not signalled "ready to plan"]
+AG-&gt;&gt;&gt;PB : 13: buildToolSelectionPrompt(context, goal, tools, results); on=PB
+PB.&gt;AG : 14: prompt; off=PB
+AG-&gt;&gt;&gt;LLM : 15: generateStructured(prompt, NextAction schema); on=LLM
+LLM-&gt;&gt;&gt;EXT : 16: createStructuredResponse(\nrequest); on=EXT
+EXT.&gt;LLM : 17: structured response; off=EXT
+LLM.&gt;AG : 18: next action: tool call, or "ready to plan"; off=LLM
+combinedFragment=alt~D AG EXT; SF:[valid tool call, e.g. recipeSearch]
+AG-&gt;&gt;&gt;TM : 19: isValidCall(toolName, args); on=TM
+TM.&gt;AG : 20: true; off=TM
+AG-&gt;&gt;&gt;TM : 21: execute(toolName, args); on=TM
+TM-&gt;&gt;&gt;RT : 22: execute(args); on=RT
+RT-&gt;&gt;&gt;RT + : 23:\nsearchRecipes(\nquery)
+tick=1
+RT.&gt;TM : 24: ToolResult(candidates); off=RT
+TM.&gt;AG : 25: ToolResult; off=TM
+AG-&gt;&gt;&gt;ST : 26: rank(candidates, context); on=ST
+ST.&gt;AG : 27: ranked candidates added to results; off=ST
 ..=D; SF:[LLM asks for a custom recipe for a slot]
 ref=AG EXT : SD05 Find or Generate Recipe - generateRecipe(context, query)
 ..=D; SF:[unknown tool or invalid arguments]
@@ -70,34 +73,34 @@ text=AG:call is not executed, the error\nis added to results for the next\nstep
 text=AG:tool phase ends
 --=D
 --=T
-AG-&gt;&gt;&gt;PB : 26: buildPlanningPrompt(context, ranked); on=PB
-PB.&gt;AG : 27: prompt; off=PB
-AG-&gt;&gt;&gt;LLM : 28: generateStructured(prompt, PlanningProposal schema); on=LLM
-LLM.&gt;AG : 29: proposal data (provider call as above); off=LLM
-AG.&gt;AC : 30: PlanningProposal (meals,\nrationale, conflicts); off=AG
-AC-&gt;&gt;&gt;PV : 31: validate(proposal, context); on=PV
-PV.&gt;AC : 32: ValidationResult (schema, recipe ids, slot count); off=PV
-AC-&gt;&gt;&gt;CV : 33: validatePlan(proposal, context); on=CV
+AG-&gt;&gt;&gt;PB : 28: buildPlanningPrompt(context, ranked); on=PB
+PB.&gt;AG : 29: prompt; off=PB
+AG-&gt;&gt;&gt;LLM : 30: generateStructured(prompt, PlanningProposal schema); on=LLM
+LLM.&gt;AG : 31: proposal data (provider call as above); off=LLM
+AG.&gt;AC : 32: PlanningProposal (meals,\nrationale, conflicts); off=AG
+AC-&gt;&gt;&gt;PV : 33: validate(proposal, context); on=PV
+PV.&gt;AC : 34: ValidationResult (schema, recipe ids, slot count); off=PV
+AC-&gt;&gt;&gt;CV : 35: validatePlan(proposal, context); on=CV
 text=CV:checks via\nvalidateRestrictions()\nand validateTime()
-CV-&gt;&gt;&gt;NS : 34: calculateNutrition(meals); on=NS
-NS.&gt;CV : 35: NutritionSummary; off=NS
-CV-&gt;&gt;&gt;BS : 36: estimateCost(meals, pantry); on=BS
-BS.&gt;CV : 37: estimated cost; off=BS
-CV.&gt;AC : 38: ValidationResult; off=CV
+CV-&gt;&gt;&gt;NS : 36: calculateNutrition(meals); on=NS
+NS.&gt;CV : 37: NutritionSummary; off=NS
+CV-&gt;&gt;&gt;BS : 38: estimateCost(meals, pantry); on=BS
+BS.&gt;CV : 39: estimated cost; off=BS
+CV.&gt;AC : 40: ValidationResult; off=CV
 text=AC:violations are added to\ncontext for the next attempt
 --=L
 combinedFragment=alt~A GUI MPR; API:[proposal valid]
-AC-&gt;&gt;&gt;MPS : 39: createFromProposal(proposal); on=MPS
-MPS-&gt;&gt;&gt;MPR : 40: save(plan)
-MPS.&gt;AC : 41: MealPlan; off=MPS
-AC.&gt;F : 42: AgentResponse(SUCCESS,\nplan, rationale)
+AC-&gt;&gt;&gt;MPS : 41: createFromProposal(proposal); on=MPS
+MPS-&gt;&gt;&gt;MPR : 42: save(plan)
+MPS.&gt;AC : 43: MealPlan; off=MPS
+AC.&gt;F : 44: AgentResponse(SUCCESS,\nplan, rationale)
 ..=A; API:[still invalid after 2 attempts]
-AC.&gt;F : 43: AgentResponse(\nCONFLICT, violations,\nalternatives); off=AC
+AC.&gt;F : 45: AgentResponse(\nCONFLICT, violations,\nalternatives); off=AC
 text=MPS:no plan is persisted,\ntrade-offs are explained
 --=A
-F.&gt;API : 44: AgentResponse; off=F
-API.&gt;GUI : 45: JSON response; off=API
-GUI.&gt;U : 46: weekly calendar,\nnutrition totals, warnings
+F.&gt;API : 46: AgentResponse; off=F
+API.&gt;GUI : 47: JSON response; off=API
+GUI.&gt;U : 48: weekly calendar,\nnutrition totals, warnings
 text=GUI:the CLI (MealPlanningCLI) calls\nthe same facade operation\nin-process</panel_attributes>
     <additional_attributes></additional_attributes>
   </element>

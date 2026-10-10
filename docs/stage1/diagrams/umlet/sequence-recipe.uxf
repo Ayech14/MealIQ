@@ -9,7 +9,7 @@
       <x>10</x>
       <y>10</y>
       <w>5242</w>
-      <h>2410</h>
+      <h>2540</h>
     </coordinates>
     <panel_attributes>title=SD05 - Find or Generate Recipe   (UC03; F03, F04, F06, F11, F12)\nGUI calls reach the facade through MealPlanningApi (HTTP, as in SD01), the CLI calls it in-process
 obj=Meal Planner~U ACTOR
@@ -56,34 +56,37 @@ RT.&gt;TM : 19: ToolResult(candidates); off=RT
 TM.&gt;AG : 20: ToolResult; off=TM
 AG-&gt;&gt;&gt;AG + : 21:\nrankRecipes(\ncandidates,\ncontext)
 tick=1
-AG-&gt;&gt;&gt;SF : 22: createStrategy(mode); on=SF
-SF.&gt;AG : 23: strategy; off=SF
-AG-&gt;&gt;&gt;ST : 24: rank(candidates, context); on=ST
-ST.&gt;AG : 25: ranked list; off=ST
-combinedFragment=alt~A AG LLM; TM:[no compatible candidate, or custom recipe requested]
-AG-&gt;&gt;&gt;AG + : 26:\ngenerateRecipe(\ncontext,query)
+AG-&gt;&gt;&gt;SF : 22: strategyFor(context); on=SF
+SF-&gt;&gt;&gt;SF + : 23:\ncreateStrategy(\nmode)
 tick=1
-AG-&gt;&gt;&gt;PB : 27: buildRecipePrompt(context, query); on=PB
-PB.&gt;AG : 28: prompt; off=PB
-AG-&gt;&gt;&gt;LLM : 29: generateStructured(prompt, Recipe schema); on=LLM
-LLM.&gt;AG : 30: recipe data; off=LLM
-AG.&gt;AC : 31: Recipe (source =\nGENERATED)
+SF-&gt;&gt;&gt;ST : 24: configure(profile)
+SF.&gt;AG : 25: strategy; off=SF
+AG-&gt;&gt;&gt;ST : 26: rank(candidates, context); on=ST
+ST.&gt;AG : 27: ranked list; off=ST
+combinedFragment=alt~A AG LLM; TM:[no compatible candidate, or custom recipe requested]
+AG-&gt;&gt;&gt;AG + : 28:\ngenerateRecipe(\ncontext,query)
+tick=1
+AG-&gt;&gt;&gt;PB : 29: buildRecipePrompt(context, query); on=PB
+PB.&gt;AG : 30: prompt; off=PB
+AG-&gt;&gt;&gt;LLM : 31: generateStructured(prompt, Recipe schema); on=LLM
+LLM.&gt;AG : 32: recipe data; off=LLM
+AG.&gt;AC : 33: Recipe (source =\nGENERATED)
 ..=A; TM:[compatible candidates found]
-AG.&gt;AC : 32: ranked recipes with\nrationale; off=AG
+AG.&gt;AC : 34: ranked recipes with\nrationale; off=AG
 --=A
 combinedFragment=loop~L AC NS; AG:[each recipe to return]
-AC-&gt;&gt;&gt;CV : 33: validateRestrictions(recipe, profile); on=CV
-CV.&gt;AC : 34: ValidationResult (allergens, dislikes, time); off=CV
-AC-&gt;&gt;&gt;NS : 35: calculateNutrition(recipe, servings); on=NS
-NS.&gt;AC : 36: NutritionSummary (complete flag); off=NS
+AC-&gt;&gt;&gt;CV : 35: validateRestrictions(recipe, profile); on=CV
+CV.&gt;AC : 36: ValidationResult (allergens, dislikes, time); off=CV
+AC-&gt;&gt;&gt;NS : 37: calculateNutrition(recipe, servings); on=NS
+NS.&gt;AC : 38: NutritionSummary (complete flag); off=NS
 --=L
 combinedFragment=alt~B GUI NS; F:[at least one valid recipe]
-AC.&gt;F : 37: AgentResponse(SUCCESS,\nrecipes, rationale)
+AC.&gt;F : 39: AgentResponse(SUCCESS,\nrecipes, rationale)
 ..=B; F:[generated recipe invalid, or nothing compatible]
-AC.&gt;F : 38: AgentResponse(\nCONFLICT, trade-offs); off=AC
+AC.&gt;F : 40: AgentResponse(\nCONFLICT, trade-offs); off=AC
 --=B
-F.&gt;GUI : 39: AgentResponse; off=F
-GUI.&gt;U : 40: recipes with time, cost,\nand nutrition</panel_attributes>
+F.&gt;GUI : 41: AgentResponse; off=F
+GUI.&gt;U : 42: recipes with time, cost,\nand nutrition</panel_attributes>
     <additional_attributes></additional_attributes>
   </element>
 </diagram>

@@ -9,7 +9,7 @@
       <x>3300</x>
       <y>90</y>
       <w>1520</w>
-      <h>470</h>
+      <h>550</h>
     </coordinates>
     <panel_attributes>planning  (Strategy and Factory Method)
 --
@@ -59,34 +59,34 @@ bg=#FDF6F8</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>3530</x>
-      <y>180</y>
+      <y>190</y>
       <w>40</w>
-      <h>300</h>
+      <h>370</h>
     </coordinates>
     <panel_attributes>lt=.&gt;&gt;</panel_attributes>
-    <additional_attributes>20;270;20;150;20;150;20;30</additional_attributes>
+    <additional_attributes>20;340;20;180;20;180;20;30</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
       <x>3530</x>
-      <y>180</y>
+      <y>190</y>
       <w>550</w>
-      <h>300</h>
+      <h>370</h>
     </coordinates>
     <panel_attributes>lt=.&gt;&gt;</panel_attributes>
-    <additional_attributes>530;270;530;150;20;150;20;30</additional_attributes>
+    <additional_attributes>530;340;530;180;20;180;20;30</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
       <x>3530</x>
-      <y>180</y>
+      <y>190</y>
       <w>1060</w>
-      <h>300</h>
+      <h>370</h>
     </coordinates>
     <panel_attributes>lt=.&gt;&gt;</panel_attributes>
-    <additional_attributes>1040;270;1040;150;20;150;20;30</additional_attributes>
+    <additional_attributes>1040;340;1040;180;20;180;20;30</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -147,12 +147,12 @@ bg=#FDF6F8</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>4600</x>
-      <y>180</y>
+      <y>190</y>
       <w>40</w>
-      <h>140</h>
+      <h>130</h>
     </coordinates>
     <panel_attributes>lt=-&gt;&gt;</panel_attributes>
-    <additional_attributes>20;110;20;30</additional_attributes>
+    <additional_attributes>20;100;20;30</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -174,11 +174,11 @@ notifies</panel_attributes>
       <x>4576</x>
       <y>320</y>
       <w>88</w>
-      <h>160</h>
+      <h>240</h>
     </coordinates>
     <panel_attributes>lt=.&gt;
 «create»</panel_attributes>
-    <additional_attributes>44;30;44;130</additional_attributes>
+    <additional_attributes>44;30;44;210</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -365,18 +365,6 @@ m2=1</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>4236</x>
-      <y>270</y>
-      <w>258</w>
-      <h>210</h>
-    </coordinates>
-    <panel_attributes>lt=.&gt;
-«create»</panel_attributes>
-    <additional_attributes>214;30;44;30;44;180</additional_attributes>
-  </element>
-  <element>
-    <id>Relation</id>
-    <coordinates>
       <x>330</x>
       <y>770</y>
       <w>470</w>
@@ -432,6 +420,18 @@ m2=1</panel_attributes>
     <panel_attributes>lt=.&gt;
 «create»</panel_attributes>
     <additional_attributes>214;30;214;650;44;650</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>4236</x>
+      <y>310</y>
+      <w>258</w>
+      <h>250</h>
+    </coordinates>
+    <panel_attributes>lt=.&gt;
+«create»</panel_attributes>
+    <additional_attributes>214;30;44;30;44;220</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -556,25 +556,25 @@ m2=1</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>3726</x>
-      <y>320</y>
-      <w>778</w>
-      <h>160</h>
+      <y>280</y>
+      <w>768</w>
+      <h>280</h>
     </coordinates>
     <panel_attributes>lt=.&gt;
 «create»</panel_attributes>
-    <additional_attributes>734;30;734;90;44;90;44;130</additional_attributes>
+    <additional_attributes>724;30;44;30;44;250</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
     <coordinates>
       <x>3096</x>
-      <y>180</y>
+      <y>60</y>
       <w>1388</w>
-      <h>100</h>
+      <h>130</h>
     </coordinates>
     <panel_attributes>lt=-&gt;
 m2=1</panel_attributes>
-    <additional_attributes>24;50;24;70;1364;70;1364;30</additional_attributes>
+    <additional_attributes>24;100;24;30;1364;30;1364;70</additional_attributes>
   </element>
   <element>
     <id>Relation</id>
@@ -785,12 +785,13 @@ bg=#E2F0D9</panel_attributes>
       <x>3320</x>
       <y>130</y>
       <w>460</w>
-      <h>80</h>
+      <h>90</h>
     </coordinates>
     <panel_attributes>«interface»
 */PlanningStrategy/*
 --
 --
++configure(profile: UserProfile): void
 +rank(candidates: List&lt;Recipe&gt;, context: PlanningContext): List&lt;Recipe&gt;
 bg=#FCE4D6</panel_attributes>
     <additional_attributes></additional_attributes>
@@ -801,13 +802,14 @@ bg=#FCE4D6</panel_attributes>
       <x>4450</x>
       <y>130</y>
       <w>350</w>
-      <h>80</h>
+      <h>90</h>
     </coordinates>
     <panel_attributes>«creator»
 */PlanningStrategyFactory/*
 --
 --
-/+createStrategy(mode: PlanningMode): PlanningStrategy/
++strategyFor(context: PlanningContext): PlanningStrategy
+/#createStrategy(mode: PlanningMode): PlanningStrategy/
 bg=#FCE4D6</panel_attributes>
     <additional_attributes></additional_attributes>
   </element>
@@ -822,7 +824,7 @@ bg=#FCE4D6</panel_attributes>
     <panel_attributes>*DefaultPlanningStrategyFactory*
 --
 --
-+createStrategy(mode: PlanningMode): PlanningStrategy
+#createStrategy(mode: PlanningMode): PlanningStrategy
 bg=#FCE4D6</panel_attributes>
     <additional_attributes></additional_attributes>
   </element>
@@ -830,7 +832,7 @@ bg=#FCE4D6</panel_attributes>
     <id>UMLClass</id>
     <coordinates>
       <x>3320</x>
-      <y>450</y>
+      <y>530</y>
       <w>460</w>
       <h>90</h>
     </coordinates>
@@ -847,7 +849,7 @@ bg=#FCE4D6</panel_attributes>
     <id>UMLClass</id>
     <coordinates>
       <x>3830</x>
-      <y>450</y>
+      <y>530</y>
       <w>460</w>
       <h>90</h>
     </coordinates>
@@ -864,7 +866,7 @@ bg=#FCE4D6</panel_attributes>
     <id>UMLClass</id>
     <coordinates>
       <x>4340</x>
-      <y>450</y>
+      <y>530</y>
       <w>460</w>
       <h>80</h>
     </coordinates>

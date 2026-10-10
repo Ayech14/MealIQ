@@ -21,8 +21,8 @@ It is an agent, not a chatbot. It interprets natural-language requests, lets the
 
 The design separates two kinds of responsibility:
 
-- **Probabilistic work** belongs to the agent and an external LLM, reached through the provider-neutral `LLMClient`: interpreting, ranking, and proposing.
-- **Authoritative work** belongs to deterministic services: arithmetic, validation, state changes, and storage.
+- **Probabilistic work** belongs to the agent and an external LLM, reached through the provider-neutral `LLMClient`: interpreting requests, choosing tools and options, and proposing changes.
+- **Authoritative work** belongs to deterministic code: candidate ranking (the `PlanningStrategy` implementations), arithmetic, validation, state changes, and storage.
 
 Every LLM proposal becomes a structured `PlanningProposal` or `PlanChange`. It is validated deterministically, previewed, and applied through a command only after the user confirms.
 
@@ -147,7 +147,7 @@ Each diagram shows:
 - deterministic services, domain objects, and repositories;
 - external APIs.
 
-Messages are numbered and returns are shown, with activation bars and `alt` / `opt` / `loop` / `ref` fragments for alternative and error flows. Every call uses an operation defined in the class diagram. SD01 shows the full HTTP path (`MealPlanningGUI` → `MealPlanningApi` → `MealPlanningFacade`); the other diagrams note that path in their titles. The PNGs are wide (15-19 lifelines), so open them at full size.
+Messages are numbered and returns are shown, with activation bars and `alt` / `opt` / `loop` / `ref` fragments for alternative and error flows. Every call uses an operation defined in the class diagram. SD01 shows the full HTTP path (`MealPlanningGUI` → `MealPlanningApi` → `MealPlanningFacade`); the other diagrams note that path in their titles. The sequence diagrams use wide layouts, with 15-19 lifelines depending on the interaction.
 
 | Diagram | Use case(s) | Features | Main alternative / error flows |
 |---|---|---|---|
@@ -210,6 +210,7 @@ Source: [sequence-recipe.uxf](diagrams/umlet/sequence-recipe.uxf).
 - structured proposals before any state change;
 - a precedence order for constraints;
 - provider-neutral integrations;
+- the source of nutrition data and the ingredient-matching rules;
 - local event-driven impact detection, with no LLM call inside event handling;
 - test seams designed in from the start.
 
@@ -223,7 +224,7 @@ These checks were performed on the Stage 1 artifacts.
 |---|---|---|
 | At least 10 meaningful features | 13 features, F01-F13 | Feature specifications |
 | GUI and CLI provide the major functionality without duplicated logic | Both reach `MealPlanningFacade`; the GUI through `MealPlanningApi` | Architecture class view, SD01 |
-| AI/LLM integrated with meaningful agent behaviour | Tool use, planning, ranking, generation, memory, adaptation | `MealPlanningAgent`, `ToolManager`, `ConversationMemory`; SD01-SD05 |
+| AI/LLM integrated with meaningful agent behaviour | LLM-chosen tool use, planning, generation, memory, adaptation | `MealPlanningAgent`, `ToolManager`, `ConversationMemory`; SD01-SD05 |
 | At least five meaningful design patterns | Six | Design patterns, services and patterns view |
 | Every feature maps to a use case, classes, methods, a sequence diagram, and patterns | All 13 rows complete | Traceability table |
 | Sequence diagram calls exist in the class model | Every call checked against the model's operations | SD01-SD05 |

@@ -56,7 +56,7 @@ m2=1</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>2016</x>
+      <x>96</x>
       <y>1020</y>
       <w>48</w>
       <h>170</h>
@@ -68,7 +68,7 @@ m2=1</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>96</x>
+      <x>2016</x>
       <y>1020</y>
       <w>48</w>
       <h>170</h>
@@ -797,13 +797,14 @@ bg=#E3ECF5</panel_attributes>
       <x>1920</x>
       <y>1160</y>
       <w>360</w>
-      <h>90</h>
+      <h>100</h>
     </coordinates>
     <panel_attributes>«interface»
 */IngredientRepository/*
 --
 --
 +findById(ingredientId: UUID): Ingredient [0..1]
++findByName(name: String): Ingredient [0..1]
 +findSubstitutes(ingredient: Ingredient): List&lt;Ingredient&gt;
 bg=#E3ECF5</panel_attributes>
     <additional_attributes></additional_attributes>

@@ -85,7 +85,7 @@ MealPlanningApi (FastAPI)           |  in-process call
 |---|---|
 | Interpret natural-language requests and detect missing information | Validate request fields, identifiers, quantities, units, and structured outputs |
 | Select/order tools and synthesize their results | Retrieve/filter stored recipes by explicit predicates |
-| Rank compatible candidates and explain soft-constraint trade-offs | Calculate nutrition, grocery quantities, price estimates, and duplicate consolidation |
+| Choose among strategy-ranked candidates when composing the plan (variety, balance) and explain soft-constraint trade-offs | Score and order candidates with the selected `PlanningStrategy`; calculate nutrition, grocery quantities, price estimates, and duplicate consolidation |
 | Propose custom recipes, substitutions, and plan changes | Enforce allergies/restrictions, cooking-time and budget rules, persistence, undo, and event publication |
 | Propose a minimal adaptation after a relevant change | Determine affected plan/list state and preserve unchanged state on validation failure |
 
@@ -99,5 +99,5 @@ MealPlanningApi (FastAPI)           |  in-process call
 - Recipe and indicative ingredient-price data are curated or supplied through adapters. Price is an estimate, not a store checkout guarantee.
 - Allergies and dietary restrictions are hard constraints. Explicit nutrition goals, time limits, and budget limits are validated planning constraints; food preferences are soft constraints that may be traded off only with explanation.
 - Expiration dates are optional. Planning does not deduct inventory; inventory changes occur only through an explicit confirmed update.
-- Nutrition summaries are informational and depend on available ingredient data. Missing values remain labeled incomplete.
+- Nutrition summaries are informational and depend on available ingredient data. Missing values remain labeled incomplete. Where nutrition data comes from, and how ingredients are matched, is recorded in design decision D09.
 - Every LLM-derived proposal undergoes deterministic validation and user confirmation before it is applied to the active plan.

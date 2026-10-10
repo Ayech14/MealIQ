@@ -6,9 +6,11 @@ MealIQ applies six course patterns to identifiable design problems. The patterns
 
 **Design problem.** A high-protein, gain-oriented plan, a budget-first plan, and a time-first plan can rank the same compatible recipes differently. Embedding all ranking policies in conditional branches would make `MealPlanningAgent` difficult to extend and test.
 
-**Participants and roles.** `PlanningStrategy` defines `rank(candidates, context)`. `NutritionGoalStrategy`, `BudgetStrategy`, and `TimeAwareStrategy` implement alternative ranking policies. `MealPlanningAgent` is the context that requests a strategy, while `ConstraintValidator` remains the hard-constraint gate.
+**Participants and roles.** `PlanningStrategy` defines `configure(profile)` and `rank(candidates, context)`. `NutritionGoalStrategy`, `BudgetStrategy`, and `TimeAwareStrategy` implement alternative ranking policies. Each is a deterministic scoring function: a weighted score over macronutrient fit, estimated cost and pantry reuse, or total minutes, using weights derived from the profile. `MealPlanningAgent` is the context: it obtains a strategy and applies it through `rankRecipes()`, which delegates to `rank()`. `ConstraintValidator` remains the hard-constraint gate.
 
-**Rationale.** Each strategy ranks candidates and exposes its trade-offs without changing agent orchestration. Adding a policy remains local to a new implementation instead of modifying a growing selection block. Strategy supports polymorphism, focused tests, and an explicit distinction between preference ranking and non-negotiable validation.
+**Division of ranking responsibility.** Only the strategies score and order candidates; the LLM never produces scores. The LLM interprets the user's request, decides which tools to call, chooses among the strategy-ranked candidates when composing a multi-day plan (variety, repetition, balance across the week), and explains trade-offs. The validators then accept or reject the result. This keeps ranking reproducible and unit-testable, while still letting the LLM make the judgement calls that a fixed score cannot.
+
+**Rationale.** Each strategy ranks candidates deterministically without changing agent orchestration. Adding a policy remains local to a new implementation instead of modifying a growing selection block. Strategy supports polymorphism, focused tests, and an explicit distinction between preference ranking and non-negotiable validation.
 
 **UML evidence.** Class diagrams: services and patterns view (`PlanningStrategy` realized by three strategies, and `MealPlanningAgent` ..> `PlanningStrategy` labelled `ranks with`). Sequence diagrams: SD01 and SD05 (`rank(candidates, context)` on `strategy:PlanningStrategy`).
 
@@ -16,11 +18,17 @@ MealIQ applies six course patterns to identifiable design problems. The patterns
 
 **Design problem.** Agent code needs a `PlanningStrategy` without being coupled to concrete strategy construction or configuration.
 
-**Participants and roles.** Abstract creator `PlanningStrategyFactory` declares the factory method `createStrategy(mode)`. `DefaultPlanningStrategyFactory` overrides that method and creates the appropriate concrete product: `NutritionGoalStrategy`, `BudgetStrategy`, or `TimeAwareStrategy`. `MealPlanningAgent` depends on the creator abstraction and receives only the `PlanningStrategy` product.
+**Participants and roles.**
 
-**Rationale.** This is the *parameterized* form of Factory Method described by Gamma et al.: the abstract creator declares the factory method, and the concrete creator overrides it to decide, from the `PlanningMode` argument, which concrete product to create. A different policy set, such as a test factory that always returns a fixed strategy, can be supplied by adding another `PlanningStrategyFactory` subclass, without changing the agent. The class diagram makes the concrete creator-to-product dependencies explicit. Without it, agent or UI code would instantiate concrete strategies, coupling planning orchestration to construction details and making replacement/configuration harder.
+- **Creator:** `PlanningStrategyFactory` (abstract). It declares the protected, abstract factory method `createStrategy(mode)`, and implements the operation `strategyFor(context)`, which uses it. `strategyFor()` reads the `PlanningMode` from the request, calls `createStrategy(mode)` to obtain a product, configures that product from the user's profile (`configure(profile)`), and returns it.
+- **Concrete creator:** `DefaultPlanningStrategyFactory`. It overrides `createStrategy(mode)` and instantiates the concrete product for the mode.
+- **Product:** `PlanningStrategy`.
+- **Concrete products:** `NutritionGoalStrategy`, `BudgetStrategy`, and `TimeAwareStrategy`.
+- **Client:** `MealPlanningAgent`. It depends only on the creator abstraction and the product interface.
 
-**UML evidence.** Class diagrams: services and patterns view and complete view (`DefaultPlanningStrategyFactory` --▷ `PlanningStrategyFactory`, with «create» dependencies to each concrete strategy). Sequence diagrams: SD01 messages 7-8 and SD05 messages 22-23 (`createStrategy()`).
+**Rationale.** The course instructions name Factory Method but do not define it, so the standard definition from Gamma et al. is used: a creator declares a factory method that returns a product, the creator's own operations use that method, and subclasses override it to decide which concrete product is instantiated. MealIQ follows that structure. `strategyFor()` is the creator operation that depends only on the abstract product, and `DefaultPlanningStrategyFactory` decides the concrete class. Because the factory method takes the mode as an argument, this is the *parameterized factory method* variation that Gamma et al. describe. Another creator subclass, such as a test factory that always returns a fixed strategy, can be supplied without changing the agent or `strategyFor()`. The shared configuration step means every strategy is configured the same way, wherever it is created. The class diagram makes the concrete creator-to-product dependencies explicit. Without it, agent or UI code would instantiate concrete strategies, coupling planning orchestration to construction details and making replacement/configuration harder.
+
+**UML evidence.** Class diagrams: services and patterns view and complete view (`DefaultPlanningStrategyFactory` --▷ `PlanningStrategyFactory`, with «create» dependencies to each concrete strategy). Sequence diagrams: SD01 messages 7-10 and SD05 messages 22-25 (`strategyFor()`, then the self-call `createStrategy()` and `configure(profile)` on the new strategy).
 
 ## Command - previewable and reversible plan changes
 

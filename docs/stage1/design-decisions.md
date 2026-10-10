@@ -4,7 +4,7 @@
 
 ### D01 - Hybrid agent with deterministic guardrails
 
-The external LLM API supports interpretation, tool selection, candidate ranking, recipe/substitution proposals, and multi-step planning. Deterministic services calculate nutrition, costs, quantities, and grocery consolidation; validate inputs and hard constraints; and own persistence. This prevents generated text from becoming an authority for arithmetic or durable state.
+The external LLM API supports interpretation, tool selection, choosing among ranked candidates, recipe and substitution proposals, and multi-step planning. Candidate scoring itself is deterministic: the selected `PlanningStrategy` ranks candidates, and the LLM chooses among the top-ranked options and explains its choices. Deterministic services calculate nutrition, costs, quantities, and grocery consolidation; validate inputs and hard constraints; and own persistence. This prevents generated text from becoming an authority for arithmetic or durable state.
 
 ### D02 - Shared facade and API boundary
 
@@ -32,7 +32,25 @@ The agent does not call tools in a fixed order. In a bounded loop, the LLM choos
 
 ### D08 - Test seams are first-class design elements
 
-Repository interfaces, injected provider adapters, typed tool results, strategy interfaces, commands, and event observers allow isolated tests with controlled state. Stage 3 can test deterministic services with pytest and evaluate LLM behavior separately with KUMA-style behavioral tests.
+Repository interfaces, injected provider adapters, typed tool results, strategy interfaces, commands, and event observers allow isolated tests with controlled state. Stage 3 can test deterministic services with pytest and evaluate LLM behavior separately with KUMA behavioral tests.
+
+### D09 - Nutrition data provenance and ingredient matching
+
+**Source.** Nutrition values are stored per ingredient, not per recipe. Each `Ingredient` in the ingredient catalogue (`IngredientRepository`) carries `nutritionPer100g` (calories, protein, carbohydrates, and fat). Recipes reference catalogue ingredients through `IngredientRequirement`. `NutritionService` derives meal and plan totals from these values, so there is one source of truth and no LLM arithmetic.
+
+**Open decision.** Which dataset seeds the catalogue is still undecided and will be chosen in Stage 2. The leading candidate is a public food-composition database (for example USDA FoodData Central), imported into the catalogue, rather than live API calls during planning. No integration with any nutrition provider exists yet.
+
+**Matching rules.**
+
+- Curated recipes reference catalogue ingredients by ID, so they need no matching.
+- External recipes are mapped by `ExternalRecipeAdapter.toRecipe()`, which matches each ingredient name through `IngredientRepository.findByName()`. If any ingredient cannot be matched, the recipe is excluded from results: its allergens, nutrition, and cost cannot be verified.
+- Generated recipes must use catalogue ingredient names supplied in the prompt. An unmatched ingredient fails validation and triggers the single retry described in F04.
+
+**Incomplete data.**
+
+- A matched ingredient whose catalogue entry lacks nutrition values contributes nothing to the totals, and the resulting `NutritionSummary` has `complete = false`.
+- A quantity that cannot be converted to grams (for example "1 bunch", with no conversion defined) has the same effect.
+- The interface shows such totals as incomplete. Values are never estimated by the LLM.
 
 ## Stage 3 testability
 

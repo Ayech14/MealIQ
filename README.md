@@ -168,12 +168,13 @@ Full participants and rationale are documented in [design patterns](docs/stage1/
 ## Repository layout
 
 ```text
+README.md                   Project overview (this file)
+LICENSE                     MIT license
 docs/
-├── stage1/                 Stage 1 design package
-│   └── diagrams/
-│       ├── umlet/          Editable UMLet .uxf sources
-│       └── png/            UMLet PNG exports
-└── dev/                    Local course reference PDFs (not tracked)
+└── stage1/                 Stage 1 design package (report, specifications, decisions)
+    └── diagrams/
+        ├── umlet/          Editable UMLet .uxf sources
+        └── png/            UMLet PNG exports
 ```
 
 ## Responsible use and limitations

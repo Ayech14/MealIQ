@@ -10,7 +10,7 @@ Each feature traces from requirement to use case, classes, methods, sequence dia
 | F02 | Pantry inventory management | Deterministic | UC02 | `MealPlanningFacade`, `PantryService`, `Pantry`, `PantryItem`, `PantryRepository` | `updatePantry()`, `updateItem()`, `availableQuantity()`, `publish()` | SD04 | Facade, Observer |
 | F03 | Recipe search and recommendation | Hybrid | UC03 | `AgentController`, `MealPlanningAgent`, `ToolManager`, `RecipeTool`, `RecipeRepository`, `ExternalRecipeAdapter`, `PlanningStrategy` | `recommendRecipe()`, `recommendRecipes()`, `searchRecipes()`, `find()`, `rankRecipes()`, `rank()` | SD05, SD01 | Strategy, Factory Method, Adapter, Facade |
 | F04 | AI recipe generation | Hybrid | UC03 | `MealPlanningAgent`, `PromptBuilder`, `LLMClient`, `ProviderLLMAdapter`, `ConstraintValidator`, `NutritionService` | `generateRecipe()`, `buildRecipePrompt()`, `generateStructured()`, `validateRestrictions()`, `calculateNutrition()` | SD05 | Adapter, Facade |
-| F05 | Weekly meal-plan generation | Hybrid | UC04 | `AgentController`, `MealPlanningAgent`, `PlanningStrategyFactory`, `PromptBuilder`, `ToolManager`, `ProposalValidator`, `ConstraintValidator`, `MealPlanService`, `MealPlanRepository` | `generateWeeklyPlan()`, `createPlanProposal()`, `createStrategy()`, `buildToolSelectionPrompt()`, `isValidCall()`, `execute()`, `validatePlan()`, `createFromProposal()` | SD01 | Strategy, Factory Method, Facade, Adapter |
+| F05 | Weekly meal-plan generation | Hybrid | UC04 | `AgentController`, `MealPlanningAgent`, `PlanningStrategyFactory`, `PromptBuilder`, `ToolManager`, `ProposalValidator`, `ConstraintValidator`, `MealPlanService`, `MealPlanRepository` | `generateWeeklyPlan()`, `createPlanProposal()`, `strategyFor()`, `createStrategy()`, `buildToolSelectionPrompt()`, `isValidCall()`, `execute()`, `validatePlan()`, `createFromProposal()` | SD01 | Strategy, Factory Method, Facade, Adapter |
 | F06 | Nutrition analysis | Deterministic | UC05 | `NutritionService`, `NutritionTool`, `NutritionSummary`, `ConstraintValidator` | `calculateNutrition()`, `dailyTotals()`, `analyze()` | SD01, SD05 | Facade |
 | F07 | Grocery-list generation | Deterministic | UC06 | `GroceryService`, `Pantry`, `GroceryList`, `GroceryItem`, `GroceryTool` | `generateList()`, `availableQuantity()`, `project()` | SD02 | Facade |
 | F08 | Grocery-list optimization | Hybrid | UC06, UC07 | `GroceryService`, `PriceDataSource`, `BudgetService`, `AgentController`, `MealPlanningAgent`, `SubstitutionTool` | `optimizeList()`, `consolidate()`, `estimatePrice()`, `evaluate()`, `resolveBudgetConflict()`, `proposeSubstitution()` | SD02 | Adapter, Facade |
@@ -62,16 +62,16 @@ All features are reached through `MealPlanningFacade`, which is why Facade appea
 **Classes involved**
 
 - `AgentController`: builds the `PlanningContext` and coordinates the request.
-- `MealPlanningAgent`: chooses the retrieval tool, ranks results, and explains the choice.
+- `MealPlanningAgent`: lets the LLM choose the retrieval tool, applies the strategy through `rankRecipes()`, and has the LLM explain the result.
 - `ToolManager`: dispatches the named tool.
 - `RecipeTool`: retrieves candidates.
 - `RecipeRepository`: provides curated recipes.
 - `ExternalRecipeAdapter`: provides external recipes behind `RecipeDataSource`.
-- `PlanningStrategyFactory` / `PlanningStrategy`: supply the ranking policy.
+- `PlanningStrategyFactory` / `PlanningStrategy`: create and configure the deterministic ranking policy (`strategyFor()`, `rank()`).
 
 **Important methods:** `AgentController.recommendRecipe()`, `MealPlanningAgent.recommendRecipes()`, `ToolManager.execute()`, `RecipeTool.searchRecipes()`, `RecipeRepository.search()`, `RecipeDataSource.find()`, `MealPlanningAgent.rankRecipes()`, `PlanningStrategy.rank()`.
 
-**Execution.** The agent calls the recipe tool through `ToolManager`. The tool queries the repository first and the external adapter only when there are too few matches. The agent then ranks candidates with the strategy chosen for the planning mode. **AI:** tool selection, ranking, and explanation. **Deterministic:** retrieval, filtering, and `ConstraintValidator.validateRestrictions()` on each result. If nothing fits, near matches are returned with their violated constraint, or generation (F04) is offered.
+**Execution.** The agent calls the recipe tool through `ToolManager`. The tool queries the repository first and the external adapter only when there are too few matches. The agent then ranks candidates with the strategy chosen for the planning mode. **AI:** tool selection and the explanation. **Deterministic:** retrieval, filtering, strategy ranking, and `ConstraintValidator.validateRestrictions()` on each result. If nothing fits, near matches are returned with their violated constraint, or generation (F04) is offered.
 
 ### F04 - AI recipe generation
 
@@ -106,9 +106,9 @@ All features are reached through `MealPlanningFacade`, which is why Facade appea
 - `ConstraintValidator`: checks restrictions, time, nutrition, and cost.
 - `MealPlanService` / `MealPlanRepository`: create and save the `MealPlan`.
 
-**Important methods:** `AgentController.generateWeeklyPlan()`, `MealPlanningAgent.createPlanProposal()`, `PlanningStrategyFactory.createStrategy()`, `PromptBuilder.buildToolSelectionPrompt()`, `ToolManager.isValidCall()`, `ToolManager.execute()`, `PlanningStrategy.rank()`, `LLMClient.generateStructured()`, `ProposalValidator.validate()`, `ConstraintValidator.validatePlan()`, `MealPlanService.createFromProposal()`.
+**Important methods:** `AgentController.generateWeeklyPlan()`, `MealPlanningAgent.createPlanProposal()`, `PlanningStrategyFactory.strategyFor()`, `PromptBuilder.buildToolSelectionPrompt()`, `ToolManager.isValidCall()`, `ToolManager.execute()`, `PlanningStrategy.rank()`, `LLMClient.generateStructured()`, `ProposalValidator.validate()`, `ConstraintValidator.validatePlan()`, `MealPlanService.createFromProposal()`.
 
-**Execution.** The controller asks the agent for a proposal. The agent obtains a strategy and runs its tool loop: the LLM decides which tool to call next, `ToolManager` rejects invalid calls (returning the error to the LLM) and executes valid ones, and recipe results are ranked by the strategy before being fed back. When the LLM signals it has enough information, the agent asks it for a structured weekly proposal. The controller validates it. If it fails, the violations are added to the context and the agent tries once more. A valid proposal is saved; otherwise a `CONFLICT` response with trade-offs is returned and nothing is saved. **AI:** tool selection and arguments, planning, choosing between soft constraints, and the rationale. **Deterministic:** every check and the save.
+**Execution.** The controller asks the agent for a proposal. The agent obtains a strategy and runs its tool loop: the LLM decides which tool to call next, `ToolManager` rejects invalid calls (returning the error to the LLM) and executes valid ones, and recipe results are ranked by the strategy before being fed back. When the LLM signals it has enough information, the agent asks it for a structured weekly proposal. The controller validates it. If it fails, the violations are added to the context and the agent tries once more. A valid proposal is saved; otherwise a `CONFLICT` response with trade-offs is returned and nothing is saved. **AI:** tool selection and arguments, choosing among strategy-ranked candidates when composing the week, and the rationale. **Deterministic:** strategy ranking, every check, and the save.
 
 ### F06 - Nutrition analysis
 
@@ -116,7 +116,7 @@ All features are reached through `MealPlanningFacade`, which is why Facade appea
 
 **Classes involved**
 
-- `NutritionService`: totals stored per-ingredient values.
+- `NutritionService`: totals per-ingredient values (`Ingredient.nutritionPer100g`) from the ingredient catalogue, scaled by quantity in grams (D09).
 - `NutritionSummary`: result with a `complete` flag.
 - `NutritionTool`: exposes the calculation to the agent.
 - `ConstraintValidator`: uses it during plan validation.
