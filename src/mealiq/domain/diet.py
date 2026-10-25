@@ -21,7 +21,7 @@ DIET_RULES: dict[str, DietRule] = {
     "vegetarian": DietRule(excluded_categories=_MEAT | _SEAFOOD),
     "pescatarian": DietRule(excluded_categories=_MEAT),
     "vegan": DietRule(
-        excluded_categories=_MEAT | _SEAFOOD | {"dairy", "egg"},
+        excluded_categories=_MEAT | _SEAFOOD | {"dairy", "egg", "bee-product"},
         excluded_allergens=frozenset({"milk", "egg", "fish", "shellfish"}),
     ),
     "gluten-free": DietRule(excluded_allergens=frozenset({"gluten"})),

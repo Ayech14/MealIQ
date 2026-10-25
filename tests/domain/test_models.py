@@ -108,6 +108,18 @@ class TestMealPlan:
         assert recipe("x", 45).total_minutes() == 45
 
 
+def test_ingredient_to_grams():
+    egg = Ingredient("egg", "egg", grams_per_unit=50)
+    oil = Ingredient("oil", "oil", grams_per_ml=0.9)
+    assert egg.to_grams(Quantity(2, "unit")) == 100
+    assert egg.to_grams(Quantity(1, "dozen")) == 600
+    assert egg.to_grams(Quantity(0.1, "kg")) == pytest.approx(100)
+    assert egg.to_grams(Quantity(1, "cup")) is None  # no volume weight in the catalogue
+    assert oil.to_grams(Quantity(100, "ml")) == pytest.approx(90)
+    assert oil.to_grams(Quantity(1, "unit")) is None
+    assert oil.to_grams(Quantity(0, "unit")) == 0
+
+
 def test_nutrition_add_propagates_incomplete():
     a = NutritionSummary(100, 10, 5, 2)
     b = NutritionSummary(50, 1, 1, 1, complete=False)

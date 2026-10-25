@@ -58,6 +58,9 @@ class RowMapper:
                 category=row.category,
                 allergens=set(row.allergens or []),
                 nutrition_per_100g=_nutrition(row),
+                grams_per_unit=row.grams_per_unit,
+                grams_per_ml=row.grams_per_ml,
+                fdc_id=row.fdc_id,
             )
         return self._ingredients[row.id]
 
@@ -155,6 +158,9 @@ def fill_ingredient_row(row: IngredientRow, ingredient: Ingredient) -> None:
     row.protein_g = n.protein_g if n else None
     row.carbs_g = n.carbs_g if n else None
     row.fat_g = n.fat_g if n else None
+    row.grams_per_unit = ingredient.grams_per_unit
+    row.grams_per_ml = ingredient.grams_per_ml
+    row.fdc_id = ingredient.fdc_id
 
 
 def fill_recipe_row(row: RecipeRow, recipe: Recipe) -> None:

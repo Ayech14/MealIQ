@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 from mealiq.domain.diet import DIET_RULES, normalize_tag
 from mealiq.domain.enums import DayOfWeek, MealType, PlanStatus, RecipeSource, WeightGoal
-from mealiq.domain.quantity import Quantity
+from mealiq.domain.quantity import Dimension, Quantity
 
 
 @dataclass(frozen=True)
@@ -51,11 +51,29 @@ class Ingredient:
     category: str
     allergens: set[str] = field(default_factory=set)
     nutrition_per_100g: NutritionSummary | None = None
+    # Gram weights for converting counts ("2 eggs") and volumes ("1 cup rice") to
+    # grams. None means the catalogue has no weight for that kind of unit (D09).
+    grams_per_unit: float | None = None
+    grams_per_ml: float | None = None
+    # Source record in USDA FoodData Central, for provenance.
+    fdc_id: int | None = None
     ingredient_id: UUID = field(default_factory=uuid4)
 
     def __post_init__(self) -> None:
         self.category = normalize_tag(self.category)
         self.allergens = {normalize_tag(a) for a in self.allergens}
+
+    def to_grams(self, quantity: Quantity) -> float | None:
+        """Weight of a quantity of this ingredient, or None when it cannot be converted."""
+        if quantity.amount == 0:
+            return 0.0
+        if quantity.dimension is Dimension.MASS:
+            return quantity.convert_to("g").amount
+        if quantity.dimension is Dimension.VOLUME and self.grams_per_ml is not None:
+            return quantity.convert_to("ml").amount * self.grams_per_ml
+        if quantity.dimension is Dimension.COUNT and self.grams_per_unit is not None:
+            return quantity.convert_to("unit").amount * self.grams_per_unit
+        return None
 
 
 @dataclass

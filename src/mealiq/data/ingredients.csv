@@ -1,0 +1,147 @@
+name,fdc_id,usda_description,category,allergens,calories,protein_g,carbs_g,fat_g,grams_per_unit,unit_portion,grams_per_ml,volume_portion,substitutes
+chicken breast,171077,"Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw",poultry,,120,22.5,0,2.62,,,,,turkey breast;chicken thigh;tofu
+chicken thigh,173627,"Chicken, broilers or fryers, dark meat, thigh, meat only, raw",poultry,,121,19.66,0,4.12,,,,,chicken breast;turkey breast
+ground chicken,171116,"Chicken, ground, raw",poultry,,143,17.44,0.04,8.1,,,,,ground turkey;ground beef
+turkey breast,174515,"Turkey, retail parts, breast, meat only, raw",poultry,,114,23.34,0,2.33,,,,,chicken breast
+ground turkey,174493,"Turkey, ground, 85% lean, 15% fat, raw",poultry,,180,16.9,0,12.54,,,,,ground chicken;ground beef;lentils
+ground beef,171796,"Beef, ground, 85% lean meat / 15% fat, raw (Includes foods for USDA's Food Distribution Program)",meat,,215,18.59,0,15,,,,,ground turkey;ground lamb;lentils
+beef sirloin,174055,"Beef, top sirloin, steak, separable lean only, trimmed to 1/8"" fat, all grades, raw",meat,,131,22.09,0,4.08,,,,,pork loin;chicken breast
+pork loin,168230,"Pork, fresh, loin, whole, separable lean only, raw",meat,,143,21.43,0,5.66,,,,,chicken breast;beef sirloin
+pork chop,167829,"Pork, fresh, loin, center loin (chops), bone-in, separable lean only, raw",meat,,127,21.99,0,3.71,178,"chop without refuse (Yield from 1 raw chop, with refuse, weighing 259g)",,,pork loin;chicken breast
+bacon,168277,"Pork, cured, bacon, unprepared",meat,,393,13.66,0,37.13,28,slice raw,,,ham
+ham,173864,"Ham, sliced, regular (approximately 11% fat)",meat,,164,16.6,3.63,8.8,28,slice,,,bacon;turkey breast
+ground lamb,174370,"Lamb, ground, raw",meat,,282,16.56,0,23.41,,,,,ground beef
+salmon,175167,"Fish, salmon, Atlantic, farmed, raw",fish,fish,208,20.42,0,13.42,,,,,cod;tilapia;tuna steak
+tuna steak,175159,"Fish, tuna, fresh, yellowfin, raw",fish,fish,109,24.4,0,0.49,,,,,salmon
+canned tuna,173709,"Fish, tuna, light, canned in water, drained solids (Includes foods for USDA's Food Distribution Program)",fish,fish,86,19.44,0,0.96,165,can,0.6509,"cup, solid or chunks",chicken breast;chickpeas
+cod,171955,"Fish, cod, Atlantic, raw",fish,fish,82,17.81,0,0.67,231,fillet,,,tilapia;salmon
+tilapia,175176,"Fish, tilapia, raw",fish,fish,96,20.08,0,1.7,116,fillet,,,cod;salmon
+shrimp,175179,"Crustaceans, shrimp, raw",shellfish,shellfish,85,20.1,0,0.51,,,,,chicken breast;tofu
+egg,171287,"Egg, whole, raw, fresh",egg,egg,143,12.56,0.72,9.51,50,large,,,
+egg white,172183,"Egg, white, raw, fresh",egg,egg,52,10.9,0.73,0.17,33,large,1.027,cup,
+milk,171265,"Milk, whole, 3.25% milkfat, with added vitamin D",dairy,milk,61,3.15,4.8,3.25,,,1.031,cup,soy milk;almond milk;skim milk
+skim milk,171269,"Milk, nonfat, fluid, with added vitamin A and vitamin D (fat free or skim)",dairy,milk,34,3.37,4.96,0.08,,,1.036,cup,milk;soy milk
+soy milk,172446,"Soymilk, original and vanilla, unfortified",plant-milk,soy,54,3.27,6.28,1.75,,,1.027,cup,almond milk;milk
+almond milk,174832,"Beverages, almond milk, unsweetened, shelf stable",plant-milk,tree-nut,15,0.4,1.31,0.96,,,1.107,cup,soy milk;milk
+greek yogurt,170894,"Yogurt, Greek, plain, nonfat (Includes foods for USDA's Food Distribution Program)",dairy,milk,59,10.19,3.6,0.39,,,,,plain yogurt;sour cream
+plain yogurt,171284,"Yogurt, plain, whole milk",dairy,milk,61,3.47,4.66,3.25,,,1.036,cup (8 fl oz),greek yogurt
+cheddar cheese,173414,"Cheese, cheddar (Includes foods for USDA's Food Distribution Program)",dairy,milk,403,22.87,3.37,33.31,28,slice (1 oz),0.5579,"cup, diced",mozzarella
+mozzarella,170847,"Cheese, mozzarella, part skim milk",dairy,milk,254,24.26,2.77,15.92,,,,,cheddar cheese
+parmesan,171247,"Cheese, parmesan, grated",dairy,milk,420,28.42,13.91,27.84,,,0.4227,cup,feta
+feta,173420,"Cheese, feta",dairy,milk,265,14.21,3.88,21.49,,,0.634,"cup, crumbled",parmesan
+cottage cheese,172182,"Cheese, cottage, lowfat, 2% milkfat",dairy,milk,81,10.45,4.76,2.27,,,0.9552,cup (not packed),greek yogurt;cream cheese
+cream cheese,173418,"Cheese, cream",dairy,milk,350,6.15,5.52,34.44,,,0.9806,tbsp,cottage cheese
+butter,173410,"Butter, salted",dairy,milk,717,0.85,0.06,81.11,5,"pat (1"" sq, 1/3"" high)",0.9603,tbsp,olive oil;coconut oil
+heavy cream,170859,"Cream, fluid, heavy whipping",dairy,milk,340,2.84,2.84,36.08,,,0.5072,"cup, whipped",coconut milk;milk
+sour cream,171257,"Cream, sour, cultured",dairy,milk,198,2.44,4.63,19.35,,,0.9722,cup,greek yogurt
+white rice,168877,"Rice, white, long-grain, regular, raw, enriched",grain,,365,7.13,79.95,0.66,,,0.7819,cup,brown rice;quinoa;couscous
+brown rice,169703,"Rice, brown, long-grain, raw (Includes foods for USDA's Food Distribution Program)",grain,,367,7.54,76.25,3.2,,,0.7819,cup,white rice;quinoa
+quinoa,168874,"Quinoa, uncooked",grain,,368,14.12,64.16,6.07,,,0.7185,cup,white rice;brown rice
+rolled oats,173904,"Cereals, oats, regular and quick, not fortified, dry",grain,gluten,379,13.15,67.7,6.52,,,0.3424,cup,quinoa
+spaghetti,169736,"Pasta, dry, enriched",grain,gluten,371,13.04,74.67,1.51,,,0.3846,cup spaghetti,whole wheat pasta;white rice
+whole wheat pasta,169738,"Pasta, whole-wheat, dry (Includes foods for USDA's Food Distribution Program)",grain,gluten,352,13.87,73.37,2.93,,,0.3846,cup spaghetti,spaghetti
+white bread,174924,"Bread, white, commercially prepared (includes soft bread crumbs)",grain,gluten,266,8.85,49.42,3.33,29,slice,,,whole wheat bread
+whole wheat bread,172688,"Bread, whole-wheat, commercially prepared",grain,gluten,252,12.45,42.71,3.5,32,slice,,,white bread
+flour,168894,"Wheat flour, white, all-purpose, enriched, bleached",grain,gluten,364,10.33,76.31,0.98,,,0.5283,cup,whole wheat flour
+whole wheat flour,168893,"Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",grain,gluten,340,13.21,71.97,2.5,,,0.5072,cup,flour
+flour tortilla,167535,"Tortillas, ready-to-bake or -fry, flour, shelf stable",grain,gluten,297,8.01,49.27,7.58,49,tortilla,,,corn tortilla
+corn tortilla,175036,"Tortillas, ready-to-bake or -fry, corn",grain,,218,5.7,44.64,2.85,24,tortilla,,,flour tortilla
+couscous,169699,"Couscous, dry",grain,gluten,376,12.76,77.43,0.64,,,0.7312,cup,white rice;quinoa
+breadcrumbs,174928,"Bread, crumbs, dry, grated, plain",grain,gluten,395,13.35,71.98,5.3,,,0.4565,cup,rolled oats
+black beans,175238,"Beans, black, mature seeds, canned, low sodium",legume,,91,6.03,16.55,0.29,,,1.014,cup,kidney beans;chickpeas
+kidney beans,174285,"Beans, kidney, red, mature seeds, canned, drained solids",legume,,124,7.98,21.49,1.05,266,can drained solids,,,black beans;chickpeas
+chickpeas,173800,"Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, drained solids",legume,,139,7.05,22.53,2.77,253,can drained,,,black beans;kidney beans
+lentils,172420,"Lentils, raw",legume,,352,24.63,63.35,1.06,,,0.8115,cup,black beans;chickpeas
+tofu,172475,"Tofu, raw, firm, prepared with calcium sulfate",legume,soy,144,17.27,2.78,8.72,,,1.065,cup,tempeh;chicken breast
+tempeh,174272,Tempeh,legume,soy,192,20.29,7.64,10.8,,,0.7016,cup,tofu
+edamame,168410,"Edamame, frozen, unprepared",legume,soy,109,11.22,7.61,4.73,,,0.4988,cup,peas
+peanut butter,172470,"Peanut butter, smooth style, without salt",legume,peanut,598,22.21,22.31,51.36,,,1.082,tbsp,tahini
+hummus,174289,"Hummus, commercial",legume,sesame,237,7.78,15,17.82,,,1.014,tbsp,
+almonds,170567,"Nuts, almonds",nut,tree-nut,579,21.15,21.55,49.93,,,0.6044,"cup, whole",sunflower seeds;walnuts
+walnuts,170187,"Nuts, walnuts, english",nut,tree-nut,654,15.23,13.71,65.21,,,0.4945,"cup, chopped",almonds;sunflower seeds
+cashews,170162,"Nuts, cashew nuts, raw",nut,tree-nut,553,18.22,30.19,43.85,,,,,almonds
+peanuts,172430,"Peanuts, all types, raw",legume,peanut,567,25.8,16.13,49.24,,,0.6171,cup,sunflower seeds
+chia seeds,170554,"Seeds, chia seeds, dried",seed,,486,16.54,42.12,30.74,,,,,flaxseed
+flaxseed,169414,"Seeds, flaxseed",seed,,534,18.29,28.88,42.16,,,0.6966,"tbsp, whole",chia seeds
+sunflower seeds,170562,"Seeds, sunflower seed kernels, dried",seed,,584,20.78,20,51.46,,,0.1944,"cup, with hulls, edible yield",almonds
+sesame seeds,170150,"Seeds, sesame seeds, whole, dried",seed,sesame,573,17.73,23.45,49.67,,,0.6087,tbsp,
+tahini,170189,"Seeds, sesame butter, tahini, from roasted and toasted kernels (most common type)",seed,sesame,595,17,21.19,53.76,,,1.014,tbsp,peanut butter
+spinach,168462,"Spinach, raw",vegetable,,23,2.86,3.63,0.39,,,0.1268,cup,kale
+kale,168421,"Kale, raw",vegetable,,35,2.92,4.42,1.49,,,0.08876,cup,spinach
+romaine lettuce,169247,"Lettuce, cos or romaine, raw",vegetable,,17,1.23,3.29,0.3,6,leaf inner,0.1987,cup shredded,spinach
+broccoli,170379,"Broccoli, raw",vegetable,,34,2.82,6.64,0.37,,,0.3846,cup chopped,cauliflower;green beans
+cauliflower,169986,"Cauliflower, raw",vegetable,,25,1.92,4.97,0.28,,,0.4523,"cup chopped (1/2"" pieces)",broccoli
+carrot,170393,"Carrots, raw",vegetable,,41,0.93,9.58,0.24,61,medium,0.541,cup chopped,
+onion,170000,"Onions, raw",vegetable,,40,1.1,9.34,0.1,110,"medium (2-1/2"" dia)",0.6763,"cup, chopped",
+green onion,170005,"Onions, spring or scallions (includes tops and bulb), raw",vegetable,,32,1.83,7.34,0.19,15,"medium (4-1/8"" long)",0.4227,"cup, chopped",onion
+garlic,169230,"Garlic, raw",vegetable,,149,6.36,33.06,0.5,3,clove,0.5681,tsp,garlic powder
+tomato,170457,"Tomatoes, red, ripe, raw, year round average",vegetable,,18,0.88,3.89,0.2,123,"medium whole (2-3/5"" dia)",0.7608,"cup, chopped or sliced",canned tomatoes
+canned tomatoes,170051,"Tomatoes, red, ripe, canned, packed in tomato juice",vegetable,,16,0.79,3.47,0.25,,,1.014,cup,tomato
+tomato paste,170459,"Tomato products, canned, paste, without salt added (Includes foods for USDA's Food Distribution Program)",vegetable,,82,4.32,18.91,0.47,,,1.082,tbsp,tomato sauce
+tomato sauce,170054,"Tomato products, canned, sauce",vegetable,,24,1.2,5.31,0.3,,,1.036,cup,canned tomatoes
+potato,170026,"Potatoes, flesh and skin, raw",vegetable,,77,2.05,17.49,0.09,213,"Potato medium (2-1/4"" to 3-1/4"" dia)",0.634,"cup, diced",sweet potato
+sweet potato,168482,"Sweet potato, raw, unprepared (Includes foods for USDA's Food Distribution Program)",vegetable,,86,1.57,20.12,0.05,130,"sweetpotato, 5"" long",0.5622,"cup, cubes",potato
+red bell pepper,170108,"Peppers, sweet, red, raw",vegetable,,26,0.99,6.03,0.3,119,"medium (approx 2-3/4"" long, 2-1/2 dia.)",0.6298,"cup, chopped",green bell pepper
+green bell pepper,170427,"Peppers, sweet, green, raw",vegetable,,20,0.86,4.64,0.17,119,"medium (approx 2-3/4"" long, 2-1/2"" dia)",0.6298,"cup, chopped",red bell pepper
+jalapeno,168576,"Peppers, jalapeno, raw",vegetable,,29,0.91,6.5,0.37,14,pepper,0.3804,"cup, sliced",
+cucumber,168409,"Cucumber, with peel, raw",vegetable,,15,0.65,3.63,0.11,301,"cucumber (8-1/4"")",0.4396,cup slices,zucchini
+zucchini,169291,"Squash, summer, zucchini, includes skin, raw",vegetable,,17,1.21,3.11,0.32,196,medium,0.5241,"cup, chopped",eggplant;cucumber
+eggplant,169228,"Eggplant, raw",vegetable,,25,0.98,5.88,0.18,458,"eggplant, peeled (yield from 1-1/4 lb)",0.3466,"cup, cubes",zucchini
+mushrooms,169251,"Mushrooms, white, raw",vegetable,,22,3.09,3.26,0.34,18,medium,0.2959,"cup, pieces or slices",
+cabbage,169975,"Cabbage, raw",vegetable,,25,1.28,5.8,0.1,,,0.3762,"cup, chopped",kale
+green beans,169961,"Beans, snap, green, raw",vegetable,,31,1.83,6.97,0.22,,,0.4227,"cup 1/2"" pieces",broccoli;asparagus
+asparagus,168389,"Asparagus, raw",vegetable,,20,2.2,3.88,0.12,12,"spear, small (5"" long or less)",0.5664,cup,green beans
+peas,170016,"Peas, green, frozen, unprepared (Includes foods for USDA's Food Distribution Program)",vegetable,,77,5.22,13.62,0.4,,,0.5664,cup,edamame;green beans
+corn,169998,"Corn, sweet, yellow, raw",vegetable,,86,3.27,18.7,1.35,143,"ear, large (7-3/4"" to 9"" long) yields",0.6129,cup,peas
+celery,169988,"Celery, raw",vegetable,,14,0.69,2.97,0.17,64,"stalk, large (11""-12"" long)",0.4269,cup chopped,
+avocado,171705,"Avocados, raw, all commercial varieties",fruit,,160,2,8.53,14.66,201,"avocado, NS as to Florida or California",0.634,"cup, cubes",
+ginger,169231,"Ginger root, raw",vegetable,,80,1.82,17.77,0.75,,,0.4058,tsp,
+parsley,170416,"Parsley, fresh",herb,,36,2.97,6.33,0.79,,,0.2536,cup chopped,cilantro
+cilantro,169997,"Coriander (cilantro) leaves, raw",herb,,23,2.13,3.67,0.52,,,0.06763,cup,parsley
+basil,172232,"Basil, fresh",herb,,23,3.15,2.65,0.64,,,0.1792,"tbsp, chopped",parsley
+frozen mixed vegetables,170471,"Vegetables, mixed, frozen, unprepared",vegetable,,72,3.33,13.47,0.52,,,,,peas;green beans
+apple,171688,"Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)",fruit,,52,0.26,13.81,0.17,182,"medium (3"" dia)",0.5283,"cup, quartered or chopped",banana
+banana,173944,"Bananas, raw",fruit,,89,1.09,22.84,0.33,118,"medium (7"" to 7-7/8"" long)",0.634,"cup, sliced",apple
+orange,169097,"Oranges, raw, all commercial varieties",fruit,,47,0.94,11.75,0.12,131,"fruit (2-5/8"" dia)",0.7608,"cup, sections",
+lemon,167746,"Lemons, raw, without peel",fruit,,29,1.1,9.32,0.3,58,"fruit (2-1/8"" dia)",,,lime juice
+strawberries,167762,"Strawberries, raw",fruit,,32,0.67,7.68,0.3,12,"medium (1-1/4"" dia)",0.6425,"cup, halves",blueberries
+blueberries,171711,"Blueberries, raw",fruit,,57,0.74,14.49,0.33,,,0.6256,cup,strawberries
+grapes,174683,"Grapes, red or green (European type, such as Thompson seedless), raw",fruit,,69,0.72,18.1,0.16,4.9,grapes,0.6382,cup,
+mango,169910,"Mangos, raw",fruit,,60,0.82,14.98,0.38,336,fruit without refuse,0.6974,cup pieces,pineapple
+pineapple,169124,"Pineapple, raw, all varieties",fruit,,50,0.54,13.12,0.12,,,0.6974,"cup, chunks",mango
+raisins,168165,"Raisins, dark, seedless (Includes foods for USDA's Food Distribution Program)",fruit,,299,3.3,79.32,0.25,,,0.6974,"cup, packed",
+lemon juice,167747,"Lemon juice, raw",fruit,,22,0.35,6.9,0.24,,,1.031,cup,lime juice
+lime juice,168156,"Lime juice, raw",fruit,,25,0.42,8.42,0.07,,,1.023,cup,lemon juice
+orange juice,169098,"Orange juice, raw (Includes foods for USDA's Food Distribution Program)",fruit,,45,0.7,10.4,0.2,,,1.048,cup,
+olive oil,171413,"Oil, olive, salad or cooking",oil,,884,0,0,100,,,0.913,cup,vegetable oil;butter
+vegetable oil,172336,"Oil, canola",oil,,884,0,0,100,,,0.9214,cup,olive oil
+sesame oil,171016,"Oil, sesame, salad or cooking",oil,sesame,884,0,0,100,,,0.9214,cup,olive oil
+coconut oil,171412,"Oil, coconut",oil,,892,0,0,99.06,,,0.9214,cup,butter;olive oil
+soy sauce,174277,Soy sauce made from soy and wheat (shoyu),condiment,soy;gluten,53,8.14,4.93,0.57,,,1.082,tbsp,
+honey,169640,Honey,bee-product,,304,0.3,82.4,0,,,1.42,tbsp,maple syrup;sugar
+maple syrup,169661,"Syrups, maple",sweetener,,260,0.04,67.04,0.06,,,1.353,tbsp,honey;sugar
+sugar,169655,"Sugars, granulated",sweetener,,387,0,99.98,0,,,0.8454,cup,brown sugar;honey;maple syrup
+brown sugar,168833,"Sugars, brown",sweetener,,380,0.12,98.09,0,,,0.9299,cup packed,sugar
+salt,173468,"Salt, table",spice,,0,0,0,0,,,1.217,tsp,
+black pepper,170931,"Spices, pepper, black",spice,,251,10.39,63.95,3.26,,,0.4666,"tsp, ground",
+cumin,170923,"Spices, cumin seed",spice,,375,17.81,44.24,22.27,,,0.4261,"tsp, whole",
+paprika,171329,"Spices, paprika",spice,,282,14.14,53.99,12.89,,,0.4666,tsp,chili powder
+chili powder,171319,"Spices, chili powder",spice,,282,13.46,49.7,14.28,,,0.5478,tsp,paprika
+cinnamon,171320,"Spices, cinnamon, ground",spice,,247,3.99,80.59,1.24,,,0.5275,tsp,
+oregano,171328,"Spices, oregano, dried",spice,,265,9,68.92,4.28,,,0.2029,"tsp, leaves",basil
+garlic powder,171325,"Spices, garlic powder",spice,,331,16.55,72.73,0.73,,,0.6289,tsp,garlic
+turmeric,172231,"Spices, turmeric, ground",spice,,312,9.68,67.14,3.25,,,0.6087,tsp,curry powder
+curry powder,170924,"Spices, curry powder",spice,,325,14.29,55.83,14.01,,,0.4058,tsp,turmeric
+mustard,172234,"Mustard, prepared, yellow",condiment,,60,3.74,5.83,3.34,,,1.014,tsp or 1 packet,
+ketchup,168556,Catsup,condiment,,101,1.04,27.4,0.1,,,1.15,tbsp,tomato paste
+mayonnaise,171009,"Salad dressing, mayonnaise, regular",condiment,egg,680,0.96,0.57,74.85,,,0.9333,tbsp,greek yogurt
+apple cider vinegar,173469,"Vinegar, cider",condiment,,21,0,0.93,0,,,1.008,tbsp,lemon juice;balsamic vinegar
+balsamic vinegar,172241,"Vinegar, balsamic",condiment,,88,0.49,17.03,0,,,1.082,tbsp,apple cider vinegar
+salsa,174524,"Sauce, salsa, ready-to-serve",condiment,,29,1.52,6.64,0.17,,,1.217,tbsp,canned tomatoes
+hot sauce,174527,"Sauce, ready-to-serve, pepper or hot",condiment,,11,0.51,1.75,0.37,,,0.9536,tsp,
+chicken broth,174536,"Soup, chicken broth, ready-to-serve",poultry,,6,0.64,0.44,0.21,,,1.052,cup,vegetable broth
+vegetable broth,171583,"Soup, vegetable broth, ready to serve",broth,,5,0.24,0.93,0.07,,,0.9341,cup,chicken broth
+coconut milk,170173,"Nuts, coconut milk, canned (liquid expressed from grated meat and water)",plant-milk,,197,2.02,2.81,21.33,,,0.9552,cup,heavy cream
+baking powder,172803,"Leavening agents, baking powder, double-acting, sodium aluminum sulfate",baking,,53,0,27.7,0,,,0.9333,tsp,
+cocoa powder,169593,"Cocoa, dry powder, unsweetened",baking,,228,19.6,57.9,13.7,,,0.3652,tbsp,
+vanilla extract,173471,Vanilla extract,baking,,288,0.06,12.65,0.06,,,0.8521,tsp,

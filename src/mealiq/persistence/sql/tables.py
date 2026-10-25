@@ -30,6 +30,9 @@ class IngredientRow(Base):
     protein_g: Mapped[float | None] = mapped_column(Float)
     carbs_g: Mapped[float | None] = mapped_column(Float)
     fat_g: Mapped[float | None] = mapped_column(Float)
+    grams_per_unit: Mapped[float | None] = mapped_column(Float)
+    grams_per_ml: Mapped[float | None] = mapped_column(Float)
+    fdc_id: Mapped[int | None] = mapped_column(Integer)
 
 
 class IngredientSubstituteRow(Base):
