@@ -6,7 +6,7 @@ from mealiq.config import Settings
 
 @pytest.fixture(autouse=True)
 def _isolate_env(monkeypatch):
-    for name in ("DATABASE_URL", "LLM_API_KEY", "LLM_MODEL", "LLM_TIMEOUT_SECONDS", "MAX_TOOL_STEPS"):
+    for name in ("DATABASE_URL", "LLM_API_KEY", "LLM_MODEL", "LLM_TIMEOUT_SECONDS", "LLM_MAX_RETRIES", "MAX_TOOL_STEPS"):
         monkeypatch.delenv(name, raising=False)
 
 

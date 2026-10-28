@@ -31,6 +31,8 @@ class Settings(BaseSettings):
         default=None, description="Pinned model identifier for structured output."
     )
     llm_timeout_seconds: float = Field(default=60.0, gt=0)
+    # Transient-failure retries done by the provider SDK (timeouts, rate limits, 5xx).
+    llm_max_retries: int = Field(default=2, ge=0, le=5)
 
     # Upper bound on tool calls in one agent run (D07).
     max_tool_steps: int = Field(default=6, ge=1, le=20)
