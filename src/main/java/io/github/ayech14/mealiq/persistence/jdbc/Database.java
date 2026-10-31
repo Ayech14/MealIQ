@@ -91,7 +91,7 @@ public final class Database {
                 .toList();
     }
 
-    private static String readSchemaScript() {
+    static String readSchemaScript() {
         try (InputStream in = Database.class.getResourceAsStream("/db/schema.sql")) {
             if (in == null) {
                 throw new PersistenceException("db/schema.sql is missing from the classpath");
