@@ -5,21 +5,22 @@ docs/dev/
 .DS_Store
 .idea/
 .vscode/
+*.iml
 
-# Future implementation artifacts
+# Local secrets
 .env
 .env.*
 !.env.example
+config.local.json
+
+# Build output
+target/
+*.class
+*.log
+
+# Leftovers from the earlier Python implementation
+.venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.coverage
-htmlcov/
-node_modules/
-dist/
-build/
-*.sqlite3
-*.db
-config.local.json
-.venv/
 *.egg-info/
