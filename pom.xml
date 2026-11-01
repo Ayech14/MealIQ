@@ -23,6 +23,17 @@
             <version>42.7.14</version>
         </dependency>
         <dependency>
+            <groupId>com.openai</groupId>
+            <artifactId>openai-java</artifactId>
+            <version>4.95.0</version>
+        </dependency>
+        <!-- Same version the OpenAI SDK uses; declared because the adapter parses JSON with it directly. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.18.9</version>
+        </dependency>
+        <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>2.5.252</version>
