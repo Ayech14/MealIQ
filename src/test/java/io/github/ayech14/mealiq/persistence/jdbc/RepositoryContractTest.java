@@ -128,6 +128,12 @@ abstract class RepositoryContractTest {
         }
 
         @Test
+        void findAllIsOrderedByName() {
+            assertEquals(List.of("chicken breast", "egg", "rice", "tofu"),
+                    ingredients.findAll().stream().map(Ingredient::name).toList());
+        }
+
+        @Test
         void namesAreUnique() {
             assertThrows(PersistenceException.class, () -> ingredients.save(Ingredient.of("chicken breast", "poultry")));
         }

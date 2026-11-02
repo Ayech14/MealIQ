@@ -14,6 +14,9 @@ public interface IngredientRepository {
 
     List<Ingredient> findSubstitutes(Ingredient ingredient);
 
+    /** The whole catalogue, ordered by name. */
+    List<Ingredient> findAll();
+
     /** Inserts or updates a catalogue entry (used by the catalogue import). */
     void save(Ingredient ingredient);
 

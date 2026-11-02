@@ -90,6 +90,19 @@ class ProfileServiceTest {
     }
 
     @Test
+    void unknownAllergenIsRejectedBecauseItWouldMatchNothing() {
+        InvalidInputException error = assertThrows(InvalidInputException.class,
+                () -> service.updateProfile(validProfile().allergies(Set.of("peanuts", "milk"))));
+        assertTrue(error.errors().get("allergies").startsWith("unknown: peanuts;"), error.errors().toString());
+    }
+
+    @Test
+    void allergenSpellingIsNormalized() {
+        UserProfile saved = service.updateProfile(validProfile().allergies(Set.of("Tree Nut", "SESAME")));
+        assertEquals(Set.of("tree-nut", "sesame"), saved.allergies());
+    }
+
+    @Test
     void emptyTimeLimitsAreValid() {
         assertTrue(service.validate(validProfile().maxCookMinutes(Map.of())).isEmpty());
     }

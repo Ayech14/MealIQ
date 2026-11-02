@@ -10,6 +10,7 @@ import io.github.ayech14.mealiq.persistence.PantryRepository;
 import io.github.ayech14.mealiq.persistence.ProfileRepository;
 import io.github.ayech14.mealiq.persistence.catalogue.CatalogueLoader;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -18,15 +19,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * In-memory repository fakes for service tests (D08). Saved objects are copied, like a
+ * In-memory repository fakes for service, facade and CLI tests (D08). Saved objects are copied, like a
  * database round trip, so a test cannot pass by mutating shared objects.
  */
-final class InMemoryRepositories {
+public final class InMemoryRepositories {
 
     private InMemoryRepositories() {
     }
 
-    static final class Profiles implements ProfileRepository {
+    public static final class Profiles implements ProfileRepository {
         final Map<UUID, UserProfile> rows = new HashMap<>();
 
         @Override
@@ -40,7 +41,7 @@ final class InMemoryRepositories {
         }
     }
 
-    static final class Pantries implements PantryRepository {
+    public static final class Pantries implements PantryRepository {
         final Map<UUID, Pantry> rows = new HashMap<>();
 
         @Override
@@ -62,11 +63,11 @@ final class InMemoryRepositories {
     }
 
     /** Read-only view of the packaged USDA catalogue. */
-    static final class Catalogue implements IngredientRepository {
+    public static final class Catalogue implements IngredientRepository {
         private final Map<String, Ingredient> byName = new HashMap<>();
         private final Map<UUID, Ingredient> byId = new HashMap<>();
 
-        Catalogue() {
+        public Catalogue() {
             for (CatalogueLoader.Entry entry : CatalogueLoader.read()) {
                 byName.put(entry.ingredient().name(), entry.ingredient());
                 byId.put(entry.ingredient().id(), entry.ingredient());
@@ -89,6 +90,11 @@ final class InMemoryRepositories {
         }
 
         @Override
+        public List<Ingredient> findAll() {
+            return byName.values().stream().sorted(Comparator.comparing(Ingredient::name)).toList();
+        }
+
+        @Override
         public void save(Ingredient ingredient) {
             throw new UnsupportedOperationException("read-only catalogue");
         }
@@ -99,8 +105,8 @@ final class InMemoryRepositories {
         }
     }
 
-    static final class RecordingObserver implements PlanImpactObserver {
-        final List<PlanRelevantChange> events = new ArrayList<>();
+    public static final class RecordingObserver implements PlanImpactObserver {
+        public final List<PlanRelevantChange> events = new ArrayList<>();
 
         @Override
         public void onPlanRelevantChange(PlanRelevantChange event) {

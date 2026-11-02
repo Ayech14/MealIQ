@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.github.ayech14.mealiq.domain.DietRules;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import java.util.HashSet;
 import java.util.List;
@@ -30,6 +31,15 @@ class CatalogueLoaderTest {
             assertTrue(ingredient.nutrition().map(n -> n.complete()).orElse(false), ingredient.name());
         }
         assertEquals(entries.size(), names.size(), "names are unique");
+    }
+
+    @Test
+    void everyAllergenTagCanBeChosenAsAnAllergy() {
+        for (CatalogueLoader.Entry entry : CatalogueLoader.read()) {
+            for (String allergen : entry.ingredient().allergens()) {
+                assertTrue(DietRules.isKnownAllergen(allergen), entry.ingredient().name() + ": " + allergen);
+            }
+        }
     }
 
     @Test

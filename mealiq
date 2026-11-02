@@ -1,0 +1,6 @@
+#!/bin/sh
+# Runs the MealIQ command line from the project folder, e.g. ./mealiq --help
+set -e
+cd "$(dirname "$0")"
+./mvnw -q compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt
+exec java -cp "target/classes:$(cat target/classpath.txt)" io.github.ayech14.mealiq.presentation.cli.MealPlanningCLI "$@"

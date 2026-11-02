@@ -52,6 +52,22 @@ public final class JdbcIngredientRepository implements IngredientRepository {
     }
 
     @Override
+    public List<Ingredient> findAll() {
+        return database.read(connection -> {
+            JdbcLoader loader = new JdbcLoader(connection);
+            List<Ingredient> all = new ArrayList<>();
+            try (PreparedStatement statement = Sql.prepare(connection,
+                    "SELECT " + JdbcLoader.INGREDIENT_COLUMNS + " FROM ingredients ORDER BY name");
+                 ResultSet rows = statement.executeQuery()) {
+                while (rows.next()) {
+                    all.add(loader.ingredient(rows));
+                }
+            }
+            return all;
+        });
+    }
+
+    @Override
     public void save(Ingredient ingredient) {
         NutritionSummary n = ingredient.nutritionPer100g();
         Object[] values = {

@@ -118,6 +118,13 @@ public class ProfileService implements PlanRelevantChangePublisher {
             errors.put("dietaryRestrictions", "unsupported: " + String.join(", ", unsupported)
                     + "; supported: " + String.join(", ", new TreeSet<>(DietRules.supportedRestrictions())));
         }
+        Set<String> unknownAllergens = profile.allergies().stream()
+                .filter(a -> !DietRules.isKnownAllergen(a)).collect(Collectors.toCollection(TreeSet::new));
+        if (!unknownAllergens.isEmpty()) {
+            // An allergy that matches no catalogue tag would never exclude anything (D04).
+            errors.put("allergies", "unknown: " + String.join(", ", unknownAllergens)
+                    + "; known: " + String.join(", ", DietRules.knownAllergens()));
+        }
         Set<String> both = normalized(profile.preferredFoods());
         both.retainAll(normalized(profile.dislikedFoods()));
         if (!both.isEmpty()) {

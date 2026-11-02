@@ -29,6 +29,10 @@ public final class DietRules {
             "dairy-free", new Rule(Set.of("dairy"), Set.of("milk")),
             "nut-free", new Rule(Set.of(), Set.of("tree-nut", "peanut")));
 
+    /** Every allergen tag used in the ingredient catalogue; an allergy must be one of them. */
+    private static final Set<String> ALLERGENS = Set.of(
+            "egg", "fish", "gluten", "milk", "peanut", "sesame", "shellfish", "soy", "tree-nut");
+
     private DietRules() {
     }
 
@@ -43,6 +47,14 @@ public final class DietRules {
 
     public static Rule ruleFor(String restriction) {
         return RULES.get(normalizeTag(restriction));
+    }
+
+    public static boolean isKnownAllergen(String allergen) {
+        return ALLERGENS.contains(normalizeTag(allergen));
+    }
+
+    public static Set<String> knownAllergens() {
+        return new TreeSet<>(ALLERGENS);
     }
 
     public static Set<String> supportedRestrictions() {
