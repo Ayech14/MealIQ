@@ -28,8 +28,8 @@ import picocli.CommandLine.Spec;
 import picocli.CommandLine.Model.CommandSpec;
 
 /**
- * {@code mealiq plan generate|show|modify|substitute|cheaper|undo|history}: weekly plans (F05,
- * F06) and confirmed changes with undo (F08, F09, F10).
+ * {@code mealiq plan generate|show|modify|substitute|cheaper|adapt|undo|history}: weekly plans
+ * (F05, F06) and confirmed changes with undo (F08 to F11, F13).
  */
 @Command(name = "plan", description = "Generate or show your meal plan.", mixinStandardHelpOptions = true)
 final class PlanCommand implements Runnable {
@@ -121,6 +121,13 @@ final class PlanCommand implements Runnable {
     int cheaper(@Option(names = {"-y", "--yes"}, description = "Apply without asking") boolean yes,
                 @Option(names = "--show-steps", description = "Also print the agent's tool calls") boolean showSteps) {
         return confirmFlow(cli.facade().suggestCheaperPlan(cli.profileId()), yes, showSteps);
+    }
+
+    @Command(name = "adapt", description = {
+        "Fix the meals that no longer fit after a pantry or profile change; you see the change first."})
+    int adapt(@Option(names = {"-y", "--yes"}, description = "Apply without asking") boolean yes,
+              @Option(names = "--show-steps", description = "Also print the agent's tool calls") boolean showSteps) {
+        return confirmFlow(cli.facade().adaptPlan(cli.profileId()), yes, showSteps);
     }
 
     @Command(name = "undo", description = "Undo the last applied change.")
@@ -224,6 +231,7 @@ final class PlanCommand implements Runnable {
         }
         print(plan.get());
         printDisclaimer();
+        cli.printImpactNotice();
         return MealPlanningCLI.OK;
     }
 

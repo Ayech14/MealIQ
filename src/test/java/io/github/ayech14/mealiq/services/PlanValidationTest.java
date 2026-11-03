@@ -294,8 +294,7 @@ class PlanValidationTest {
     class Storage {
 
         final InMemoryRepositories.MealPlans repository = new InMemoryRepositories.MealPlans();
-        final MealPlanService service = new MealPlanService(repository, recipes,
-                new InMemoryRepositories.PlanChanges());
+        final MealPlanService service = TestFacades.planService(repository, recipes);
 
         @Test
         void newPlanIsActiveAndArchivesThePreviousOne() {

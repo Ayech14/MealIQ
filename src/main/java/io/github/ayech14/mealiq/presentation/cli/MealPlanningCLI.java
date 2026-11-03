@@ -125,6 +125,15 @@ public final class MealPlanningCLI implements Runnable {
         }
     }
 
+    /** Lists what recent changes broke in the active plan, if anything, and how to fix it. */
+    void printImpactNotice() {
+        facade.pendingImpact(profileId()).ifPresent(impact -> {
+            out().println("This affects your meal plan:");
+            impact.conflicts().forEach(c -> out().println("  " + c));
+            out().println("Adapt the plan with: mealiq plan adapt");
+        });
+    }
+
     MealPlanningFacade facade() {
         return facade;
     }

@@ -47,6 +47,7 @@ class MealPlanningAgentTest {
         InMemoryRepositories.Catalogue catalogue = new InMemoryRepositories.Catalogue();
         NutritionService nutrition = new NutritionService();
         GroceryService groceries = new GroceryService(new InMemoryRepositories.GroceryLists(),
+                new InMemoryRepositories.MealPlans(),
                 new PantryService(new InMemoryRepositories.Pantries(), catalogue), (i, q) -> Optional.empty());
         BudgetService budget = new BudgetService((i, q) -> Optional.empty());
         agent = AgentAssembly.agent(llm, new InMemoryRepositories.Recipes(catalogue), catalogue, nutrition, budget,

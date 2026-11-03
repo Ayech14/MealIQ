@@ -76,7 +76,7 @@ class ContractsTest {
     @Test
     void emptyImpactAndResponseBuilder() {
         assertTrue(PlanImpact.NONE.isEmpty());
-        assertFalse(new PlanImpact(List.of(), List.of(), List.of("budget exceeded")).isEmpty());
+        assertFalse(new PlanImpact(List.of(), List.of(), List.of("budget exceeded"), List.of()).isEmpty());
         AgentResponse response = AgentResponse.builder(ResponseStatus.CONFLICT).conflicts(List.of("over budget"))
                 .build();
         assertEquals(ResponseStatus.CONFLICT, response.status());

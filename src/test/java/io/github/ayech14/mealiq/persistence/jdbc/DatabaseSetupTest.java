@@ -41,7 +41,7 @@ class DatabaseSetupTest {
         DatabaseSetup.Result result = DatabaseSetup.run(database);
 
         assertEquals(DatabaseSetup.schemaTables(), result.tablesCreated());
-        assertEquals(12, result.tablesCreated().size());
+        assertEquals(13, result.tablesCreated().size());
         assertEquals(CatalogueLoader.read().size(), result.ingredientsLoaded());
         assertEquals(result.ingredientsLoaded(), count(database, "ingredients"));
         assertEquals(30, result.recipesLoaded());

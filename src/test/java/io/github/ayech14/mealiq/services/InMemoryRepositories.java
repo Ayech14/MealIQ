@@ -3,6 +3,7 @@ package io.github.ayech14.mealiq.services;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.domain.AppliedChange;
 import io.github.ayech14.mealiq.domain.GroceryList;
+import io.github.ayech14.mealiq.domain.ImpactCause;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.Pantry;
@@ -17,6 +18,7 @@ import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.persistence.MealPlanRepository;
 import io.github.ayech14.mealiq.persistence.PantryRepository;
 import io.github.ayech14.mealiq.persistence.PlanChangeRepository;
+import io.github.ayech14.mealiq.persistence.PlanImpactRepository;
 import io.github.ayech14.mealiq.persistence.ProfileRepository;
 import io.github.ayech14.mealiq.persistence.RecipeRepository;
 import io.github.ayech14.mealiq.persistence.catalogue.CatalogueLoader;
@@ -209,6 +211,24 @@ public final class InMemoryRepositories {
 
         @Override
         public List<AppliedChange> findAll(UUID planId) {
+            return List.copyOf(byPlan.getOrDefault(planId, List.of()));
+        }
+    }
+
+    /** Causes of pending plan impacts. */
+    public static final class PlanImpacts implements PlanImpactRepository {
+        public final Map<UUID, List<ImpactCause>> byPlan = new HashMap<>();
+
+        @Override
+        public void record(UUID planId, ImpactCause cause) {
+            List<ImpactCause> causes = byPlan.computeIfAbsent(planId, id -> new ArrayList<>());
+            if (!causes.contains(cause)) {
+                causes.add(cause);
+            }
+        }
+
+        @Override
+        public List<ImpactCause> findAll(UUID planId) {
             return List.copyOf(byPlan.getOrDefault(planId, List.of()));
         }
     }

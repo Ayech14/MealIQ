@@ -36,7 +36,8 @@ class GroceryServiceTest {
     final Pantry pantry = Pantry.emptyFor(profileId);
     final InMemoryRepositories.Pantries pantries = new InMemoryRepositories.Pantries();
     final InMemoryRepositories.GroceryLists lists = new InMemoryRepositories.GroceryLists();
-    final GroceryService service = new GroceryService(lists, new PantryService(pantries, catalogue),
+    final GroceryService service = new GroceryService(lists, new InMemoryRepositories.MealPlans(),
+            new PantryService(pantries, catalogue),
             TestFacades.FLAT_PRICES);
 
     /** Serves 2: 300 g rice, 2 eggs, optional salt. */
@@ -130,7 +131,8 @@ class GroceryServiceTest {
 
     @Test
     void unknownPricesMakeThePartialListHonest() {
-        GroceryService noPrices = new GroceryService(lists, new PantryService(pantries, catalogue),
+        GroceryService noPrices = new GroceryService(lists, new InMemoryRepositories.MealPlans(),
+                new PantryService(pantries, catalogue),
                 (i, q) -> Optional.empty());
         GroceryList list = noPrices.optimizeList(
                 noPrices.generateList(plan(new PlannedMeal(START, MealType.DINNER, riceBowl, 2)), pantry));

@@ -432,4 +432,38 @@ class MealPlanningCLITest {
         assertEquals(1, run("plan", "modify", "anything"));
         assertTrue(err.toString().contains("No meal plan yet."), err.toString());
     }
+
+    @Test
+    void impactNoticesAndPlanAdapt() {
+        run("profile", "set");
+        activePlan("Overnight oats", "Lentil soup", "Sheet-pan salmon with sweet potato");
+
+        assertEquals(0, run("profile", "set", "--allergies", "fish"));
+        String saved = out.toString();
+        assertTrue(saved.contains("This affects your meal plan:\n  Day 1 (2026-11-02) dinner: Sheet-pan salmon with "
+                + "sweet potato contains salmon (allergy: fish).\nAdapt the plan with: mealiq plan adapt"), saved);
+
+        assertEquals(0, run("plan", "show"));
+        assertTrue(out.toString().contains("Adapt the plan with: mealiq plan adapt"));
+
+        queueDinnerSwap("Black bean tacos");
+        assertEquals(0, run("plan", "adapt", "--yes"));
+        assertTrue(out.toString().contains("dinner: Sheet-pan salmon with sweet potato -> Black bean tacos"),
+                out.toString());
+        assertEquals(0, run("plan", "show"));
+        assertFalse(out.toString().contains("This affects your meal plan"), out.toString());
+
+        assertEquals(0, run("plan", "adapt"));
+        assertTrue(out.toString().contains("Nothing to adapt"));
+    }
+
+    @Test
+    void pantryChangesShowTheNotice() {
+        run("profile", "set");
+        run("pantry", "set", "rolled oats", "1", "kg");
+        activePlan("Overnight oats", "Lentil soup", "Shrimp tacos");
+        assertEquals(0, run("pantry", "remove", "rolled oats"));
+        assertTrue(out.toString().contains("Overnight oats uses rolled oats, which is no longer in your pantry."),
+                out.toString());
+    }
 }

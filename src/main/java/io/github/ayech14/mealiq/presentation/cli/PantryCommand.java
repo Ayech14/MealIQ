@@ -52,6 +52,7 @@ final class PantryCommand implements Runnable {
         PantryItem item = cli.facade().pantryItem(ingredient, amount, unit, expires);
         AgentResponse response = cli.facade().updatePantry(profileId, item);
         cli.out().println(response.rationale());
+        cli.printImpactNotice();
         return MealPlanningCLI.OK;
     }
 
@@ -59,6 +60,7 @@ final class PantryCommand implements Runnable {
     int remove(@Parameters(paramLabel = "INGREDIENT") String ingredient) {
         cli.facade().removePantryItem(cli.profileId(), ingredient);
         cli.out().println("Removed " + ingredient.strip() + " from the pantry.");
+        cli.printImpactNotice();
         return MealPlanningCLI.OK;
     }
 

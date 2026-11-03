@@ -8,9 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.domain.AppliedChange;
+import io.github.ayech14.mealiq.domain.ChangeEventType;
 import io.github.ayech14.mealiq.domain.ChangeType;
 import io.github.ayech14.mealiq.domain.GroceryItem;
 import io.github.ayech14.mealiq.domain.GroceryList;
+import io.github.ayech14.mealiq.domain.ImpactCause;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.IngredientRequirement;
 import io.github.ayech14.mealiq.domain.MealPlan;
@@ -305,6 +307,23 @@ abstract class RepositoryContractTest {
         }
     }
 
+
+    @Nested
+    class PlanImpacts {
+
+        @Test
+        void causesAreRecordedOnce() {
+            JdbcPlanImpactRepository impacts = new JdbcPlanImpactRepository(database);
+            MealPlan plan = new MealPlan(profile.id(), START, 1, List.of());
+            plans.save(plan);
+            ImpactCause eggGone = new ImpactCause(ChangeEventType.PANTRY_CHANGED, egg.id());
+            impacts.record(plan.id(), eggGone);
+            impacts.record(plan.id(), new ImpactCause(ChangeEventType.TIME_LIMIT_CHANGED, null));
+            impacts.record(plan.id(), eggGone);
+            assertEquals(List.of(eggGone, new ImpactCause(ChangeEventType.TIME_LIMIT_CHANGED, null)),
+                    impacts.findAll(plan.id()));
+        }
+    }
 
     @Nested
     class PlanChanges {

@@ -4,6 +4,7 @@ import io.github.ayech14.mealiq.agent.MealPlanningAgent;
 import io.github.ayech14.mealiq.config.AppConfig;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
 import io.github.ayech14.mealiq.contracts.PlanChange;
+import io.github.ayech14.mealiq.contracts.PlanImpact;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
@@ -21,6 +22,8 @@ import io.github.ayech14.mealiq.domain.PlanningMode;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.ResponseStatus;
 import io.github.ayech14.mealiq.domain.UserProfile;
+import io.github.ayech14.mealiq.events.GroceryListImpactObserver;
+import io.github.ayech14.mealiq.events.MealPlanImpactObserver;
 import io.github.ayech14.mealiq.integration.PriceDataSource;
 import io.github.ayech14.mealiq.integration.StatCanPriceDataSource;
 import io.github.ayech14.mealiq.llm.LLMClient;
@@ -34,6 +37,7 @@ import io.github.ayech14.mealiq.persistence.jdbc.JdbcIngredientRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcMealPlanRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcPantryRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcPlanChangeRepository;
+import io.github.ayech14.mealiq.persistence.jdbc.JdbcPlanImpactRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcProfileRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcRecipeRepository;
 import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
@@ -45,6 +49,7 @@ import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NotFoundException;
 import io.github.ayech14.mealiq.services.NutritionService;
 import io.github.ayech14.mealiq.services.PantryService;
+import io.github.ayech14.mealiq.services.PlanImpactAssessor;
 import io.github.ayech14.mealiq.services.ProfileService;
 import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.nio.charset.StandardCharsets;
@@ -66,7 +71,8 @@ import java.util.UUID;
  * <p>Operations are added as features are implemented; this version covers F01 (profile),
  * F02 (pantry), recipe browsing and agent recommendations (F03), weekly plans (F05),
  * nutrition analysis (F06), grocery lists with prices and budget checks (F07, F08, F12), and
- * confirmed plan changes with undo (F09, F10).
+ * confirmed plan changes with undo (F09, F10), and adaptation after pantry or profile
+ * changes (F11, F13).
  */
 public class MealPlanningFacade {
 
@@ -120,21 +126,39 @@ public class MealPlanningFacade {
         ConstraintValidator validator = new ConstraintValidator(nutrition, budget);
         PlanningStrategyFactory strategies = new DefaultPlanningStrategyFactory(nutrition, budget);
         Clock clock = Clock.systemDefaultZone();
-        ProfileService profiles = new ProfileService(new JdbcProfileRepository(database), ingredients);
-        PantryService pantry = new PantryService(new JdbcPantryRepository(database), ingredients, clock);
+        JdbcProfileRepository profileRows = new JdbcProfileRepository(database);
+        JdbcPantryRepository pantryRows = new JdbcPantryRepository(database);
+        JdbcMealPlanRepository planRows = new JdbcMealPlanRepository(database);
+        ProfileService profiles = new ProfileService(profileRows, ingredients);
+        PantryService pantry = new PantryService(pantryRows, ingredients, clock);
         LLMClient llm = config.llmConfigured() ? ProviderLLMAdapter.fromConfig(config)
                 : (prompt, schema, instructions) -> {
                     throw new LLMException(LLMException.Kind.NOT_CONFIGURED, "set LLM_API_KEY and LLM_MODEL in .env");
                 };
-        MealPlanService mealPlans = new MealPlanService(new JdbcMealPlanRepository(database), recipes,
-                new JdbcPlanChangeRepository(database));
-        GroceryService groceries = new GroceryService(new JdbcGroceryListRepository(database), pantry, prices);
-        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, ingredients, nutrition, budget, groceries, validator,
-                strategies, config.maxToolSteps());
+        MealPlanService mealPlans = new MealPlanService(planRows, recipes, new JdbcPlanChangeRepository(database),
+                new JdbcPlanImpactRepository(database),
+                new PlanImpactAssessor(profileRows, pantryRows, ingredients, validator, budget, clock));
+        GroceryService groceries = new GroceryService(new JdbcGroceryListRepository(database), planRows, pantry,
+                prices);
+        subscribeObservers(profiles, pantry, mealPlans, groceries);
+        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, ingredients, nutrition, budget, groceries,
+                validator, strategies, config.maxToolSteps());
         AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
                 new ProposalValidator(recipes), validator, groceries);
         return new MealPlanningFacade(new Services(profiles, pantry, mealPlans, groceries, ingredients, recipes,
                 nutrition, budget, validator, strategies, controller, clock));
+    }
+
+    /**
+     * Connects the impact observers (Observer, F13): pantry changes reach both, profile
+     * changes only the plan observer, since they do not change what must be bought.
+     */
+    public static void subscribeObservers(ProfileService profiles, PantryService pantry, MealPlanService mealPlans,
+                                          GroceryService groceries) {
+        MealPlanImpactObserver planObserver = new MealPlanImpactObserver(mealPlans);
+        pantry.subscribe(new GroceryListImpactObserver(groceries));
+        pantry.subscribe(planObserver);
+        profiles.subscribe(planObserver);
     }
 
     /**
@@ -174,11 +198,15 @@ public class MealPlanningFacade {
         return pantryService.makeItem(ingredientName, amount, unit, expiryDate);
     }
 
-    /** Adds the item or replaces its quantity (UC02). */
+    /**
+     * Adds the item or replaces its quantity (UC02). When this affects the active plan, the
+     * affected meals are listed in {@code conflicts} as an impact notice (SD04).
+     */
     public AgentResponse updatePantry(UUID profileId, PantryItem item) {
         pantryService.updateItem(profileId, item);
         return AgentResponse.builder(ResponseStatus.SUCCESS)
                 .rationale("Pantry updated: " + item.ingredient().name() + " " + item.quantity() + ".")
+                .conflicts(pendingImpact(profileId).map(PlanImpact::conflicts).orElse(List.of()))
                 .build();
     }
 
@@ -269,6 +297,24 @@ public class MealPlanningFacade {
         return AgentResponse.builder(ResponseStatus.SUCCESS).plan(restored)
                 .groceryList(groceryService.refreshForPlan(restored))
                 .rationale("Undone: " + history.getLast().description()).build();
+    }
+
+    // ---- F11 and F13 adaptation ----
+
+    /** What recent pantry or profile changes mean for the active plan; empty when nothing needs attention. */
+    public Optional<PlanImpact> pendingImpact(UUID profileId) {
+        return mealPlanService.getActivePlan(profileId).flatMap(plan -> mealPlanService.getPendingImpact(plan.id()));
+    }
+
+    /** Asks the agent for the smallest change that resolves the pending impact; it waits for confirmation. */
+    public AgentResponse adaptPlan(UUID profileId) {
+        MealPlan plan = activePlanOrThrow(profileId);
+        Optional<PlanImpact> impact = mealPlanService.getPendingImpact(plan.id());
+        if (impact.isEmpty()) {
+            return AgentResponse.builder(ResponseStatus.SUCCESS).plan(plan)
+                    .rationale("Nothing to adapt: the plan still fits your pantry and profile.").build();
+        }
+        return agentController.adaptPlan(plan, impact.get());
     }
 
     /** Confirmed changes of the active plan that can still be undone, oldest first. */

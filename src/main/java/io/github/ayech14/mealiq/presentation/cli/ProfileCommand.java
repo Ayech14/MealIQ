@@ -115,6 +115,7 @@ final class ProfileCommand implements Runnable {
         cli.out().println("Profile '" + cli.profileName + "' saved.");
         print(saved);
         cli.facade().profileWarnings(saved).forEach(w -> cli.out().println("Warning: " + w));
+        cli.printImpactNotice();
         return MealPlanningCLI.OK;
     }
 

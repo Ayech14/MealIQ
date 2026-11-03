@@ -99,4 +99,19 @@ class CommandsTest {
         ReplaceMealCommand.restored(new MealSwap(breakfast.id(), oatmeal, pancakes, null, null)).undo(plan);
         assertEquals(oatmeal, plan.findMeal(breakfast.id()).recipe());
     }
+
+    @Test
+    void constraintUpdateReplacesADaysMealsTogether() {
+        UpdatePlanConstraintCommand command = new UpdatePlanConstraintCommand(java.time.DayOfWeek.TUESDAY, 15,
+                List.of(new ReplaceMealCommand(breakfast.id(), pancakes)));
+        command.execute(plan);
+        assertEquals("Pancakes", plan.findMeal(breakfast.id()).recipe().name());
+        assertEquals("Adapt Tuesday to the 15-minute limit: Replace 2026-11-03 breakfast: Oatmeal -> Pancakes",
+                command.describe());
+        assertEquals(1, command.swaps().size());
+        command.undo(plan);
+        assertEquals(oatmeal, plan.findMeal(breakfast.id()).recipe());
+        assertThrows(IllegalArgumentException.class,
+                () -> new UpdatePlanConstraintCommand(java.time.DayOfWeek.MONDAY, null, List.of()));
+    }
 }

@@ -100,6 +100,7 @@ class ToolsTest {
     @Test
     void groceryListNeedsAnActivePlan() {
         GroceryTool tool = new GroceryTool(new GroceryService(new InMemoryRepositories.GroceryLists(),
+                new InMemoryRepositories.MealPlans(),
                 new PantryService(new InMemoryRepositories.Pantries(), catalogue), (i, q) -> Optional.empty()));
         UserProfile profile = new UserProfile(profileId);
         assertEquals("ERROR: there is no active meal plan yet", tool.execute(Map.of(), context(profile)).observation());

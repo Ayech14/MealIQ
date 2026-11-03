@@ -127,3 +127,11 @@ CREATE TABLE IF NOT EXISTS plan_changes (
     substitute_ingredient_id UUID         REFERENCES ingredients (id),
     PRIMARY KEY (plan_id, position)
 );
+
+CREATE TABLE IF NOT EXISTS plan_impacts (
+    plan_id         UUID        NOT NULL REFERENCES meal_plans (id) ON DELETE CASCADE,
+    position        INTEGER     NOT NULL,
+    event_type      VARCHAR(30) NOT NULL,
+    ingredient_id   UUID        REFERENCES ingredients (id),
+    PRIMARY KEY (plan_id, position)
+);

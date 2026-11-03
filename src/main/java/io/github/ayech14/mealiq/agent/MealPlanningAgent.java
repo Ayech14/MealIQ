@@ -5,9 +5,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.ayech14.mealiq.commands.SubstituteIngredientCommand;
 import io.github.ayech14.mealiq.contracts.PlanChange;
+import io.github.ayech14.mealiq.contracts.PlanImpact;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
+import io.github.ayech14.mealiq.domain.ChangeEventType;
 import io.github.ayech14.mealiq.domain.ChangeType;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.MealPlan;
@@ -22,11 +24,13 @@ import io.github.ayech14.mealiq.planning.PlanningStrategyFactory;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -54,6 +58,11 @@ public class MealPlanningAgent {
 
     /** Ranked candidates per meal type offered for the plan. */
     static final int CANDIDATES_PER_TYPE = 8;
+    /**
+     * Candidates shown for a change. The LLM chose the search filters for its request, so
+     * everything its searches found is shown, ranked, up to this cap.
+     */
+    static final int CHANGE_CANDIDATES = 40;
 
     static final JsonSchema PLAN_PROPOSAL = JsonSchema.object("plan_proposal")
             .property("meals", JsonSchema.arrayOf(JsonSchema.object("planned_meal")
@@ -237,7 +246,7 @@ public class MealPlanningAgent {
             }
         }
         List<Recipe> candidates = rankRecipes(new ArrayList<>(found.values()), context).stream()
-                .limit(CANDIDATES_PER_TYPE * 2L).toList();
+                .limit(CHANGE_CANDIDATES).toList();
         Map<String, Object> answer = llmClient.generateStructured(
                 promptBuilder.buildChangePrompt(context, instruction, candidates), PLAN_CHANGE,
                 PromptBuilder.INSTRUCTIONS);
@@ -350,6 +359,35 @@ public class MealPlanningAgent {
         PlanningProposal proposal = new PlanningProposal(changed, context.request().mode(), rationale, problems);
         return new ChangeAttempt(PlanChange.proposed(ChangeType.SUBSTITUTE_INGREDIENT,
                 changed.stream().map(PlannedMeal::id).toList(), proposal, rationale), calls);
+    }
+
+    /**
+     * Proposes the smallest change that resolves a pending impact (F13, SD04): only the
+     * affected meals are replaced. A time-limit impact becomes an UPDATE_CONSTRAINT change.
+     *
+     * @throws io.github.ayech14.mealiq.llm.LLMException if the provider fails
+     */
+    public ChangeAttempt proposeAdaptation(PlanningContext context, PlanImpact impact) {
+        String instruction = "Something changed, and the plan no longer fits. Replace only the meals named below "
+                + "with candidates that fit the profile now; leave every other meal as it is.\n- "
+                + String.join("\n- ", impact.conflicts());
+        ChangeAttempt attempt = proposeChange(context, instruction);
+        PlanChange change = attempt.change();
+        if (change.needsClarification() || impact.affectedMeals().isEmpty()) {
+            return attempt;
+        }
+        Set<UUID> allowed = new HashSet<>();
+        impact.affectedMeals().forEach(m -> allowed.add(m.id()));
+        List<PlannedMeal> kept = change.proposal().meals().stream().filter(m -> allowed.contains(m.id())).toList();
+        List<String> notes = new ArrayList<>(change.proposal().conflicts());
+        if (kept.size() < change.proposal().meals().size()) {
+            notes.add("Replacements for meals that were not affected were left out.");
+        }
+        ChangeType type = impact.causes().stream().allMatch(c -> c.type() == ChangeEventType.TIME_LIMIT_CHANGED)
+                ? ChangeType.UPDATE_CONSTRAINT : ChangeType.REPLACE_MEAL;
+        PlanningProposal proposal = new PlanningProposal(kept, change.proposal().mode(), change.rationale(), notes);
+        return new ChangeAttempt(PlanChange.proposed(type, kept.stream().map(PlannedMeal::id).toList(), proposal,
+                change.rationale()), attempt.toolCalls());
     }
 
     /** Remembers a confirmed decision, so later requests can refer to it. */

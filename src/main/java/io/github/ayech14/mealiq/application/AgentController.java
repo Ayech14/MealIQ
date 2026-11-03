@@ -7,11 +7,13 @@ import io.github.ayech14.mealiq.agent.RecipeRecommendation;
 import io.github.ayech14.mealiq.agent.ToolCall;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
 import io.github.ayech14.mealiq.contracts.PlanChange;
+import io.github.ayech14.mealiq.contracts.PlanImpact;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
 import io.github.ayech14.mealiq.domain.BudgetStatus;
+import io.github.ayech14.mealiq.domain.ChangeEventType;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.PlanningMode;
@@ -38,7 +40,7 @@ import java.util.function.Function;
  * what it returns with deterministic validators before anything reaches the user (D01, D04).
  *
  * <p>Covers recipe recommendation (F03), weekly plans (F05) and plan changes (F08 budget
- * alternatives, F09 substitution, F10 typed changes). A proposed change is validated and
+ * alternatives, F09 substitution, F10 typed changes, F11 and F13 adaptation). A proposed change is validated and
  * held until the user confirms it; only {@link #confirmChange} applies it (D03).
  */
 public class AgentController {
@@ -178,6 +180,15 @@ public class AgentController {
                         .map(i -> i.ingredient().name()).toList())
                 + ". Replace as few meals as needed with cheaper candidates.";
         return propose(plan, PlanningMode.BUDGET, instruction, context -> agent.proposeChange(context, instruction));
+    }
+
+    /** The smallest change that resolves a pending impact (F13, SD04); like every change, it waits for confirmation. */
+    public AgentResponse adaptPlan(MealPlan plan, PlanImpact impact) {
+        PlanningMode mode = impact.causes().stream().anyMatch(c -> c.type() == ChangeEventType.TIME_LIMIT_CHANGED)
+                ? PlanningMode.TIME_AWARE
+                : impact.causes().stream().anyMatch(c -> c.type() == ChangeEventType.BUDGET_CHANGED)
+                        ? PlanningMode.BUDGET : PlanningMode.NUTRITION_GOAL;
+        return propose(plan, mode, "adapt the plan", context -> agent.proposeAdaptation(context, impact));
     }
 
     /**

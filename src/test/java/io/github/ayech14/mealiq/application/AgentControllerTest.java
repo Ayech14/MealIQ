@@ -99,11 +99,11 @@ class AgentControllerTest {
     }
 
     MealPlanService planService() {
-        return new MealPlanService(plans, recipes, new InMemoryRepositories.PlanChanges());
+        return TestFacades.planService(plans, recipes);
     }
 
     GroceryService groceries() {
-        return new GroceryService(new InMemoryRepositories.GroceryLists(), pantry, (i, q) -> Optional.empty());
+        return new GroceryService(new InMemoryRepositories.GroceryLists(), plans, pantry, (i, q) -> Optional.empty());
     }
 
     static Map<String, Object> finish() {

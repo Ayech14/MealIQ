@@ -1,5 +1,6 @@
 package io.github.ayech14.mealiq.services;
 
+import io.github.ayech14.mealiq.domain.ChangeEventType;
 import io.github.ayech14.mealiq.domain.GroceryItem;
 import io.github.ayech14.mealiq.domain.GroceryList;
 import io.github.ayech14.mealiq.domain.Ingredient;
@@ -9,8 +10,10 @@ import io.github.ayech14.mealiq.domain.Pantry;
 import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Quantity;
 import io.github.ayech14.mealiq.domain.Unit;
+import io.github.ayech14.mealiq.events.PlanRelevantChange;
 import io.github.ayech14.mealiq.integration.PriceDataSource;
 import io.github.ayech14.mealiq.persistence.GroceryListRepository;
+import io.github.ayech14.mealiq.persistence.MealPlanRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -30,14 +33,32 @@ import java.util.UUID;
 public class GroceryService {
 
     private final GroceryListRepository groceryListRepository;
+    private final MealPlanRepository mealPlanRepository;
     private final PantryService pantryService;
     private final PriceDataSource priceSource;
 
-    public GroceryService(GroceryListRepository groceryListRepository, PantryService pantryService,
-                          PriceDataSource priceSource) {
+    public GroceryService(GroceryListRepository groceryListRepository, MealPlanRepository mealPlanRepository,
+                          PantryService pantryService, PriceDataSource priceSource) {
         this.groceryListRepository = groceryListRepository;
+        this.mealPlanRepository = mealPlanRepository;
         this.pantryService = pantryService;
         this.priceSource = priceSource;
+    }
+
+    /**
+     * Marks the active plan's saved list out of date after a pantry change (D06); it is
+     * recalculated only when the user refreshes it. Other changes leave the list as it is.
+     */
+    public void markAffectedListStale(PlanRelevantChange event) {
+        if (event.type() != ChangeEventType.PANTRY_CHANGED) {
+            return;
+        }
+        mealPlanRepository.findActiveByProfileId(event.profileId())
+                .flatMap(plan -> groceryListRepository.findByPlanId(plan.id()))
+                .ifPresent(list -> {
+                    list.markStale();
+                    groceryListRepository.save(list);
+                });
     }
 
     /**
