@@ -86,7 +86,7 @@ class AgentControllerTest {
         });
         BudgetService budget = new BudgetService((i, q) -> Optional.empty());
         MealPlanningAgent agent = new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition, budget),
-                new ConversationMemory(5), new DefaultPlanningStrategyFactory(nutrition, budget), 2);
+                new ConversationMemory(5), new DefaultPlanningStrategyFactory(nutrition, budget), catalogue, 2);
         return new AgentController(agent, profiles, pantry, planService(), new ProposalValidator(recipes), validator,
                 groceries());
     }

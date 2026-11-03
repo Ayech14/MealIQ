@@ -180,6 +180,27 @@ public class PromptBuilder {
         return prompt.toString();
     }
 
+    /**
+     * Asks for one new recipe (F04, SD05). The ingredient list itself is enforced by the
+     * schema; problems with the previous attempt are listed so the retry can fix them.
+     */
+    public String buildRecipePrompt(PlanningContext context, RecipeQuery query, List<String> previousProblems) {
+        StringBuilder prompt = new StringBuilder();
+        appendRequest(prompt, context, query);
+        appendProfile(prompt, context);
+        if (!previousProblems.isEmpty()) {
+            prompt.append("YOUR PREVIOUS RECIPE WAS REJECTED; FIX THESE PROBLEMS:\n");
+            previousProblems.forEach(p -> prompt.append("- ").append(p).append('\n'));
+        }
+        prompt.append("""
+                Write one realistic home recipe for this request, using only ingredients from the allowed list \
+                in the schema, with amounts for the whole recipe and its number of servings. Prefer pantry \
+                items. Use g, kg, ml or l unless "unit" (one whole item, such as one egg) is clearly meant. \
+                Keep within the time limits. List the steps in order, one per entry, without numbering them. Do \
+                not state nutrition values; they are calculated from the ingredients.""");
+        return prompt.toString();
+    }
+
     private static void appendPlan(StringBuilder prompt, PlanningContext context) {
         MealPlan plan = context.activePlan();
         prompt.append("CURRENT PLAN (day 1 is ").append(plan.startDate()).append("):\n");

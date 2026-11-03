@@ -466,4 +466,30 @@ class MealPlanningCLITest {
         assertTrue(out.toString().contains("Overnight oats uses rolled oats, which is no longer in your pantry."),
                 out.toString());
     }
+
+    @Test
+    void recipesGeneratePreviewsAndSavesOnYes() {
+        run("profile", "set");
+        java.util.Map<String, Object> draft = java.util.Map.of("name", "Oat porridge", "mealTypes", List.of("breakfast"),
+                "prepMinutes", 2, "cookMinutes", 8, "servings", 2,
+                "ingredients", List.of(java.util.Map.of("ingredient", "rolled oats", "amount", 80, "unit", "g",
+                        "optional", false), java.util.Map.of("ingredient", "milk", "amount", 300, "unit", "ml",
+                        "optional", false)),
+                "instructions", List.of("Simmer oats in milk.", "Serve warm."), "tags", List.of());
+        llm.queue(draft);
+        input = "n\n";
+        assertEquals(0, run("recipes", "generate", "warm breakfast", "--meal", "breakfast"));
+        String shown = out.toString();
+        assertTrue(shown.contains("Oat porridge\n  breakfast | 2 min prep + 8 min cooking | makes 2 servings"), shown);
+        assertTrue(shown.contains("  1. Simmer oats in milk."), shown);
+        assertTrue(shown.contains("Nutrition for 1 serving: "), shown);
+        assertTrue(shown.contains("Save this recipe? [y/N] Not saved."), shown);
+        assertEquals(1, run("recipes", "show", "Oat porridge"));
+
+        llm.queue(draft);
+        assertEquals(0, run("recipes", "generate", "warm breakfast", "--yes"));
+        assertTrue(out.toString().contains("Saved Oat porridge."), out.toString());
+        assertEquals(0, run("recipes", "list", "--generated", "--meal", "breakfast", "--limit", "30"));
+        assertTrue(out.toString().contains("Oat porridge"));
+    }
 }

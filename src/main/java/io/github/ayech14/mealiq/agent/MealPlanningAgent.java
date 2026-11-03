@@ -16,8 +16,10 @@ import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Recipe;
+import io.github.ayech14.mealiq.domain.RecipeSource;
 import io.github.ayech14.mealiq.llm.JsonSchema;
 import io.github.ayech14.mealiq.llm.LLMClient;
+import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.planning.MealSlots;
 import io.github.ayech14.mealiq.planning.PlanningStrategy;
 import io.github.ayech14.mealiq.planning.PlanningStrategyFactory;
@@ -100,15 +102,18 @@ public class MealPlanningAgent {
     private final PromptBuilder promptBuilder;
     private final ConversationMemory memory;
     private final PlanningStrategyFactory strategyFactory;
+    private final IngredientRepository ingredientRepository;
     private final int maxToolSteps;
 
     public MealPlanningAgent(LLMClient llmClient, ToolManager toolManager, PromptBuilder promptBuilder,
-                             ConversationMemory memory, PlanningStrategyFactory strategyFactory, int maxToolSteps) {
+                             ConversationMemory memory, PlanningStrategyFactory strategyFactory,
+                             IngredientRepository ingredientRepository, int maxToolSteps) {
         this.llmClient = llmClient;
         this.toolManager = toolManager;
         this.promptBuilder = promptBuilder;
         this.memory = memory;
         this.strategyFactory = strategyFactory;
+        this.ingredientRepository = ingredientRepository;
         this.maxToolSteps = maxToolSteps;
     }
 
@@ -388,6 +393,126 @@ public class MealPlanningAgent {
         PlanningProposal proposal = new PlanningProposal(kept, change.proposal().mode(), change.rationale(), notes);
         return new ChangeAttempt(PlanChange.proposed(type, kept.stream().map(PlannedMeal::id).toList(), proposal,
                 change.rationale()), attempt.toolCalls());
+    }
+
+    /** Units a generated recipe may use; each can be converted to grams with catalogue weights. */
+    static final List<String> RECIPE_UNITS = List.of("g", "kg", "ml", "l", "tsp", "tbsp", "cup", "unit");
+    static final int MAX_RECIPE_ATTEMPTS = 2;
+
+    /**
+     * Asks the LLM for a new recipe when the collection has nothing suitable (F04, SD05). The
+     * schema only offers catalogue ingredients the profile allows and does not dislike, so
+     * allergens cannot appear.
+     * The draft is checked here for what the schema cannot express (weighable amounts, the
+     * requested meal type, time and ingredients); a failed draft is retried once with its
+     * problems. The controller still validates restrictions before the user sees it.
+     *
+     * @throws io.github.ayech14.mealiq.llm.LLMException if the provider fails
+     */
+    public RecipeDraft generateRecipe(PlanningContext context, RecipeQuery query) {
+        List<Ingredient> allowed = ingredientRepository.findAll().stream()
+                .filter(i -> context.profile().isAllowed(i))
+                .filter(i -> !context.profile().dislikedFoods().contains(i.name())).toList();
+        JsonSchema schema = recipeSchema(allowed);
+        List<String> problems = List.of();
+        Recipe recipe = null;
+        int attempt = 0;
+        while (attempt < MAX_RECIPE_ATTEMPTS) {
+            attempt++;
+            Map<String, Object> answer = llmClient.generateStructured(
+                    promptBuilder.buildRecipePrompt(context, query, problems), schema, PromptBuilder.INSTRUCTIONS);
+            recipe = toRecipe(answer, allowed);
+            problems = recipeProblems(recipe, query);
+            if (problems.isEmpty()) {
+                break;
+            }
+        }
+        if (problems.isEmpty()) {
+            memory.recordDecision(context.request().profileId(), "Generated recipe " + recipe.name() + " for \""
+                    + context.request().instruction() + "\"");
+        }
+        return new RecipeDraft(recipe, problems, attempt);
+    }
+
+    static JsonSchema recipeSchema(List<Ingredient> allowed) {
+        return JsonSchema.object("generated_recipe")
+                .property("name", JsonSchema.string())
+                .property("mealTypes", JsonSchema.arrayOf(JsonSchema.enumOf("breakfast", "lunch", "dinner", "snack")))
+                .property("prepMinutes", JsonSchema.integer())
+                .property("cookMinutes", JsonSchema.integer())
+                .property("servings", JsonSchema.integer())
+                .property("ingredients", JsonSchema.arrayOf(JsonSchema.object("line")
+                        .property("ingredient", JsonSchema.enumOf(allowed.stream().map(Ingredient::name)
+                                .toArray(String[]::new)))
+                        .property("amount", JsonSchema.number())
+                        .property("unit", JsonSchema.enumOf(RECIPE_UNITS.toArray(String[]::new)))
+                        .property("optional", JsonSchema.bool())
+                        .asType()))
+                .property("instructions", JsonSchema.arrayOf(JsonSchema.string()))
+                .property("tags", JsonSchema.arrayOf(JsonSchema.string()))
+                .build();
+    }
+
+    private static Recipe toRecipe(Map<String, Object> answer, List<Ingredient> allowed) {
+        Map<String, Ingredient> byName = new LinkedHashMap<>();
+        allowed.forEach(i -> byName.put(i.name(), i));
+        Recipe.Builder recipe = Recipe.builder(((String) answer.get("name")).strip())
+                .mealTypes(((List<?>) answer.get("mealTypes")).stream()
+                        .map(t -> MealType.valueOf(((String) t).toUpperCase(Locale.ROOT))).toArray(MealType[]::new))
+                .minutes(Math.max(0, ((Number) answer.get("prepMinutes")).intValue()),
+                        Math.max(0, ((Number) answer.get("cookMinutes")).intValue()))
+                .servings(Math.max(1, ((Number) answer.get("servings")).intValue()))
+                .tags(((List<?>) answer.get("tags")).stream().map(String::valueOf).toArray(String[]::new))
+                .instructions(((List<?>) answer.get("instructions")).stream().map(String::valueOf)
+                        .toArray(String[]::new))
+                .source(RecipeSource.GENERATED);
+        for (Object item : (List<?>) answer.get("ingredients")) {
+            Map<?, ?> line = (Map<?, ?>) item;
+            Ingredient ingredient = byName.get((String) line.get("ingredient"));
+            double amount = Math.max(0, ((Number) line.get("amount")).doubleValue());
+            if (Boolean.TRUE.equals(line.get("optional"))) {
+                recipe.optionalIngredient(ingredient, amount, (String) line.get("unit"));
+            } else {
+                recipe.ingredient(ingredient, amount, (String) line.get("unit"));
+            }
+        }
+        return recipe.build();
+    }
+
+    /** What the schema cannot guarantee: a usable recipe that matches the request. */
+    static List<String> recipeProblems(Recipe recipe, RecipeQuery query) {
+        List<String> problems = new ArrayList<>();
+        if (recipe.name().isBlank()) {
+            problems.add("The recipe needs a name.");
+        }
+        if (recipe.ingredients().stream().noneMatch(l -> !l.optional() && l.quantity().amount() > 0)) {
+            problems.add("The recipe needs at least one required ingredient with an amount.");
+        }
+        if (recipe.instructions().isEmpty()) {
+            problems.add("The recipe needs steps.");
+        }
+        recipe.ingredients().stream().filter(l -> l.ingredient().toGrams(l.quantity()).isEmpty())
+                .forEach(l -> problems.add("'" + l.quantity() + "' of " + l.ingredient().name()
+                        + " cannot be weighed; use g, kg, ml or l for it."));
+        if (query.mealType() != null && !recipe.mealTypes().contains(query.mealType())) {
+            problems.add("It must be a " + query.mealType().name().toLowerCase(Locale.ROOT) + " recipe.");
+        }
+        if (query.maxMinutes() != null && recipe.totalMinutes() > query.maxMinutes()) {
+            problems.add("It takes " + recipe.totalMinutes() + " minutes; the limit is " + query.maxMinutes() + ".");
+        }
+        for (String wanted : query.includeIngredients()) {
+            String term = wanted.strip().toLowerCase(Locale.ROOT);
+            if (recipe.ingredients().stream().noneMatch(l -> l.ingredient().name().contains(term))) {
+                problems.add("It must use " + wanted.strip() + ".");
+            }
+        }
+        for (String unwanted : query.excludeIngredients()) {
+            String term = unwanted.strip().toLowerCase(Locale.ROOT);
+            if (recipe.ingredients().stream().anyMatch(l -> l.ingredient().name().contains(term))) {
+                problems.add("It must not use " + unwanted.strip() + ".");
+            }
+        }
+        return problems;
     }
 
     /** Remembers a confirmed decision, so later requests can refer to it. */

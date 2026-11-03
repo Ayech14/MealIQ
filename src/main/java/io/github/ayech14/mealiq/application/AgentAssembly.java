@@ -34,7 +34,7 @@ public final class AgentAssembly {
         tools.register(new NutritionTool(nutrition, recipes));
         tools.register(new GroceryTool(groceries));
         tools.register(new SubstitutionTool(ingredients));
-        return new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition, budget), new ConversationMemory(MEMORY_ENTRIES),
-                strategies, maxToolSteps);
+        return new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition, budget),
+                new ConversationMemory(MEMORY_ENTRIES), strategies, ingredients, maxToolSteps);
     }
 }

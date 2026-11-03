@@ -69,7 +69,7 @@ import java.util.UUID;
  * reach the same rules and give the same outcome.
  *
  * <p>Operations are added as features are implemented; this version covers F01 (profile),
- * F02 (pantry), recipe browsing and agent recommendations (F03), weekly plans (F05),
+ * F02 (pantry), recipe browsing, recommendations and generation (F03, F04), weekly plans (F05),
  * nutrition analysis (F06), grocery lists with prices and budget checks (F07, F08, F12), and
  * confirmed plan changes with undo (F09, F10), and adaptation after pantry or profile
  * changes (F11, F13).
@@ -413,6 +413,30 @@ public class MealPlanningFacade {
     public AgentResponse recommendRecipe(UUID profileId, String request, RecipeQuery filters, PlanningMode mode) {
         return agentController.recommendRecipe(
                 new PlanRequest(profileId, LocalDate.now(clock), 1, mode, request), filters);
+    }
+
+    /**
+     * Asks the AI for a new recipe matching the request and filters (F04); a valid one waits
+     * for {@link #saveGeneratedRecipe}.
+     */
+    public AgentResponse generateRecipe(UUID profileId, String request, RecipeQuery filters) {
+        return agentController.generateRecipe(
+                new PlanRequest(profileId, LocalDate.now(clock), 1, PlanningMode.NUTRITION_GOAL, request), filters);
+    }
+
+    /**
+     * Saves a recipe generated in this session, so it can be browsed and planned. Only recipes
+     * that were generated and validated here are accepted, each once.
+     */
+    public AgentResponse saveGeneratedRecipe(UUID recipeId) {
+        Optional<Recipe> recipe = agentController.takeGeneratedRecipe(recipeId);
+        if (recipe.isEmpty()) {
+            return AgentResponse.builder(ResponseStatus.FAILED)
+                    .rationale("That recipe was not generated here or was already saved.").build();
+        }
+        recipeRepository.save(recipe.get());
+        return AgentResponse.builder(ResponseStatus.SUCCESS).recipes(List.of(recipe.get()))
+                .rationale("Saved " + recipe.get().name() + ".").build();
     }
 
     /** Today's cooking-time limit from the saved profile; empty when none is set or no profile is saved. */

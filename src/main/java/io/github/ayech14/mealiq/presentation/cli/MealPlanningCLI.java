@@ -115,7 +115,12 @@ public final class MealPlanningCLI implements Runnable {
 
     /** Asks the user to confirm a previewed change; anything but "y" or "yes" (or no input) declines. */
     public boolean promptConfirmation(PlanChange change) {
-        out().print("Apply this change? [y/N] ");
+        return confirm("Apply this change?");
+    }
+
+    /** Asks a yes/no question; anything but "y" or "yes" (or no input) means no. */
+    boolean confirm(String question) {
+        out().print(question + " [y/N] ");
         out().flush();
         try {
             String answer = in.readLine();
