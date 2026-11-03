@@ -1,0 +1,64 @@
+ingredient,price,package_amount,package_unit,statcan_product,reference_month,note
+almonds,5.55,200,g,"Almonds, 200 grams",2026-08,
+apple,6.47,1,kg,"Apples, per kilogram",2026-08,
+avocado,1.98,1,unit,"Avocado, unit",2026-08,
+bacon,6.58,500,g,"Bacon, 500 grams",2026-08,
+banana,1.89,1,kg,"Bananas, per kilogram",2026-08,
+beef sirloin,27.81,1,kg,"Beef top sirloin cuts, per kilogram",2026-08,
+black beans,1.70,540,ml,"Canned beans and lentils, 540 millilitres",2026-08,"canned beans and lentils, any kind"
+brown rice,5.87,900,g,"Brown rice, 900 grams",2026-08,
+butter,5.68,454,g,"Butter, 454 grams",2026-08,
+cabbage,2.63,1,kg,"Cabbage, per kilogram",2026-08,
+canned tomatoes,2.18,796,ml,"Canned tomatoes, 796 millilitres",2026-08,
+canned tuna,1.70,170,g,"Canned tuna, 170 grams",2026-08,
+carrot,3.89,1.36,kg,"Carrots, 1.36 kilograms",2026-08,
+cheddar cheese,7.05,500,g,"Block cheese, 500 grams",2026-08,"block cheese, any kind"
+chicken breast,14.41,1,kg,"Chicken breasts, per kilogram",2026-08,
+chicken thigh,13.42,1,kg,"Chicken thigh, per kilogram",2026-08,
+corn,3.77,750,g,"Frozen corn, 750 grams",2026-08,frozen
+cucumber,1.35,1,unit,"Cucumber, unit",2026-08,
+egg,4.83,12,unit,"Eggs, 1 dozen",2026-08,
+flour,5.38,2.5,kg,"Wheat flour, 2.5 kilograms",2026-08,
+frozen mixed vegetables,4.33,750,g,"Frozen mixed vegetables, 750 grams",2026-08,
+grapes,6.83,1,kg,"Grapes, per kilogram",2026-08,
+greek yogurt,3.94,500,g,"Yogurt, 500 grams",2026-08,"yogurt, any kind"
+green beans,4.59,750,g,"Frozen green beans, 750 grams",2026-08,frozen
+green bell pepper,5.85,1,kg,"Peppers, per kilogram",2026-08,"peppers, any colour"
+ground beef,16.75,1,kg,"Ground beef, per kilogram",2026-08,
+heavy cream,4.96,1,l,"Cream, 1 litre",2026-08,"cream, any fat content"
+hummus,3.83,227,g,"Hummus, 227 grams",2026-08,
+ketchup,4.57,1,l,"Ketchup, 1 litre",2026-08,
+lemon,1.08,1,unit,"Lemons, unit",2026-08,
+lentils,3.63,900,g,"Dried lentils, 900 grams",2026-08,
+mayonnaise,6.40,890,ml,"Mayonnaise, 890 millilitres",2026-08,
+milk,5.49,2,l,"Milk, 2 litres",2026-08,
+mushrooms,2.44,227,g,"Mushrooms, 227 grams",2026-08,
+almond milk,4.33,1.89,l,"Nut milk, 1.89 litres",2026-08,"nut milk, any kind"
+olive oil,12.29,1,l,"Olive oil, 1 litre",2026-08,
+onion,5.49,1,kg,"Onions, per kilogram",2026-08,
+orange,4.53,1,kg,"Oranges, per kilogram",2026-08,
+orange juice,6.22,2,l,"Orange juice, 2 litres",2026-08,
+peanut butter,5.95,1,kg,"Peanut butter, 1 kilogram",2026-08,
+peanuts,4.35,450,g,"Peanuts, 450 grams",2026-08,
+peas,3.77,750,g,"Frozen peas, 750 grams",2026-08,frozen
+plain yogurt,3.94,500,g,"Yogurt, 500 grams",2026-08,
+pork chop,9.21,1,kg,"Pork loin cuts, per kilogram",2026-08,pork loin cuts
+pork loin,9.21,1,kg,"Pork loin cuts, per kilogram",2026-08,
+potato,5.17,1,kg,"Potatoes, per kilogram",2026-08,
+red bell pepper,5.85,1,kg,"Peppers, per kilogram",2026-08,"peppers, any colour"
+salmon,27.70,1,kg,"Salmon, per kilogram",2026-08,
+salsa,5.04,418,ml,"Salsa, 418 millilitres",2026-08,
+shrimp,7.40,300,g,"Shrimp, 300 grams",2026-08,
+soy milk,4.48,1.89,l,"Soy milk, 1.89 litres",2026-08,
+spaghetti,3.37,500,g,"Dry or fresh pasta, 500 grams",2026-08,"pasta, any kind"
+spinach,2.25,300,g,"Frozen spinach, 300 grams",2026-08,frozen
+strawberries,4.34,454,g,"Strawberries, 454 grams",2026-08,
+sugar,2.78,2,kg,"White sugar, 2 kilograms",2026-08,
+sunflower seeds,5.14,400,g,"Sunflower seeds, 400 grams",2026-08,
+sweet potato,4.95,1,kg,"Sweet potatoes, per kilogram",2026-08,
+tofu,2.92,350,g,"Tofu, 350 grams",2026-08,
+tomato,4.80,1,kg,"Tomatoes, per kilogram",2026-08,
+vegetable oil,9.82,3,l,"Vegetable oil, 3 litres",2026-08,
+white bread,3.63,675,g,"White bread, 675 grams",2026-08,
+white rice,9.73,2,kg,"White rice, 2 kilograms",2026-08,
+whole wheat pasta,3.37,500,g,"Dry or fresh pasta, 500 grams",2026-08,"pasta, any kind"

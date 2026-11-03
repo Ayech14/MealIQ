@@ -9,4 +9,9 @@ import java.util.Optional;
 public interface PriceDataSource {
 
     Optional<BigDecimal> estimatePrice(Ingredient ingredient, Quantity quantity);
+
+    /** Where the prices come from, shown next to estimates. */
+    default String describe() {
+        return "price source not specified";
+    }
 }

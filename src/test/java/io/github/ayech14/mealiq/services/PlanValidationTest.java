@@ -94,14 +94,14 @@ class PlanValidationTest {
         void wrongMealTypeDatesAndUnknownRecipesAreViolations() {
             Recipe invented = Recipe.builder("Invented stew").mealTypes(MealType.DINNER).build();
             List<PlannedMeal> meals = List.of(
-                    new PlannedMeal(START, MealType.BREAKFAST, recipe("Lentil soup"), 1),
+                    new PlannedMeal(START, MealType.BREAKFAST, recipe("Turkey chili"), 1),
                     new PlannedMeal(START, MealType.LUNCH, recipe("Lentil soup"), 1),
                     new PlannedMeal(START, MealType.DINNER, invented, 1),
                     new PlannedMeal(START.plusDays(5), MealType.DINNER, recipe("Shrimp tacos"), 1));
             List<String> violations = validator.validate(new PlanningProposal(meals, PlanningMode.BUDGET, "",
                     List.of()), context(1)).violations();
             assertEquals(List.of(
-                    "Day 1 (2026-11-03) breakfast: Lentil soup is not a breakfast recipe.",
+                    "Day 1 (2026-11-03) breakfast: Turkey chili is not a breakfast recipe.",
                     "Day 1 (2026-11-03) dinner: Invented stew is not a stored recipe.",
                     "Day 6 (2026-11-08) dinner is outside the plan's dates."), violations);
         }
@@ -117,11 +117,11 @@ class PlanValidationTest {
         }
 
         @Test
-        void sameRecipeTwiceInADayGetsAWarning() {
+        void sameRecipeTwiceInADayIsAViolation() {
             ValidationResult result = validator.validate(proposal("Tofu scramble", "Tofu scramble", "Shrimp tacos"),
                     context(1));
-            assertTrue(result.valid());
-            assertEquals(List.of("Tofu scramble is planned 2 times on day 1."), result.warnings());
+            assertEquals(List.of("Tofu scramble is planned 2 times on day 1; use a different recipe for each meal "
+                    + "of a day."), result.violations());
         }
 
         @Test
@@ -171,13 +171,21 @@ class PlanValidationTest {
         }
 
         @Test
-        void unknownPricesOnlyWarn() {
+        void unknownPricesOnlyWarnUnlessKnownPricesAreAlreadyOver() {
             profile.weeklyBudget(new BigDecimal("50"));
             ValidationResult result = validator(new BudgetService((i, q) -> Optional.empty()))
                     .validatePlan(oneGoodDay(), context(1));
             assertTrue(result.valid());
-            assertEquals(List.of("The cost could not be estimated (some prices are unknown), so the budget of $7.14 "
-                    + "was not checked."), result.warnings());
+            assertEquals(1, result.warnings().size());
+            assertTrue(result.warnings().getFirst().startsWith("Known prices add up to $0.00+ against a budget of "
+                    + "$7.14; "), result.warnings().toString());
+
+            ConstraintValidator someKnown = validator(new BudgetService((i, q) -> i.name().equals("salt")
+                    ? Optional.empty() : TestFacades.FLAT_PRICES.estimatePrice(i, q)));
+            profile.weeklyBudget(new BigDecimal("7"));
+            ValidationResult over = someKnown.validatePlan(oneGoodDay(), context(1));
+            assertFalse(over.valid(), "known prices alone exceed $1.00");
+            assertTrue(over.violations().getFirst().contains("+ is over the budget of $1.00"), over.toString());
         }
 
         @Test
@@ -203,9 +211,9 @@ class PlanValidationTest {
             List<PlannedMeal> twoDinners = List.of(new PlannedMeal(START, MealType.DINNER, friedRice, 1),
                     new PlannedMeal(START.plusDays(1), MealType.DINNER, friedRice, 1));
             BudgetService budget = new BudgetService(TestFacades.FLAT_PRICES);
-            BigDecimal withoutRice = budget.estimateCost(twoDinners, pantry).orElseThrow();
+            BigDecimal withoutRice = budget.estimateCost(twoDinners, pantry).known();
             pantry.updateItem(new PantryItem(rice, Quantity.of(100, "g"), null));
-            BigDecimal withRice = budget.estimateCost(twoDinners, pantry).orElseThrow();
+            BigDecimal withRice = budget.estimateCost(twoDinners, pantry).known();
             assertEquals(new BigDecimal("1.00"), withoutRice.subtract(withRice), "100 g of rice at $1/100 g is saved");
             assertEquals(Quantity.of(100, "g"), pantry.items().values().iterator().next().quantity(),
                     "the real pantry is not changed");

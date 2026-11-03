@@ -96,6 +96,8 @@ class PlanGenerationTest {
         assertTrue(planningPrompt.contains("PLAN: 2 day(s) from 2026-11-03 (day 1 is Tuesday). Each day needs "
                 + "exactly: breakfast, lunch, dinner."), planningPrompt);
         assertTrue(planningPrompt.contains("BREAKFAST CANDIDATES, best first by the nutrition goal ranking"));
+        assertTrue(planningPrompt.matches("(?s).*Overnight oats \\(5 min; \\d+ kcal, \\d+ g protein; \\$\\d+\\.\\d{2} to buy\\).*"),
+                "candidate facts include the deterministic cost: " + planningPrompt);
     }
 
     @Test

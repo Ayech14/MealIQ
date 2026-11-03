@@ -27,9 +27,9 @@ import picocli.CommandLine.Model.CommandSpec;
 @Command(name = "plan", description = "Generate or show your meal plan.", mixinStandardHelpOptions = true)
 final class PlanCommand implements Runnable {
 
-    /** CLI names for the planning modes that have the data they need. */
+    /** CLI names for the planning modes. */
     enum Mode {
-        NUTRITION(PlanningMode.NUTRITION_GOAL), TIME(PlanningMode.TIME_AWARE);
+        NUTRITION(PlanningMode.NUTRITION_GOAL), TIME(PlanningMode.TIME_AWARE), BUDGET(PlanningMode.BUDGET);
 
         final PlanningMode mode;
 
@@ -57,7 +57,7 @@ final class PlanCommand implements Runnable {
                  @Option(names = "--days", paramLabel = "N", defaultValue = "7",
                          description = "1 to " + PlanRequest.MAX_DAYS + " (default: ${DEFAULT-VALUE})") int days,
                  @Option(names = "--mode", paramLabel = "MODE", defaultValue = "nutrition",
-                         description = "nutrition or time (default: ${DEFAULT-VALUE})") Mode mode,
+                         description = "nutrition, time or budget (default: ${DEFAULT-VALUE})") Mode mode,
                  @Option(names = "--note", paramLabel = "TEXT", description = "Anything else, e.g. \"more fish\"")
                  String note,
                  @Option(names = "--show-steps", description = "Also print the agent's tool calls") boolean showSteps) {

@@ -48,9 +48,10 @@ class MealPlanningAgentTest {
         NutritionService nutrition = new NutritionService();
         GroceryService groceries = new GroceryService(new InMemoryRepositories.GroceryLists(),
                 new PantryService(new InMemoryRepositories.Pantries(), catalogue), (i, q) -> Optional.empty());
-        agent = AgentAssembly.agent(llm, new InMemoryRepositories.Recipes(catalogue), catalogue, nutrition, groceries,
-                new ConstraintValidator(nutrition, new BudgetService((i, q) -> Optional.empty())), new DefaultPlanningStrategyFactory(nutrition,
-                        new BudgetService((i, q) -> Optional.empty())), MAX_STEPS);
+        BudgetService budget = new BudgetService((i, q) -> Optional.empty());
+        agent = AgentAssembly.agent(llm, new InMemoryRepositories.Recipes(catalogue), catalogue, nutrition, budget,
+                groceries, new ConstraintValidator(nutrition, budget), new DefaultPlanningStrategyFactory(nutrition,
+                        budget), MAX_STEPS);
         profile = new UserProfile(profileId);
     }
 
@@ -101,7 +102,8 @@ class MealPlanningAgentTest {
 
     @Test
     void firstPromptHasTheRequestProfileAndTools() {
-        profile.allergies(Set.of("peanut")).dailyCalorieTarget(1800).mealsPerDay(3);
+        profile.allergies(Set.of("peanut")).dailyCalorieTarget(1800).mealsPerDay(3)
+                .weeklyBudget(new java.math.BigDecimal("70"));
         llm.queue(finish());
         agent.recommendRecipes(context("something light"), RecipeQuery.any().withMaxMinutes(15));
         String prompt = llm.calls().getFirst().prompt();
@@ -109,6 +111,7 @@ class MealPlanningAgentTest {
         assertTrue(prompt.contains("REQUIRED FILTERS (applied to every result): at most 15 minutes"), prompt);
         assertTrue(prompt.contains("about 600 kcal per meal"), prompt);
         assertTrue(prompt.contains("allergies: peanut"), prompt);
+        assertTrue(prompt.contains("grocery budget $10.00 for 1 day(s)"), prompt);
         assertTrue(prompt.contains("- recipeSearch: ") && prompt.contains("- nutritionAnalysis: ")
                 && prompt.contains("- substituteIngredient: "), prompt);
         assertEquals(PromptBuilder.INSTRUCTIONS, llm.calls().getFirst().instructions());

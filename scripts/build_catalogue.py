@@ -7,7 +7,7 @@ Input:  scripts/catalogue_selection.csv - the curated ingredient list. For each
         ingredient it names the USDA fdc_id, the MealIQ category, allergens and
         substitutes (curated by hand, not USDA data), and regexes that pick which USDA
         portion defines "1 unit" and which defines a volume (cup/tbsp/tsp).
-Output: src/mealiq/data/ingredients.csv - nutrition per 100 g and gram weights, taken
+Output: src/main/resources/catalogue/ingredients.csv - nutrition per 100 g and gram weights, taken
         from USDA. The output keeps fdc_id and the USDA portion text so every value can
         be traced back to its source.
 
@@ -25,7 +25,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SELECTION = ROOT / "scripts" / "catalogue_selection.csv"
-OUTPUT = ROOT / "src" / "mealiq" / "data" / "ingredients.csv"
+OUTPUT = ROOT / "src" / "main" / "resources" / "catalogue" / "ingredients.csv"
 
 ENERGY_IDS = ("1008", "2047", "2048")  # kcal; 1008 is the standard SR value
 PROTEIN, FAT, CARBS = "1003", "1004", "1005"

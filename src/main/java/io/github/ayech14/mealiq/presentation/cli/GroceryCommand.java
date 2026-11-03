@@ -1,5 +1,7 @@
 package io.github.ayech14.mealiq.presentation.cli;
 
+import io.github.ayech14.mealiq.contracts.AgentResponse;
+import io.github.ayech14.mealiq.domain.BudgetStatus;
 import io.github.ayech14.mealiq.domain.GroceryItem;
 import io.github.ayech14.mealiq.domain.GroceryList;
 import java.io.PrintWriter;
@@ -10,7 +12,7 @@ import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 import picocli.CommandLine.Model.CommandSpec;
 
-/** {@code mealiq grocery generate|show}: the shopping list for the active plan (F07). */
+/** {@code mealiq grocery generate|show}: the priced shopping list for the active plan (F07, F08, F12). */
 @Command(name = "grocery", description = "Make or show the shopping list for your plan.",
         mixinStandardHelpOptions = true)
 final class GroceryCommand implements Runnable {
@@ -26,9 +28,20 @@ final class GroceryCommand implements Runnable {
         spec.commandLine().usage(cli.out());
     }
 
-    @Command(name = "generate", description = "Work out what to buy for the active plan, after your pantry.")
+    @Command(name = "generate", aliases = "optimize", description = {
+        "Work out what to buy for the active plan after your pantry, price it and compare it with your budget."})
     int generate() {
-        print(cli.facade().generateGroceryList(cli.profileId()));
+        AgentResponse response = cli.facade().generateOptimizedGroceryList(cli.profileId());
+        print(response.groceryList());
+        BudgetStatus status = response.budgetStatus();
+        if (status != null) {
+            cli.out().println("Budget for this plan: $" + status.budget() + (status.withinBudget()
+                    ? (status.partial() ? ". The priced items fit." : ". Within budget.")
+                    : ". Over by $" + status.shortfall() + "."));
+        } else if (!response.rationale().isEmpty()) {
+            cli.out().println(response.rationale());
+        }
+        response.conflicts().forEach(c -> cli.out().println("Note: " + c));
         return MealPlanningCLI.OK;
     }
 
@@ -68,5 +81,6 @@ final class GroceryCommand implements Runnable {
                 + (unpriced == 0 ? "$" + list.total()
                         : unpriced == toBuy.size() ? "unknown (no prices available)"
                         : "at least $" + list.total() + " (" + unpriced + " item(s) without a price)"));
+        out.println("Prices: " + cli.facade().priceSource() + ".");
     }
 }

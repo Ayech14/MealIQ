@@ -18,7 +18,9 @@ import java.util.UUID;
 
 /**
  * Structural checks of an agent proposal (SD01): every meal is a stored recipe of the right
- * meal type, on a day inside the plan, and every slot is filled exactly once.
+ * meal type, on a day inside the plan, every slot is filled exactly once, and no recipe is
+ * repeated within a day. Repeats across days are only a warning, since short or restrictive
+ * plans may need them.
  */
 public class ProposalValidator {
 
@@ -74,8 +76,9 @@ public class ProposalValidator {
         sameDay.forEach((key, count) -> {
             if (count > 1) {
                 LocalDate date = LocalDate.parse(key.substring(0, key.indexOf('/')));
-                warnings.add(key.substring(key.indexOf('/') + 1) + " is planned " + count + " times on day "
-                        + (ChronoUnit.DAYS.between(start, date) + 1) + ".");
+                violations.add(key.substring(key.indexOf('/') + 1) + " is planned " + count + " times on day "
+                        + (ChronoUnit.DAYS.between(start, date) + 1)
+                        + "; use a different recipe for each meal of a day.");
             }
         });
         uses.forEach((recipeId, count) -> {

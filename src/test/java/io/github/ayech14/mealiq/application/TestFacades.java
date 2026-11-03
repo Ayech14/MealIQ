@@ -51,15 +51,15 @@ public final class TestFacades {
         DefaultPlanningStrategyFactory strategies = new DefaultPlanningStrategyFactory(nutrition, budget);
         ScriptedLLMClient llm = new ScriptedLLMClient();
         GroceryService groceries = new GroceryService(new InMemoryRepositories.GroceryLists(), pantry, FLAT_PRICES);
-        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, catalogue, nutrition, groceries, validator,
+        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, catalogue, nutrition, budget, groceries, validator,
                 strategies, MAX_TOOL_STEPS);
         InMemoryRepositories.MealPlans plans = new InMemoryRepositories.MealPlans();
         MealPlanService mealPlans = new MealPlanService(plans);
         AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
                 new ProposalValidator(recipes), validator);
         MealPlanningFacade facade = new MealPlanningFacade(new MealPlanningFacade.Services(
-                profiles, pantry, mealPlans, groceries, catalogue, recipes, nutrition, validator, strategies, controller,
-                clock));
+                profiles, pantry, mealPlans, groceries, catalogue, recipes, nutrition, budget, validator, strategies,
+                controller, clock));
         return new Fixture(facade, events, llm, plans);
     }
 }

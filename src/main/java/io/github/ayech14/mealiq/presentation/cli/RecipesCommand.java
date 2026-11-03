@@ -24,9 +24,9 @@ import picocli.CommandLine.Model.CommandSpec;
 @Command(name = "recipes", description = "Browse recipes that fit your profile.", mixinStandardHelpOptions = true)
 final class RecipesCommand implements Runnable {
 
-    /** CLI names for the ranking modes that have the data they need. */
+    /** CLI names for the ranking modes. */
     enum Rank {
-        NUTRITION(PlanningMode.NUTRITION_GOAL), TIME(PlanningMode.TIME_AWARE);
+        NUTRITION(PlanningMode.NUTRITION_GOAL), TIME(PlanningMode.TIME_AWARE), BUDGET(PlanningMode.BUDGET);
 
         final PlanningMode mode;
 
@@ -57,7 +57,8 @@ final class RecipesCommand implements Runnable {
              @Option(names = "--exclude", paramLabel = "INGREDIENTS", split = ",",
                      description = "Leave out recipes using any of these") List<String> exclude,
              @Option(names = "--rank", paramLabel = "BY", defaultValue = "nutrition",
-                     description = "nutrition (your calorie and protein targets) or time (default: ${DEFAULT-VALUE})")
+                     description = "nutrition (your calorie and protein targets), time or budget "
+                             + "(default: ${DEFAULT-VALUE})")
              Rank rank,
              @Option(names = "--limit", paramLabel = "N", defaultValue = "10") int limit) {
         RecipeQuery query = new RecipeQuery(meal, maxMinutes, include, exclude, null, false);
@@ -71,8 +72,9 @@ final class RecipesCommand implements Runnable {
             out.println("No recipe fits these filters and your restrictions.");
         } else {
             printTable(shown, "Recipe (ranked by " + rank.name().toLowerCase(Locale.ROOT) + ")");
-            out.println("Per serving. " + response.recipes().size() + " match"
-                    + (response.recipes().size() == 1 ? "" : "es") + "; details: mealiq recipes show \"NAME\"");
+            out.println("Per serving; cost is what you would buy beyond your pantry (+ means some prices are "
+                    + "unknown). " + response.recipes().size() + " match" + (response.recipes().size() == 1 ? "" : "es")
+                    + "; details: mealiq recipes show \"NAME\"");
             printTimeNote(shown);
         }
         if (!response.conflicts().isEmpty()) {
@@ -92,7 +94,8 @@ final class RecipesCommand implements Runnable {
              @Option(names = "--include", paramLabel = "INGREDIENTS", split = ",") List<String> include,
              @Option(names = "--exclude", paramLabel = "INGREDIENTS", split = ",") List<String> exclude,
              @Option(names = "--rank", paramLabel = "BY", defaultValue = "nutrition",
-                     description = "Ranking the agent chooses from: nutrition or time (default: ${DEFAULT-VALUE})")
+                     description = "Ranking the agent chooses from: nutrition, time or budget "
+                             + "(default: ${DEFAULT-VALUE})")
              Rank rank,
              @Option(names = "--show-steps", description = "Also print the agent's tool calls") boolean showSteps) {
         RecipeQuery filters = new RecipeQuery(meal, maxMinutes, include, exclude, null, false);
@@ -124,13 +127,14 @@ final class RecipesCommand implements Runnable {
 
     private void printTable(List<Recipe> recipes, String heading) {
         OptionalInt timeLimit = cli.facade().cookingLimitToday(cli.profileId());
-        cli.out().printf("  %-40s %6s %7s %9s%n", heading, "min", "kcal", "protein");
+        cli.out().printf("  %-40s %6s %7s %9s %8s%n", heading, "min", "kcal", "protein", "cost");
         for (Recipe recipe : recipes) {
             NutritionSummary serving = cli.facade().recipeNutrition(recipe, 1);
             boolean over = timeLimit.isPresent() && recipe.totalMinutes() > timeLimit.getAsInt();
-            cli.out().printf("  %-40s %6s %7s %9s%n", recipe.name(), recipe.totalMinutes() + (over ? "*" : ""),
+            cli.out().printf("  %-40s %6s %7s %9s %8s%n", recipe.name(), recipe.totalMinutes() + (over ? "*" : ""),
                     serving.complete() ? String.valueOf(Math.round(serving.calories())) : "?",
-                    serving.complete() ? Math.round(serving.proteinG()) + " g" : "?");
+                    serving.complete() ? Math.round(serving.proteinG()) + " g" : "?",
+                    cli.facade().recipeCost(cli.profileId(), recipe).toString());
         }
     }
 

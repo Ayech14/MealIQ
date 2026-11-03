@@ -23,8 +23,8 @@ import java.util.OptionalDouble;
 import java.util.UUID;
 
 /**
- * Turns a meal plan into a shopping list (F07, SD02): what every meal needs, minus usable
- * pantry stock, with one line per ingredient. Units are combined only when the conversion
+ * Turns a meal plan into a priced shopping list (F07, F08, SD02): what every meal needs,
+ * minus usable pantry stock, with one line per ingredient. Units are combined only when the conversion
  * is exact or the catalogue gives the weights; otherwise the lines stay separate.
  */
 public class GroceryService {
@@ -60,25 +60,40 @@ public class GroceryService {
         for (IngredientRequirement need : consolidate(needs)) {
             Quantity toBuy = stock.take(need, plan.startDate());
             Quantity inPantry = new Quantity(need.quantity().amount() - toBuy.amount(), need.quantity().unit());
-            BigDecimal price = toBuy.isZero() ? BigDecimal.ZERO
-                    : priceSource.estimatePrice(need.ingredient(), toBuy)
-                            .map(p -> p.setScale(2, RoundingMode.HALF_UP)).orElse(null);
             Unit shown = need.quantity().simplified().unit(); // all three amounts in one readable unit
             items.add(new GroceryItem(need.ingredient(), need.quantity().convertTo(shown), inPantry.convertTo(shown),
-                    toBuy.convertTo(shown), price));
+                    toBuy.convertTo(shown), null));
         }
         items.sort(Comparator.comparing((GroceryItem i) -> i.ingredient().category())
                 .thenComparing(i -> i.ingredient().name()));
-        GroceryList list = new GroceryList(plan.id(), items);
-        list.estimatedCost(list.total());
+        return new GroceryList(plan.id(), items);
+    }
+
+    /**
+     * The list with a price for every item to buy (SD02): items already covered by the pantry
+     * cost nothing, and an item without a known price keeps a null price, which makes the
+     * list partial. The estimated cost is the sum of the known prices.
+     */
+    public GroceryList optimizeList(GroceryList list) {
+        List<GroceryItem> priced = list.items().stream().map(item -> new GroceryItem(item.ingredient(),
+                item.required(), item.inPantry(), item.toBuy(), item.toBuy().isZero() ? BigDecimal.ZERO
+                        : priceSource.estimatePrice(item.ingredient(), item.toBuy())
+                                .map(p -> p.setScale(2, RoundingMode.HALF_UP)).orElse(null))).toList();
+        GroceryList result = new GroceryList(list.id(), list.planId(), priced, BigDecimal.ZERO, false);
+        result.estimatedCost(result.total());
+        return result;
+    }
+
+    /** Generates and prices the list for a plan against the current pantry, and saves it. */
+    public GroceryList refreshForPlan(MealPlan plan) {
+        GroceryList list = optimizeList(generateList(plan, pantryService.getPantry(plan.profileId())));
+        groceryListRepository.save(list);
         return list;
     }
 
-    /** Generates the list for a plan against the current pantry, and saves it in place of any older one. */
-    public GroceryList refreshForPlan(MealPlan plan) {
-        GroceryList list = generateList(plan, pantryService.getPantry(plan.profileId()));
-        groceryListRepository.save(list);
-        return list;
+    /** Where prices come from, for display next to estimates. */
+    public String priceSource() {
+        return priceSource.describe();
     }
 
     public Optional<GroceryList> getList(UUID planId) {

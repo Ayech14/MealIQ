@@ -2,11 +2,13 @@ package io.github.ayech14.mealiq.agent;
 
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
+import io.github.ayech14.mealiq.domain.CostEstimate;
 import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.PantryItem;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
+import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.NutritionService;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
@@ -33,9 +35,11 @@ public class PromptBuilder {
             Answer only with the JSON object requested.""";
 
     private final NutritionService nutritionService;
+    private final BudgetService budgetService;
 
-    public PromptBuilder(NutritionService nutritionService) {
+    public PromptBuilder(NutritionService nutritionService, BudgetService budgetService) {
         this.nutritionService = nutritionService;
+        this.budgetService = budgetService;
     }
 
     /** Asks for the next tool call, or to finish, given the calls made so far. */
@@ -125,8 +129,9 @@ public class PromptBuilder {
         }
         prompt.append("""
                 Build the plan: one entry per meal slot, using exact candidate names for that meal type. \
-                Respect the cooking-time limits, aim for the calorie and protein targets across each day, \
-                use pantry items early, and vary the meals across days. In the rationale (2-4 sentences), \
+                Respect the cooking-time limits and the grocery budget (the costs are per serving), aim for \
+                the calorie and protein targets across each day, use pantry items early, never use the same recipe \
+                twice on one day, and vary the meals across days. In the rationale (2-4 sentences), \
                 explain the main trade-offs. List anything you could not satisfy in conflicts.""");
         return prompt.toString();
     }
@@ -137,6 +142,9 @@ public class PromptBuilder {
         parts.add(recipe.totalMinutes() + " min");
         parts.add(n.complete() ? Math.round(n.calories()) + " kcal, " + Math.round(n.proteinG()) + " g protein"
                 : "nutrition incomplete");
+        CostEstimate cost = budgetService.estimateRecipeCost(recipe, 1, context.pantry(),
+                context.request().startDate());
+        parts.add(cost + " to buy" + (cost.complete() ? "" : " (some prices unknown)"));
         List<String> fromPantry = recipe.ingredients().stream().filter(l -> !l.optional())
                 .filter(l -> context.pantry().shortfall(l, context.request().startDate()).isZero())
                 .map(l -> l.ingredient().name()).toList();
@@ -184,6 +192,10 @@ public class PromptBuilder {
         facts.add("allergies: " + listOrNone(p.allergies()));
         facts.add("likes: " + listOrNone(p.preferredFoods()));
         facts.add("dislikes: " + listOrNone(p.dislikedFoods()));
+        if (p.weeklyBudget().signum() > 0) {
+            facts.add("grocery budget $" + BudgetService.budgetFor(p.weeklyBudget(), context.request().days())
+                    + " for " + context.request().days() + " day(s)");
+        }
         OptionalInt limit = p.maxMinutesFor(context.request().startDate().getDayOfWeek());
         facts.add("cooking-time limit today: " + (limit.isPresent() ? limit.getAsInt() + " min" : "none"));
         prompt.append("PROFILE: ").append(String.join("; ", facts)).append('\n');

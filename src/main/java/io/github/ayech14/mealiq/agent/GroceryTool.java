@@ -42,7 +42,7 @@ public class GroceryTool implements AgentTool {
     }
 
     public GroceryList project(MealPlan plan, Pantry pantry) {
-        return groceryService.generateList(plan, pantry);
+        return groceryService.optimizeList(groceryService.generateList(plan, pantry));
     }
 
     @Override

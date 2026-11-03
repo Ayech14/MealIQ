@@ -12,6 +12,7 @@ import io.github.ayech14.mealiq.llm.LLMClient;
 import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.persistence.RecipeRepository;
 import io.github.ayech14.mealiq.planning.PlanningStrategyFactory;
+import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
 import io.github.ayech14.mealiq.services.GroceryService;
 import io.github.ayech14.mealiq.services.NutritionService;
@@ -25,15 +26,15 @@ public final class AgentAssembly {
     }
 
     public static MealPlanningAgent agent(LLMClient llm, RecipeRepository recipes, IngredientRepository ingredients,
-                                          NutritionService nutrition, GroceryService groceries,
-                                          ConstraintValidator validator, PlanningStrategyFactory strategies,
-                                          int maxToolSteps) {
+                                          NutritionService nutrition, BudgetService budget,
+                                          GroceryService groceries, ConstraintValidator validator,
+                                          PlanningStrategyFactory strategies, int maxToolSteps) {
         ToolManager tools = new ToolManager();
         tools.register(new RecipeTool(recipes, validator, nutrition));
         tools.register(new NutritionTool(nutrition, recipes));
         tools.register(new GroceryTool(groceries));
         tools.register(new SubstitutionTool(ingredients));
-        return new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition), new ConversationMemory(MEMORY_ENTRIES),
+        return new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition, budget), new ConversationMemory(MEMORY_ENTRIES),
                 strategies, maxToolSteps);
     }
 }

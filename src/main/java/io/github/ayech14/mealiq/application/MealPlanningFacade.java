@@ -7,6 +7,8 @@ import io.github.ayech14.mealiq.contracts.PlanRequest;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
+import io.github.ayech14.mealiq.domain.BudgetStatus;
+import io.github.ayech14.mealiq.domain.CostEstimate;
 import io.github.ayech14.mealiq.domain.GroceryList;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.MealPlan;
@@ -18,6 +20,7 @@ import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.ResponseStatus;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.integration.PriceDataSource;
+import io.github.ayech14.mealiq.integration.StatCanPriceDataSource;
 import io.github.ayech14.mealiq.llm.LLMClient;
 import io.github.ayech14.mealiq.llm.LLMException;
 import io.github.ayech14.mealiq.llm.ProviderLLMAdapter;
@@ -59,15 +62,15 @@ import java.util.UUID;
  *
  * <p>Operations are added as features are implemented; this version covers F01 (profile),
  * F02 (pantry), recipe browsing and agent recommendations (F03), weekly plans (F05),
- * nutrition analysis (F06) and grocery lists (F07).
+ * nutrition analysis (F06), grocery lists with prices and budget checks (F07, F08, F12).
  */
 public class MealPlanningFacade {
 
     /** The repositories and services behind the facade, grouped so wiring stays readable. */
     public record Services(ProfileService profiles, PantryService pantry, MealPlanService mealPlans,
-                           GroceryService groceries, IngredientRepository ingredients, RecipeRepository recipes, NutritionService nutrition,
-                           ConstraintValidator validator, PlanningStrategyFactory strategies,
-                           AgentController agentController, Clock clock) {
+                           GroceryService groceries, IngredientRepository ingredients, RecipeRepository recipes,
+                           NutritionService nutrition, BudgetService budget, ConstraintValidator validator,
+                           PlanningStrategyFactory strategies, AgentController agentController, Clock clock) {
     }
 
     private final ProfileService profileService;
@@ -77,6 +80,7 @@ public class MealPlanningFacade {
     private final IngredientRepository ingredientRepository;
     private final RecipeRepository recipeRepository;
     private final NutritionService nutritionService;
+    private final BudgetService budgetService;
     private final ConstraintValidator constraintValidator;
     private final PlanningStrategyFactory strategyFactory;
     private final AgentController agentController;
@@ -90,6 +94,7 @@ public class MealPlanningFacade {
         this.ingredientRepository = services.ingredients();
         this.recipeRepository = services.recipes();
         this.nutritionService = services.nutrition();
+        this.budgetService = services.budget();
         this.constraintValidator = services.validator();
         this.strategyFactory = services.strategies();
         this.agentController = services.agentController();
@@ -106,8 +111,7 @@ public class MealPlanningFacade {
         JdbcIngredientRepository ingredients = new JdbcIngredientRepository(database);
         JdbcRecipeRepository recipes = new JdbcRecipeRepository(database);
         NutritionService nutrition = new NutritionService();
-        // No grocery price data is connected yet, so every cost is unknown and BUDGET ranking is unavailable.
-        PriceDataSource prices = (ingredient, quantity) -> Optional.empty();
+        PriceDataSource prices = StatCanPriceDataSource.packaged();
         BudgetService budget = new BudgetService(prices);
         ConstraintValidator validator = new ConstraintValidator(nutrition, budget);
         PlanningStrategyFactory strategies = new DefaultPlanningStrategyFactory(nutrition, budget);
@@ -120,12 +124,12 @@ public class MealPlanningFacade {
                 };
         MealPlanService mealPlans = new MealPlanService(new JdbcMealPlanRepository(database));
         GroceryService groceries = new GroceryService(new JdbcGroceryListRepository(database), pantry, prices);
-        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, ingredients, nutrition, groceries, validator,
+        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, ingredients, nutrition, budget, groceries, validator,
                 strategies, config.maxToolSteps());
         AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
                 new ProposalValidator(recipes), validator);
         return new MealPlanningFacade(new Services(profiles, pantry, mealPlans, groceries, ingredients, recipes,
-                nutrition, validator, strategies, controller, clock));
+                nutrition, budget, validator, strategies, controller, clock));
     }
 
     /**
@@ -215,14 +219,43 @@ public class MealPlanningFacade {
         return nutritionService.dailyTotals(plan);
     }
 
-    // ---- F07 grocery list ----
+    // ---- F07 grocery list, F08 optimization and F12 budget ----
 
     /**
-     * Builds and saves the shopping list for the active plan against the current pantry.
+     * Builds, prices and saves the shopping list for the active plan, and compares it with the
+     * profile's weekly budget scaled to the plan's length (UC06). Over budget is a CONFLICT
+     * with the exact shortfall and the items that cost most.
+     *
      * @throws NotFoundException if there is no active plan
      */
-    public GroceryList generateGroceryList(UUID profileId) {
-        return groceryService.refreshForPlan(activePlanOrThrow(profileId));
+    public AgentResponse generateOptimizedGroceryList(UUID profileId) {
+        MealPlan plan = activePlanOrThrow(profileId);
+        GroceryList list = groceryService.refreshForPlan(plan);
+        Optional<UserProfile> profile = findProfile(profileId);
+        if (profile.isEmpty() || profile.get().weeklyBudget().signum() == 0) {
+            return AgentResponse.builder(ResponseStatus.SUCCESS).groceryList(list)
+                    .rationale("No weekly budget is set, so the cost was not compared with one.").build();
+        }
+        BudgetStatus status = budgetService.evaluate(list,
+                BudgetService.budgetFor(profile.get().weeklyBudget(), plan.days()));
+        List<String> notes = new ArrayList<>();
+        if (status.partial()) {
+            notes.add("Some items have no price, so the estimate is partial and the real cost is higher.");
+        }
+        if (status.withinBudget()) {
+            return AgentResponse.builder(ResponseStatus.SUCCESS).groceryList(list).budgetStatus(status)
+                    .conflicts(notes).build();
+        }
+        notes.add(0, "Over budget by $" + status.shortfall() + ". Biggest costs: " + String.join(", ",
+                status.costDrivers().stream().map(i -> i.ingredient().name() + " $" + i.estimatedPrice()).toList())
+                + ".");
+        return AgentResponse.builder(ResponseStatus.CONFLICT).groceryList(list).budgetStatus(status)
+                .conflicts(notes).build();
+    }
+
+    /** Where grocery prices come from, e.g. "Statistics Canada average retail prices, 2026-08". */
+    public String priceSource() {
+        return groceryService.priceSource();
     }
 
     /** The saved list of the active plan, if one was generated. */
@@ -301,6 +334,11 @@ public class MealPlanningFacade {
     /** Calories and macros for {@code servings} portions, from catalogue data only (D09). */
     public NutritionSummary recipeNutrition(Recipe recipe, int servings) {
         return nutritionService.calculateNutrition(recipe, servings);
+    }
+
+    /** Cost of one serving beyond what the pantry holds today, from known prices (F12). */
+    public CostEstimate recipeCost(UUID profileId, Recipe recipe) {
+        return budgetService.estimateRecipeCost(recipe, 1, getPantry(profileId), LocalDate.now(clock));
     }
 
     /** Allergy, diet and dislike findings for one recipe against a saved profile; empty result if none is saved. */

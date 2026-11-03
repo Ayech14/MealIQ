@@ -191,7 +191,7 @@ class MealPlanningCLITest {
         String ranked = listed.substring(0, listed.indexOf("Left out"));
         assertFalse(ranked.contains("Sheet-pan salmon"), ranked);
         assertTrue(listed.contains("Sheet-pan salmon with sweet potato contains salmon (allergy: fish)."), listed);
-        assertTrue(listed.contains("Per serving."), listed);
+        assertTrue(listed.contains("Per serving; cost is what you would buy beyond your pantry (+ means"), listed);
     }
 
     @Test
@@ -201,6 +201,14 @@ class MealPlanningCLITest {
         String listed = out.toString();
         assertTrue(listed.contains(" 45*"), listed);
         assertTrue(listed.contains("* Over today's cooking-time limit of 25 minutes."), listed);
+    }
+
+    @Test
+    void recipesListShowsCostAndRanksByBudget() {
+        assertEquals(0, run("recipes", "list", "--meal", "snack", "--rank", "budget", "--limit", "2"));
+        String listed = out.toString();
+        assertTrue(listed.contains("Recipe (ranked by budget)"), listed);
+        assertTrue(listed.matches("(?s).*cost\\n.*\\$\\d+\\.\\d{2}\\n.*"), listed);
     }
 
     @Test
@@ -321,6 +329,12 @@ class MealPlanningCLITest {
         assertTrue(listed.contains("  legume\n    lentils"), listed);
         assertTrue(listed.matches("(?s).*lentils\\s+250 g\\s+250 g\\s+-\\s+-.*"), listed);
         assertTrue(listed.contains("8 of 9 ingredients to buy. Estimated cost: $"), listed);
+        assertTrue(listed.contains("No weekly budget is set"), listed);
+
+        run("profile", "set", "--budget", "1");
+        assertEquals(0, run("grocery", "optimize"));
+        assertTrue(out.toString().contains("Budget for this plan: $0.14. Over by $"), out.toString());
+        assertTrue(out.toString().contains("Note: Over budget by $"), out.toString());
 
         assertEquals(0, run("grocery", "show"));
         assertTrue(out.toString().contains("lentils"));

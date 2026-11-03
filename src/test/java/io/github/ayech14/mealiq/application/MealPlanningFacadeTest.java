@@ -33,10 +33,11 @@ class MealPlanningFacadeTest {
     private InMemoryRepositories.RecordingObserver observer;
     private MealPlanningFacade facade;
     private UUID profileId;
+    private TestFacades.Fixture fixture;
 
     @BeforeEach
     void setUp() {
-        TestFacades.Fixture fixture = TestFacades.inMemory(TODAY);
+        fixture = TestFacades.inMemory(TODAY);
         facade = fixture.facade();
         observer = fixture.pantryEvents();
         profileId = MealPlanningFacade.localProfileId("default");
@@ -162,5 +163,53 @@ class MealPlanningFacadeTest {
         assertTrue(facade.checkRecipe(profileId, toast).valid(), "no saved profile");
         facade.updateProfile(new UserProfile(profileId).allergies(Set.of("peanut")));
         assertFalse(facade.checkRecipe(profileId, toast).valid());
+    }
+
+    /** Saves an active one-day plan of lentil soup, 4 servings, without going through the agent. */
+    private void activeSoupPlan() {
+        Recipe soup = facade.findRecipe("Lentil soup");
+        io.github.ayech14.mealiq.domain.MealPlan plan = new io.github.ayech14.mealiq.domain.MealPlan(profileId, TODAY,
+                1, List.of(new io.github.ayech14.mealiq.domain.PlannedMeal(TODAY, MealType.DINNER, soup, 4)));
+        plan.status(io.github.ayech14.mealiq.domain.PlanStatus.ACTIVE);
+        fixture.plans().save(plan);
+    }
+
+    @Test
+    void groceryListWithoutABudgetIsJustPriced() {
+        activeSoupPlan();
+        AgentResponse response = facade.generateOptimizedGroceryList(profileId);
+        assertEquals(ResponseStatus.SUCCESS, response.status());
+        assertTrue(response.groceryList().estimatedCost().signum() > 0);
+        assertEquals(null, response.budgetStatus());
+        assertTrue(response.rationale().startsWith("No weekly budget is set"));
+    }
+
+    @Test
+    void groceryListOverBudgetIsAConflictWithTheShortfall() {
+        activeSoupPlan();
+        facade.updateProfile(new UserProfile(profileId).weeklyBudget(new BigDecimal("7")));
+        AgentResponse response = facade.generateOptimizedGroceryList(profileId);
+        assertEquals(ResponseStatus.CONFLICT, response.status());
+        assertEquals(new BigDecimal("1.00"), response.budgetStatus().budget(), "a 1-day plan gets 1/7 of $7");
+        assertTrue(response.conflicts().getFirst().startsWith("Over budget by $" + response.budgetStatus().shortfall()
+                + ". Biggest costs: "), response.conflicts().toString());
+        assertTrue(facade.getGroceryList(profileId).isPresent(), "the list is saved either way");
+    }
+
+    @Test
+    void groceryListWithinBudget() {
+        activeSoupPlan();
+        facade.updateProfile(new UserProfile(profileId).weeklyBudget(new BigDecimal("700")));
+        AgentResponse response = facade.generateOptimizedGroceryList(profileId);
+        assertEquals(ResponseStatus.SUCCESS, response.status());
+        assertTrue(response.budgetStatus().withinBudget());
+    }
+
+    @Test
+    void recipeCostCountsThePantry() {
+        Recipe soup = facade.findRecipe("Lentil soup");
+        BigDecimal before = facade.recipeCost(profileId, soup).known();
+        facade.updatePantry(profileId, facade.pantryItem("lentils", 1, "kg", null));
+        assertTrue(facade.recipeCost(profileId, soup).known().compareTo(before) < 0);
     }
 }

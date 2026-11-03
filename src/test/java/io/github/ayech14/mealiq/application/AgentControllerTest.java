@@ -84,7 +84,7 @@ class AgentControllerTest {
                         "all snacks");
             }
         });
-        MealPlanningAgent agent = new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition),
+        MealPlanningAgent agent = new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition, new BudgetService((i, q) -> Optional.empty())),
                 new ConversationMemory(5), new DefaultPlanningStrategyFactory(nutrition,
                         new BudgetService((i, q) -> Optional.empty())), 2);
         return new AgentController(agent, profiles, pantry, new MealPlanService(plans),
@@ -94,8 +94,9 @@ class AgentControllerTest {
     AgentController controller() {
         GroceryService groceries = new GroceryService(new InMemoryRepositories.GroceryLists(), pantry,
                 (i, q) -> Optional.empty());
-        return new AgentController(AgentAssembly.agent(llm, recipes, catalogue, nutrition, groceries, validator,
-                new DefaultPlanningStrategyFactory(nutrition, new BudgetService((i, q) -> Optional.empty())), 3),
+        BudgetService budget = new BudgetService((i, q) -> Optional.empty());
+        return new AgentController(AgentAssembly.agent(llm, recipes, catalogue, nutrition, budget, groceries, validator,
+                new DefaultPlanningStrategyFactory(nutrition, budget), 3),
                 profiles, pantry, new MealPlanService(plans), new ProposalValidator(recipes), validator);
     }
 

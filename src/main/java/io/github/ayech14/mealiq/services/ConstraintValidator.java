@@ -3,6 +3,7 @@ package io.github.ayech14.mealiq.services;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
+import io.github.ayech14.mealiq.domain.CostEstimate;
 import io.github.ayech14.mealiq.domain.DietRules;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.IngredientRequirement;
@@ -11,14 +12,12 @@ import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeSet;
@@ -81,15 +80,16 @@ public class ConstraintValidator {
             return; // no budget set
         }
         int days = context.request().days();
-        BigDecimal budget = weekly.multiply(BigDecimal.valueOf(days)).divide(BigDecimal.valueOf(7), 2,
-                RoundingMode.HALF_UP);
-        Optional<BigDecimal> cost = budgetService.estimateCost(proposal.meals(), context.pantry());
-        if (cost.isEmpty()) {
-            warnings.add("The cost could not be estimated (some prices are unknown), so the budget of $"
-                    + budget + " was not checked.");
-        } else if (cost.get().compareTo(budget) > 0) {
-            violations.add("Estimated grocery cost $" + cost.get() + " is over the budget of $" + budget
-                    + " for " + days + " day(s).");
+        BigDecimal budget = BudgetService.budgetFor(weekly, days);
+        CostEstimate cost = budgetService.estimateCost(proposal.meals(), context.pantry());
+        if (cost.known().compareTo(budget) > 0) {
+            // Known prices alone are over budget, so the real cost is too.
+            violations.add("Estimated grocery cost " + cost + " is over the budget of $" + budget + " for " + days
+                    + " day(s).");
+        } else if (!cost.complete()) {
+            warnings.add("Known prices add up to " + cost + " against a budget of $" + budget + "; "
+                    + cost.unpricedItems() + " ingredient amount(s) in the meals have no price, so the plan may still be "
+                    + "over.");
         }
     }
 

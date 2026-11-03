@@ -87,7 +87,8 @@ class GroceryServiceTest {
     void pantryStockIsSubtractedAndPriced() {
         pantry.updateItem(new PantryItem(rice, Quantity.of(1, "kg"), null));
         pantry.updateItem(new PantryItem(egg, Quantity.of(1, "unit"), null));
-        GroceryList list = service.generateList(plan(new PlannedMeal(START, MealType.DINNER, riceBowl, 2)), pantry);
+        GroceryList list = service.optimizeList(
+                service.generateList(plan(new PlannedMeal(START, MealType.DINNER, riceBowl, 2)), pantry));
 
         GroceryItem riceLine = item(list, "white rice");
         assertEquals(Quantity.of(300, "g"), riceLine.inPantry());
@@ -99,6 +100,15 @@ class GroceryServiceTest {
         assertEquals(new BigDecimal("0.50"), eggLine.estimatedPrice(), "one 50 g egg at $1 per 100 g");
         assertEquals(new BigDecimal("0.50"), list.estimatedCost());
         assertEquals(Quantity.of(1, "kg"), pantry.items().get(rice.id()).quantity(), "the real pantry is unchanged");
+    }
+
+    @Test
+    void generatingDoesNotPriceButOptimizingDoes() {
+        GroceryList list = service.generateList(plan(new PlannedMeal(START, MealType.DINNER, riceBowl, 2)), pantry);
+        assertTrue(list.items().stream().allMatch(i -> i.estimatedPrice() == null));
+        GroceryList priced = service.optimizeList(list);
+        assertEquals(list.id(), priced.id());
+        assertEquals(new BigDecimal("4.00"), priced.estimatedCost(), "300 g rice + 100 g egg at $1 per 100 g");
     }
 
     @Test
@@ -122,7 +132,8 @@ class GroceryServiceTest {
     void unknownPricesMakeThePartialListHonest() {
         GroceryService noPrices = new GroceryService(lists, new PantryService(pantries, catalogue),
                 (i, q) -> Optional.empty());
-        GroceryList list = noPrices.generateList(plan(new PlannedMeal(START, MealType.DINNER, riceBowl, 2)), pantry);
+        GroceryList list = noPrices.optimizeList(
+                noPrices.generateList(plan(new PlannedMeal(START, MealType.DINNER, riceBowl, 2)), pantry));
         assertNull(item(list, "egg").estimatedPrice());
         assertTrue(list.isPartial());
         assertEquals(BigDecimal.ZERO, list.total());
