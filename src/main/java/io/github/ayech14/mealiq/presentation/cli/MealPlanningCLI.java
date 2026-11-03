@@ -28,7 +28,7 @@ import picocli.CommandLine.ScopeType;
  */
 @Command(name = "mealiq", mixinStandardHelpOptions = true, version = "MealIQ 0.1.0",
         description = "Meal planning and grocery optimization. A planning aid, not medical or dietary advice.",
-        subcommands = {ProfileCommand.class, PantryCommand.class})
+        subcommands = {ProfileCommand.class, PantryCommand.class, RecipesCommand.class})
 public final class MealPlanningCLI implements Runnable {
 
     static final int OK = 0;
@@ -78,12 +78,13 @@ public final class MealPlanningCLI implements Runnable {
         commandLine.usage(out());
     }
 
-    @Command(name = "setup", description = "Create missing database tables and load the ingredient catalogue.")
+    @Command(name = "setup", description = "Create missing database tables and load the ingredient catalogue and recipes.")
     int setup() {
         DatabaseSetup.Result result = databaseSetup.get();
         out().println(result.tablesCreated().isEmpty() ? "All tables already exist."
                 : "Created tables: " + String.join(", ", result.tablesCreated()));
         out().println("Ingredient catalogue: " + result.ingredientsLoaded() + " ingredients.");
+        out().println("Seed recipes: " + result.recipesLoaded() + " recipes.");
         return OK;
     }
 

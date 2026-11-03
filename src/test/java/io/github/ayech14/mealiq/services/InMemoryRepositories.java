@@ -1,17 +1,23 @@
 package io.github.ayech14.mealiq.services;
 
+import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.Pantry;
+import io.github.ayech14.mealiq.domain.Recipe;
+import io.github.ayech14.mealiq.domain.RecipeSource;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.events.PlanImpactObserver;
 import io.github.ayech14.mealiq.events.PlanRelevantChange;
 import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.persistence.PantryRepository;
 import io.github.ayech14.mealiq.persistence.ProfileRepository;
+import io.github.ayech14.mealiq.persistence.RecipeRepository;
 import io.github.ayech14.mealiq.persistence.catalogue.CatalogueLoader;
+import io.github.ayech14.mealiq.persistence.catalogue.RecipeCatalogueLoader;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -102,6 +108,48 @@ public final class InMemoryRepositories {
         @Override
         public void saveSubstitutes(Ingredient ingredient, List<Ingredient> substitutes) {
             throw new UnsupportedOperationException("read-only catalogue");
+        }
+    }
+
+    /** The packaged seed recipes, searched with the same rules as the JDBC repository. */
+    public static final class Recipes implements RecipeRepository {
+        private final Map<UUID, Recipe> byId = new LinkedHashMap<>();
+
+        public Recipes(IngredientRepository catalogue) {
+            RecipeCatalogueLoader.read(catalogue::findByName).forEach(this::save);
+        }
+
+        @Override
+        public Optional<Recipe> findById(UUID recipeId) {
+            return Optional.ofNullable(byId.get(recipeId));
+        }
+
+        @Override
+        public List<Recipe> search(RecipeQuery query) {
+            List<String> include = terms(query.includeIngredients());
+            List<String> exclude = terms(query.excludeIngredients());
+            return byId.values().stream()
+                    .filter(r -> query.maxMinutes() == null || r.totalMinutes() <= query.maxMinutes())
+                    .filter(r -> query.allowGenerated() || r.source() != RecipeSource.GENERATED)
+                    .filter(r -> query.mealType() == null || r.mealTypes().contains(query.mealType()))
+                    .filter(r -> include.isEmpty() || usesAny(r, include))
+                    .filter(r -> !usesAny(r, exclude))
+                    .sorted(Comparator.comparing(Recipe::name))
+                    .toList();
+        }
+
+        @Override
+        public void save(Recipe recipe) {
+            byId.put(recipe.id(), recipe); // recipes are immutable records
+        }
+
+        private static List<String> terms(List<String> values) {
+            return values.stream().map(v -> v.strip().toLowerCase(Locale.ROOT)).filter(v -> !v.isEmpty()).toList();
+        }
+
+        private static boolean usesAny(Recipe recipe, List<String> terms) {
+            return recipe.ingredients().stream().map(l -> l.ingredient().name())
+                    .anyMatch(name -> terms.stream().anyMatch(name::contains));
         }
     }
 

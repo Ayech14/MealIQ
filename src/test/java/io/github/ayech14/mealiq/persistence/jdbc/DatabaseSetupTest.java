@@ -44,6 +44,8 @@ class DatabaseSetupTest {
         assertEquals(11, result.tablesCreated().size());
         assertEquals(CatalogueLoader.read().size(), result.ingredientsLoaded());
         assertEquals(result.ingredientsLoaded(), count(database, "ingredients"));
+        assertEquals(30, result.recipesLoaded());
+        assertEquals(30, count(database, "recipes"));
     }
 
     @Test
@@ -52,12 +54,15 @@ class DatabaseSetupTest {
         DatabaseSetup.run(database);
         int ingredients = count(database, "ingredients");
         int links = count(database, "ingredient_substitutes");
+        int recipeLines = count(database, "recipe_ingredients");
 
         DatabaseSetup.Result second = DatabaseSetup.run(database);
 
         assertTrue(second.tablesCreated().isEmpty());
         assertEquals(ingredients, count(database, "ingredients"));
         assertEquals(links, count(database, "ingredient_substitutes"));
+        assertEquals(30, count(database, "recipes"));
+        assertEquals(recipeLines, count(database, "recipe_ingredients"));
     }
 
     @Test

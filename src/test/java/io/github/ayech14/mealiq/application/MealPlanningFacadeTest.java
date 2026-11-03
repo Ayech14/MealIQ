@@ -1,24 +1,25 @@
 package io.github.ayech14.mealiq.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.ayech14.mealiq.contracts.AgentResponse;
+import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.domain.Ingredient;
+import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.PantryItem;
+import io.github.ayech14.mealiq.domain.PlanningMode;
+import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.ResponseStatus;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.services.InMemoryRepositories;
 import io.github.ayech14.mealiq.services.InvalidInputException;
 import io.github.ayech14.mealiq.services.NotFoundException;
-import io.github.ayech14.mealiq.services.PantryService;
-import io.github.ayech14.mealiq.services.ProfileService;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -35,13 +36,9 @@ class MealPlanningFacadeTest {
 
     @BeforeEach
     void setUp() {
-        InMemoryRepositories.Catalogue catalogue = new InMemoryRepositories.Catalogue();
-        Clock clock = Clock.fixed(TODAY.atStartOfDay().toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
-        PantryService pantryService = new PantryService(new InMemoryRepositories.Pantries(), catalogue, clock);
-        observer = new InMemoryRepositories.RecordingObserver();
-        pantryService.subscribe(observer);
-        facade = new MealPlanningFacade(new ProfileService(new InMemoryRepositories.Profiles(), catalogue),
-                pantryService, catalogue);
+        TestFacades.Fixture fixture = TestFacades.inMemory(TODAY);
+        facade = fixture.facade();
+        observer = fixture.pantryEvents();
         profileId = MealPlanningFacade.localProfileId("default");
     }
 
@@ -109,5 +106,61 @@ class MealPlanningFacadeTest {
         assertTrue(names.stream().allMatch(n -> n.contains("milk")));
         assertEquals(facade.searchIngredients(null).size(), facade.searchIngredients("").size());
         assertTrue(facade.searchIngredients("unobtainium").isEmpty());
+    }
+
+    @Test
+    void browseExcludesRecipesThatBreakTheProfileAndSaysWhy() {
+        facade.updateProfile(new UserProfile(profileId).allergies(Set.of("peanut")));
+        AgentResponse response = facade.browseRecipes(profileId, RecipeQuery.any().withMealType(MealType.SNACK),
+                PlanningMode.NUTRITION_GOAL);
+        List<String> names = response.recipes().stream().map(Recipe::name).toList();
+        assertFalse(names.contains("Apple with peanut butter"));
+        assertTrue(response.conflicts().contains("Apple with peanut butter contains peanut butter (allergy: peanut)."),
+                response.conflicts().toString());
+        assertEquals(ResponseStatus.SUCCESS, response.status());
+        assertEquals("", response.rationale());
+    }
+
+    @Test
+    void browseWithoutProfileAppliesNoRestrictions() {
+        AgentResponse response = facade.browseRecipes(profileId, RecipeQuery.any(), PlanningMode.NUTRITION_GOAL);
+        assertEquals(30, response.recipes().size());
+        assertTrue(response.conflicts().isEmpty());
+        assertTrue(response.rationale().startsWith("No saved profile"));
+    }
+
+    @Test
+    void browseRanksByTheChosenMode() {
+        AgentResponse byTime = facade.browseRecipes(profileId, RecipeQuery.any().withMealType(MealType.DINNER),
+                PlanningMode.TIME_AWARE);
+        List<Integer> minutes = byTime.recipes().stream().map(Recipe::totalMinutes).toList();
+        assertEquals(minutes.stream().sorted().toList(), minutes, "no limit set, so quickest first");
+    }
+
+    @Test
+    void nothingLeftIsAConflict() {
+        facade.updateProfile(new UserProfile(profileId).dietaryRestrictions(Set.of("vegan")));
+        AgentResponse response = facade.browseRecipes(profileId, RecipeQuery.any().including("chicken"),
+                PlanningMode.NUTRITION_GOAL);
+        assertEquals(ResponseStatus.CONFLICT, response.status());
+        assertFalse(response.conflicts().isEmpty());
+    }
+
+    @Test
+    void findRecipeIgnoresCaseAndSuggestsCloseNames() {
+        assertEquals("Lentil soup", facade.findRecipe("  lentil SOUP ").name());
+        NotFoundException missing = assertThrows(NotFoundException.class, () -> facade.findRecipe("tacos"));
+        assertEquals("No recipe named 'tacos'. Did you mean: Black bean tacos, Shrimp tacos?", missing.getMessage());
+    }
+
+    @Test
+    void recipeNutritionAndCheck() {
+        Recipe toast = facade.findRecipe("Peanut butter banana toast");
+        assertTrue(facade.recipeNutrition(toast, 1).complete());
+        assertEquals(2 * facade.recipeNutrition(toast, 1).calories(), facade.recipeNutrition(toast, 2).calories(),
+                1e-6);
+        assertTrue(facade.checkRecipe(profileId, toast).valid(), "no saved profile");
+        facade.updateProfile(new UserProfile(profileId).allergies(Set.of("peanut")));
+        assertFalse(facade.checkRecipe(profileId, toast).valid());
     }
 }

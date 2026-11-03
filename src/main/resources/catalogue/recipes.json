@@ -1,0 +1,426 @@
+[
+  {
+    "name": "Greek yogurt berry bowl",
+    "mealTypes": ["BREAKFAST", "SNACK"], "prepMinutes": 5, "cookMinutes": 0, "servings": 1,
+    "tags": ["quick", "high-protein", "no-cook"],
+    "ingredients": [
+      {"name": "greek yogurt", "amount": 200, "unit": "g"},
+      {"name": "blueberries", "amount": 75, "unit": "g"},
+      {"name": "rolled oats", "amount": 30, "unit": "g"},
+      {"name": "honey", "amount": 1, "unit": "tsp", "optional": true}
+    ],
+    "instructions": ["Spoon the yogurt into a bowl.", "Top with blueberries and oats.", "Drizzle with honey if using."]
+  },
+  {
+    "name": "Overnight oats",
+    "mealTypes": ["BREAKFAST"], "prepMinutes": 5, "cookMinutes": 0, "servings": 1,
+    "tags": ["make-ahead", "no-cook"],
+    "ingredients": [
+      {"name": "rolled oats", "amount": 50, "unit": "g"},
+      {"name": "milk", "amount": 180, "unit": "ml"},
+      {"name": "chia seeds", "amount": 10, "unit": "g"},
+      {"name": "banana", "amount": 1, "unit": "unit"},
+      {"name": "maple syrup", "amount": 1, "unit": "tsp", "optional": true}
+    ],
+    "instructions": ["Mix oats, milk and chia seeds in a jar.", "Refrigerate overnight.", "Top with sliced banana and maple syrup."]
+  },
+  {
+    "name": "Spinach scrambled eggs on toast",
+    "mealTypes": ["BREAKFAST"], "prepMinutes": 3, "cookMinutes": 7, "servings": 1,
+    "tags": ["quick", "high-protein"],
+    "ingredients": [
+      {"name": "egg", "amount": 2, "unit": "unit"},
+      {"name": "spinach", "amount": 40, "unit": "g"},
+      {"name": "whole wheat bread", "amount": 1, "unit": "unit"},
+      {"name": "butter", "amount": 1, "unit": "unit"},
+      {"name": "salt", "amount": 0.25, "unit": "tsp"}
+    ],
+    "instructions": ["Toast the bread.", "Wilt the spinach in butter.", "Add beaten eggs and salt; stir until just set.", "Serve on the toast."]
+  },
+  {
+    "name": "Peanut butter banana toast",
+    "mealTypes": ["BREAKFAST", "SNACK"], "prepMinutes": 5, "cookMinutes": 0, "servings": 1,
+    "tags": ["quick", "budget"],
+    "ingredients": [
+      {"name": "whole wheat bread", "amount": 2, "unit": "unit"},
+      {"name": "peanut butter", "amount": 2, "unit": "tbsp"},
+      {"name": "banana", "amount": 1, "unit": "unit"}
+    ],
+    "instructions": ["Toast the bread.", "Spread with peanut butter.", "Top with sliced banana."]
+  },
+  {
+    "name": "Tofu scramble",
+    "mealTypes": ["BREAKFAST", "LUNCH"], "prepMinutes": 5, "cookMinutes": 10, "servings": 2,
+    "tags": ["high-protein", "plant-based"],
+    "ingredients": [
+      {"name": "tofu", "amount": 350, "unit": "g"},
+      {"name": "red bell pepper", "amount": 1, "unit": "unit"},
+      {"name": "onion", "amount": 0.5, "unit": "unit"},
+      {"name": "spinach", "amount": 60, "unit": "g"},
+      {"name": "turmeric", "amount": 0.5, "unit": "tsp"},
+      {"name": "olive oil", "amount": 1, "unit": "tbsp"},
+      {"name": "salt", "amount": 0.5, "unit": "tsp"}
+    ],
+    "instructions": ["Soften diced onion and pepper in oil.", "Crumble in the tofu with turmeric and salt.", "Cook 5 minutes, then stir in the spinach."]
+  },
+  {
+    "name": "Banana oat pancakes",
+    "mealTypes": ["BREAKFAST"], "prepMinutes": 5, "cookMinutes": 10, "servings": 2,
+    "tags": ["vegetarian"],
+    "ingredients": [
+      {"name": "rolled oats", "amount": 100, "unit": "g"},
+      {"name": "banana", "amount": 2, "unit": "unit"},
+      {"name": "egg", "amount": 2, "unit": "unit"},
+      {"name": "milk", "amount": 120, "unit": "ml"},
+      {"name": "baking powder", "amount": 1, "unit": "tsp"},
+      {"name": "vegetable oil", "amount": 1, "unit": "tsp"},
+      {"name": "maple syrup", "amount": 2, "unit": "tbsp", "optional": true}
+    ],
+    "instructions": ["Blend oats, bananas, eggs, milk and baking powder.", "Cook small pancakes in a lightly oiled pan, 2 minutes a side.", "Serve with maple syrup."]
+  },
+  {
+    "name": "Cottage cheese fruit plate",
+    "mealTypes": ["BREAKFAST", "SNACK"], "prepMinutes": 5, "cookMinutes": 0, "servings": 1,
+    "tags": ["quick", "high-protein", "no-cook"],
+    "ingredients": [
+      {"name": "cottage cheese", "amount": 200, "unit": "g"},
+      {"name": "pineapple", "amount": 100, "unit": "g"},
+      {"name": "walnuts", "amount": 15, "unit": "g", "optional": true}
+    ],
+    "instructions": ["Serve the cottage cheese with pineapple pieces.", "Sprinkle with chopped walnuts."]
+  },
+  {
+    "name": "Chicken quinoa bowl",
+    "mealTypes": ["LUNCH", "DINNER"], "prepMinutes": 10, "cookMinutes": 20, "servings": 2,
+    "tags": ["high-protein", "gluten-free"],
+    "ingredients": [
+      {"name": "chicken breast", "amount": 300, "unit": "g"},
+      {"name": "quinoa", "amount": 150, "unit": "g"},
+      {"name": "broccoli", "amount": 200, "unit": "g"},
+      {"name": "olive oil", "amount": 1, "unit": "tbsp"},
+      {"name": "lemon juice", "amount": 2, "unit": "tbsp"},
+      {"name": "garlic", "amount": 2, "unit": "unit"},
+      {"name": "salt", "amount": 0.5, "unit": "tsp"}
+    ],
+    "instructions": ["Cook the quinoa.", "Pan-sear seasoned chicken in oil with garlic, then slice.", "Steam the broccoli.", "Assemble bowls and dress with lemon juice."]
+  },
+  {
+    "name": "Chickpea spinach curry",
+    "mealTypes": ["LUNCH", "DINNER"], "prepMinutes": 10, "cookMinutes": 20, "servings": 4,
+    "tags": ["plant-based", "budget"],
+    "ingredients": [
+      {"name": "chickpeas", "amount": 500, "unit": "g"},
+      {"name": "canned tomatoes", "amount": 400, "unit": "ml"},
+      {"name": "coconut milk", "amount": 200, "unit": "ml"},
+      {"name": "spinach", "amount": 120, "unit": "g"},
+      {"name": "onion", "amount": 1, "unit": "unit"},
+      {"name": "garlic", "amount": 3, "unit": "unit"},
+      {"name": "ginger", "amount": 10, "unit": "g"},
+      {"name": "curry powder", "amount": 2, "unit": "tbsp"},
+      {"name": "vegetable oil", "amount": 1, "unit": "tbsp"},
+      {"name": "salt", "amount": 1, "unit": "tsp"}
+    ],
+    "instructions": ["Soften onion, garlic and ginger in oil.", "Add curry powder, then tomatoes, coconut milk and chickpeas.", "Simmer 15 minutes and stir in spinach."]
+  },
+  {
+    "name": "Lentil soup",
+    "mealTypes": ["LUNCH", "DINNER"], "prepMinutes": 10, "cookMinutes": 30, "servings": 4,
+    "tags": ["plant-based", "budget", "make-ahead"],
+    "ingredients": [
+      {"name": "lentils", "amount": 250, "unit": "g"},
+      {"name": "carrot", "amount": 2, "unit": "unit"},
+      {"name": "celery", "amount": 2, "unit": "unit"},
+      {"name": "onion", "amount": 1, "unit": "unit"},
+      {"name": "canned tomatoes", "amount": 400, "unit": "ml"},
+      {"name": "vegetable broth", "amount": 1, "unit": "l"},
+      {"name": "cumin", "amount": 1, "unit": "tsp"},
+      {"name": "olive oil", "amount": 1, "unit": "tbsp"},
+      {"name": "salt", "amount": 1, "unit": "tsp"}
+    ],
+    "instructions": ["Soften diced onion, carrot and celery in oil.", "Add cumin, lentils, tomatoes and broth.", "Simmer 25 minutes until the lentils are tender."]
+  },
+  {
+    "name": "Turkey veggie wrap",
+    "mealTypes": ["LUNCH"], "prepMinutes": 10, "cookMinutes": 0, "servings": 1,
+    "tags": ["quick", "high-protein", "no-cook"],
+    "ingredients": [
+      {"name": "flour tortilla", "amount": 1, "unit": "unit"},
+      {"name": "turkey breast", "amount": 90, "unit": "g"},
+      {"name": "romaine lettuce", "amount": 3, "unit": "unit"},
+      {"name": "tomato", "amount": 0.5, "unit": "unit"},
+      {"name": "hummus", "amount": 2, "unit": "tbsp"}
+    ],
+    "instructions": ["Spread hummus on the tortilla.", "Layer turkey, lettuce and sliced tomato.", "Roll up tightly and cut in half."]
+  },
+  {
+    "name": "Tuna salad sandwich",
+    "mealTypes": ["LUNCH"], "prepMinutes": 10, "cookMinutes": 0, "servings": 1,
+    "tags": ["quick", "high-protein", "budget", "no-cook"],
+    "ingredients": [
+      {"name": "canned tuna", "amount": 1, "unit": "unit"},
+      {"name": "mayonnaise", "amount": 1, "unit": "tbsp"},
+      {"name": "celery", "amount": 0.5, "unit": "unit"},
+      {"name": "whole wheat bread", "amount": 2, "unit": "unit"},
+      {"name": "romaine lettuce", "amount": 2, "unit": "unit"}
+    ],
+    "instructions": ["Mix drained tuna, mayonnaise and diced celery.", "Fill the bread with tuna and lettuce."]
+  },
+  {
+    "name": "Black bean quesadillas",
+    "mealTypes": ["LUNCH", "DINNER"], "prepMinutes": 5, "cookMinutes": 10, "servings": 2,
+    "tags": ["vegetarian", "budget", "quick"],
+    "ingredients": [
+      {"name": "flour tortilla", "amount": 4, "unit": "unit"},
+      {"name": "black beans", "amount": 240, "unit": "g"},
+      {"name": "cheddar cheese", "amount": 80, "unit": "g"},
+      {"name": "corn", "amount": 80, "unit": "g"},
+      {"name": "salsa", "amount": 4, "unit": "tbsp"},
+      {"name": "cumin", "amount": 0.5, "unit": "tsp"}
+    ],
+    "instructions": ["Mash beans with cumin.", "Fill two tortillas with beans, corn and cheese; top with the others.", "Toast in a dry pan, 3 minutes a side.", "Serve with salsa."]
+  },
+  {
+    "name": "Mediterranean chickpea salad",
+    "mealTypes": ["LUNCH"], "prepMinutes": 15, "cookMinutes": 0, "servings": 2,
+    "tags": ["vegetarian", "gluten-free", "no-cook"],
+    "ingredients": [
+      {"name": "chickpeas", "amount": 250, "unit": "g"},
+      {"name": "cucumber", "amount": 0.5, "unit": "unit"},
+      {"name": "tomato", "amount": 2, "unit": "unit"},
+      {"name": "red bell pepper", "amount": 1, "unit": "unit"},
+      {"name": "feta", "amount": 60, "unit": "g"},
+      {"name": "olive oil", "amount": 2, "unit": "tbsp"},
+      {"name": "lemon juice", "amount": 2, "unit": "tbsp"},
+      {"name": "oregano", "amount": 0.5, "unit": "tsp"}
+    ],
+    "instructions": ["Dice the cucumber, tomatoes and pepper.", "Toss with chickpeas, crumbled feta, oil, lemon juice and oregano."]
+  },
+  {
+    "name": "Egg fried rice",
+    "mealTypes": ["LUNCH", "DINNER"], "prepMinutes": 5, "cookMinutes": 15, "servings": 2,
+    "tags": ["budget", "quick", "vegetarian"],
+    "ingredients": [
+      {"name": "white rice", "amount": 150, "unit": "g"},
+      {"name": "egg", "amount": 3, "unit": "unit"},
+      {"name": "frozen mixed vegetables", "amount": 200, "unit": "g"},
+      {"name": "green onion", "amount": 2, "unit": "unit"},
+      {"name": "soy sauce", "amount": 2, "unit": "tbsp"},
+      {"name": "vegetable oil", "amount": 1, "unit": "tbsp"}
+    ],
+    "instructions": ["Cook the rice and let it cool.", "Scramble the eggs in oil and set aside.", "Stir-fry the vegetables, add the rice and soy sauce.", "Fold in eggs and sliced green onion."]
+  },
+  {
+    "name": "Sheet-pan salmon with sweet potato",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 25, "servings": 2,
+    "tags": ["high-protein", "gluten-free"],
+    "ingredients": [
+      {"name": "salmon", "amount": 300, "unit": "g"},
+      {"name": "sweet potato", "amount": 2, "unit": "unit"},
+      {"name": "asparagus", "amount": 10, "unit": "unit"},
+      {"name": "olive oil", "amount": 2, "unit": "tbsp"},
+      {"name": "paprika", "amount": 1, "unit": "tsp"},
+      {"name": "salt", "amount": 0.5, "unit": "tsp"},
+      {"name": "lemon", "amount": 1, "unit": "unit", "optional": true}
+    ],
+    "instructions": ["Roast cubed sweet potato with oil and paprika at 220 C for 10 minutes.", "Add salmon and asparagus to the pan.", "Roast 15 minutes more; serve with lemon wedges."]
+  },
+  {
+    "name": "Spaghetti bolognese",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 30, "servings": 4,
+    "tags": ["family", "make-ahead"],
+    "ingredients": [
+      {"name": "spaghetti", "amount": 400, "unit": "g"},
+      {"name": "ground beef", "amount": 450, "unit": "g"},
+      {"name": "tomato sauce", "amount": 500, "unit": "ml"},
+      {"name": "onion", "amount": 1, "unit": "unit"},
+      {"name": "carrot", "amount": 1, "unit": "unit"},
+      {"name": "garlic", "amount": 3, "unit": "unit"},
+      {"name": "olive oil", "amount": 1, "unit": "tbsp"},
+      {"name": "oregano", "amount": 1, "unit": "tsp"},
+      {"name": "parmesan", "amount": 30, "unit": "g", "optional": true}
+    ],
+    "instructions": ["Brown the beef with onion, carrot and garlic in oil.", "Add tomato sauce and oregano; simmer 20 minutes.", "Cook the spaghetti and serve with the sauce and parmesan."]
+  },
+  {
+    "name": "Chicken stir-fry",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 15, "servings": 2,
+    "tags": ["high-protein", "quick"],
+    "ingredients": [
+      {"name": "chicken breast", "amount": 300, "unit": "g"},
+      {"name": "broccoli", "amount": 150, "unit": "g"},
+      {"name": "red bell pepper", "amount": 1, "unit": "unit"},
+      {"name": "carrot", "amount": 1, "unit": "unit"},
+      {"name": "soy sauce", "amount": 3, "unit": "tbsp"},
+      {"name": "ginger", "amount": 10, "unit": "g"},
+      {"name": "garlic", "amount": 2, "unit": "unit"},
+      {"name": "vegetable oil", "amount": 1, "unit": "tbsp"},
+      {"name": "brown rice", "amount": 150, "unit": "g"}
+    ],
+    "instructions": ["Cook the rice.", "Stir-fry sliced chicken in oil until browned.", "Add vegetables, garlic and ginger; cook 5 minutes.", "Add soy sauce and serve over rice."]
+  },
+  {
+    "name": "Beef and broccoli",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 15, "servings": 2,
+    "tags": ["high-protein"],
+    "ingredients": [
+      {"name": "beef sirloin", "amount": 300, "unit": "g"},
+      {"name": "broccoli", "amount": 250, "unit": "g"},
+      {"name": "soy sauce", "amount": 3, "unit": "tbsp"},
+      {"name": "brown sugar", "amount": 1, "unit": "tbsp"},
+      {"name": "garlic", "amount": 2, "unit": "unit"},
+      {"name": "vegetable oil", "amount": 1, "unit": "tbsp"},
+      {"name": "white rice", "amount": 150, "unit": "g"}
+    ],
+    "instructions": ["Cook the rice.", "Sear thin beef strips in oil.", "Add broccoli, garlic, soy sauce and sugar; cook until glossy.", "Serve over rice."]
+  },
+  {
+    "name": "Black bean tacos",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 10, "servings": 2,
+    "tags": ["plant-based", "budget", "gluten-free"],
+    "ingredients": [
+      {"name": "corn tortilla", "amount": 6, "unit": "unit"},
+      {"name": "black beans", "amount": 400, "unit": "g"},
+      {"name": "avocado", "amount": 1, "unit": "unit"},
+      {"name": "cabbage", "amount": 100, "unit": "g"},
+      {"name": "lime juice", "amount": 1, "unit": "tbsp"},
+      {"name": "chili powder", "amount": 1, "unit": "tsp"},
+      {"name": "cilantro", "amount": 10, "unit": "g", "optional": true}
+    ],
+    "instructions": ["Warm the beans with chili powder.", "Warm the tortillas.", "Fill with beans, sliced avocado and shredded cabbage.", "Finish with lime juice and cilantro."]
+  },
+  {
+    "name": "Baked cod with roasted potatoes",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 30, "servings": 2,
+    "tags": ["high-protein", "gluten-free"],
+    "ingredients": [
+      {"name": "cod", "amount": 2, "unit": "unit"},
+      {"name": "potato", "amount": 2, "unit": "unit"},
+      {"name": "green beans", "amount": 200, "unit": "g"},
+      {"name": "olive oil", "amount": 2, "unit": "tbsp"},
+      {"name": "lemon juice", "amount": 1, "unit": "tbsp"},
+      {"name": "parsley", "amount": 5, "unit": "g", "optional": true},
+      {"name": "salt", "amount": 0.5, "unit": "tsp"}
+    ],
+    "instructions": ["Roast cubed potatoes in oil at 220 C for 15 minutes.", "Add the cod and green beans; drizzle with lemon juice.", "Roast 15 minutes more and top with parsley."]
+  },
+  {
+    "name": "Vegetable tofu stir-fry",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 15, "servings": 2,
+    "tags": ["plant-based", "high-protein"],
+    "ingredients": [
+      {"name": "tofu", "amount": 350, "unit": "g"},
+      {"name": "broccoli", "amount": 150, "unit": "g"},
+      {"name": "mushrooms", "amount": 6, "unit": "unit"},
+      {"name": "red bell pepper", "amount": 1, "unit": "unit"},
+      {"name": "soy sauce", "amount": 3, "unit": "tbsp"},
+      {"name": "sesame oil", "amount": 1, "unit": "tbsp"},
+      {"name": "garlic", "amount": 2, "unit": "unit"},
+      {"name": "brown rice", "amount": 150, "unit": "g"}
+    ],
+    "instructions": ["Cook the rice.", "Fry cubed tofu in sesame oil until golden.", "Add vegetables and garlic; cook 5 minutes.", "Toss with soy sauce and serve over rice."]
+  },
+  {
+    "name": "Turkey chili",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 35, "servings": 4,
+    "tags": ["high-protein", "make-ahead", "gluten-free"],
+    "ingredients": [
+      {"name": "ground turkey", "amount": 450, "unit": "g"},
+      {"name": "kidney beans", "amount": 2, "unit": "unit"},
+      {"name": "canned tomatoes", "amount": 800, "unit": "ml"},
+      {"name": "onion", "amount": 1, "unit": "unit"},
+      {"name": "green bell pepper", "amount": 1, "unit": "unit"},
+      {"name": "chili powder", "amount": 2, "unit": "tbsp"},
+      {"name": "cumin", "amount": 1, "unit": "tsp"},
+      {"name": "vegetable oil", "amount": 1, "unit": "tbsp"}
+    ],
+    "instructions": ["Brown the turkey with onion and pepper in oil.", "Add spices, tomatoes and beans.", "Simmer 30 minutes."]
+  },
+  {
+    "name": "Mushroom spinach pasta",
+    "mealTypes": ["DINNER"], "prepMinutes": 5, "cookMinutes": 15, "servings": 2,
+    "tags": ["vegetarian", "quick"],
+    "ingredients": [
+      {"name": "whole wheat pasta", "amount": 200, "unit": "g"},
+      {"name": "mushrooms", "amount": 10, "unit": "unit"},
+      {"name": "spinach", "amount": 100, "unit": "g"},
+      {"name": "garlic", "amount": 3, "unit": "unit"},
+      {"name": "olive oil", "amount": 2, "unit": "tbsp"},
+      {"name": "parmesan", "amount": 30, "unit": "g"},
+      {"name": "black pepper", "amount": 0.5, "unit": "tsp"}
+    ],
+    "instructions": ["Cook the pasta.", "Saute sliced mushrooms and garlic in oil.", "Add spinach until wilted, then toss with pasta, parmesan and pepper."]
+  },
+  {
+    "name": "Pork chops with apples and green beans",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 20, "servings": 2,
+    "tags": ["high-protein", "gluten-free"],
+    "ingredients": [
+      {"name": "pork chop", "amount": 2, "unit": "unit"},
+      {"name": "apple", "amount": 1, "unit": "unit"},
+      {"name": "green beans", "amount": 200, "unit": "g"},
+      {"name": "olive oil", "amount": 1, "unit": "tbsp"},
+      {"name": "butter", "amount": 2, "unit": "unit"},
+      {"name": "salt", "amount": 0.5, "unit": "tsp"}
+    ],
+    "instructions": ["Sear seasoned pork chops in oil, 5 minutes a side.", "Cook sliced apple in butter in the same pan.", "Steam the green beans and serve together."]
+  },
+  {
+    "name": "Shrimp tacos",
+    "mealTypes": ["DINNER"], "prepMinutes": 10, "cookMinutes": 8, "servings": 2,
+    "tags": ["quick", "high-protein", "gluten-free"],
+    "ingredients": [
+      {"name": "shrimp", "amount": 300, "unit": "g"},
+      {"name": "corn tortilla", "amount": 6, "unit": "unit"},
+      {"name": "cabbage", "amount": 100, "unit": "g"},
+      {"name": "avocado", "amount": 1, "unit": "unit"},
+      {"name": "lime juice", "amount": 2, "unit": "tbsp"},
+      {"name": "chili powder", "amount": 1, "unit": "tsp"},
+      {"name": "vegetable oil", "amount": 1, "unit": "tbsp"}
+    ],
+    "instructions": ["Toss shrimp with chili powder and cook in oil, 2 minutes a side.", "Warm the tortillas.", "Fill with shrimp, cabbage and avocado; finish with lime juice."]
+  },
+  {
+    "name": "Hummus veggie snack plate",
+    "mealTypes": ["SNACK"], "prepMinutes": 5, "cookMinutes": 0, "servings": 1,
+    "tags": ["quick", "plant-based", "no-cook"],
+    "ingredients": [
+      {"name": "hummus", "amount": 60, "unit": "g"},
+      {"name": "carrot", "amount": 1, "unit": "unit"},
+      {"name": "cucumber", "amount": 0.3, "unit": "unit"},
+      {"name": "red bell pepper", "amount": 0.5, "unit": "unit"}
+    ],
+    "instructions": ["Cut the vegetables into sticks.", "Serve with hummus."]
+  },
+  {
+    "name": "Apple with peanut butter",
+    "mealTypes": ["SNACK"], "prepMinutes": 3, "cookMinutes": 0, "servings": 1,
+    "tags": ["quick", "budget", "no-cook"],
+    "ingredients": [
+      {"name": "apple", "amount": 1, "unit": "unit"},
+      {"name": "peanut butter", "amount": 2, "unit": "tbsp"}
+    ],
+    "instructions": ["Slice the apple and serve with peanut butter."]
+  },
+  {
+    "name": "Trail mix",
+    "mealTypes": ["SNACK"], "prepMinutes": 2, "cookMinutes": 0, "servings": 4,
+    "tags": ["quick", "make-ahead", "no-cook"],
+    "ingredients": [
+      {"name": "almonds", "amount": 60, "unit": "g"},
+      {"name": "cashews", "amount": 60, "unit": "g"},
+      {"name": "raisins", "amount": 60, "unit": "g"},
+      {"name": "sunflower seeds", "amount": 40, "unit": "g"}
+    ],
+    "instructions": ["Mix everything and divide into four portions."]
+  },
+  {
+    "name": "Edamame with sea salt",
+    "mealTypes": ["SNACK"], "prepMinutes": 2, "cookMinutes": 5, "servings": 2,
+    "tags": ["quick", "plant-based", "high-protein"],
+    "ingredients": [
+      {"name": "edamame", "amount": 300, "unit": "g"},
+      {"name": "salt", "amount": 0.5, "unit": "tsp"}
+    ],
+    "instructions": ["Boil the edamame for 5 minutes.", "Drain and sprinkle with salt."]
+  }
+]

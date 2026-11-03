@@ -5,14 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.ayech14.mealiq.application.MealPlanningFacade;
+import io.github.ayech14.mealiq.application.TestFacades;
 import io.github.ayech14.mealiq.persistence.PersistenceException;
 import io.github.ayech14.mealiq.persistence.jdbc.DatabaseSetup;
-import io.github.ayech14.mealiq.services.InMemoryRepositories;
-import io.github.ayech14.mealiq.services.PantryService;
-import io.github.ayech14.mealiq.services.ProfileService;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,13 +24,11 @@ class MealPlanningCLITest {
     private MealPlanningFacade facade;
     private StringWriter out;
     private StringWriter err;
-    private DatabaseSetup.Result setupResult = new DatabaseSetup.Result(List.of("profiles"), 146);
+    private DatabaseSetup.Result setupResult = new DatabaseSetup.Result(List.of("profiles"), 146, 30);
 
     @BeforeEach
     void setUp() {
-        InMemoryRepositories.Catalogue catalogue = new InMemoryRepositories.Catalogue();
-        facade = new MealPlanningFacade(new ProfileService(new InMemoryRepositories.Profiles(), catalogue),
-                new PantryService(new InMemoryRepositories.Pantries(), catalogue), catalogue);
+        facade = TestFacades.inMemory(LocalDate.of(2026, 11, 2)).facade();
     }
 
     private int run(String... args) {
@@ -170,5 +167,57 @@ class MealPlanningCLITest {
         assertTrue(errors.contains("Connection refused"), errors);
         assertTrue(errors.contains("docker compose up -d"), errors);
         assertFalse(errors.contains("at io.github"), errors);
+    }
+
+    @Test
+    void setupReportsRecipes() {
+        assertEquals(0, run("setup"));
+        assertTrue(out.toString().contains("Seed recipes: 30 recipes."));
+    }
+
+    @Test
+    void recipesListFiltersRanksAndExplainsExclusions() {
+        run("profile", "set", "--allergies", "fish", "--cook-minutes", "all=20");
+        assertEquals(0, run("recipes", "list", "--meal", "dinner", "--rank", "time", "--limit", "3"));
+        String listed = out.toString();
+        assertTrue(listed.contains("Recipe (ranked by time)"), listed);
+        assertTrue(listed.contains("Shrimp tacos"), listed);
+        String ranked = listed.substring(0, listed.indexOf("Left out"));
+        assertFalse(ranked.contains("Sheet-pan salmon"), ranked);
+        assertTrue(listed.contains("Sheet-pan salmon with sweet potato contains salmon (allergy: fish)."), listed);
+        assertTrue(listed.contains("Per serving."), listed);
+    }
+
+    @Test
+    void recipesOverTodaysTimeLimitAreMarked() {
+        run("profile", "set", "--cook-minutes", "all=25");
+        assertEquals(0, run("recipes", "list", "--meal", "dinner", "--include", "turkey"));
+        String listed = out.toString();
+        assertTrue(listed.contains(" 45*"), listed);
+        assertTrue(listed.contains("* Over today's cooking-time limit of 25 minutes."), listed);
+    }
+
+    @Test
+    void recipesListWithNoMatch() {
+        assertEquals(0, run("recipes", "list", "--include", "unobtainium"));
+        assertTrue(out.toString().contains("No recipe fits"));
+    }
+
+    @Test
+    void recipesShowGivesStepsNutritionAndProfileNotes() {
+        run("profile", "set", "--allergies", "tree-nut");
+        assertEquals(0, run("recipes", "show", "cottage cheese fruit plate", "--servings", "2"));
+        String shown = out.toString();
+        assertTrue(shown.contains("Cottage cheese fruit plate"), shown);
+        assertTrue(shown.contains("15 g walnuts (optional)"), shown);
+        assertTrue(shown.contains("Nutrition for 2 servings:"), shown);
+        assertTrue(shown.contains("Note: Leave out optional walnuts (allergy: tree-nut)."), shown);
+        assertTrue(shown.contains("not dietary advice"), shown);
+    }
+
+    @Test
+    void unknownRecipeSuggestsNames() {
+        assertEquals(1, run("recipes", "show", "tacos"));
+        assertTrue(err.toString().contains("Did you mean: Black bean tacos, Shrimp tacos?"), err.toString());
     }
 }

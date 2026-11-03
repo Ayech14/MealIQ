@@ -1,9 +1,7 @@
 package io.github.ayech14.mealiq.persistence.jdbc;
 
-import io.github.ayech14.mealiq.config.AppConfig;
-import io.github.ayech14.mealiq.config.ConfigException;
-import io.github.ayech14.mealiq.persistence.PersistenceException;
 import io.github.ayech14.mealiq.persistence.catalogue.CatalogueLoader;
+import io.github.ayech14.mealiq.persistence.catalogue.RecipeCatalogueLoader;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -12,19 +10,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Prepares a database for MealIQ: creates missing tables and loads the ingredient catalogue.
- * Uses DATABASE_URL from {@code .env}:
+ * Prepares a database for MealIQ: creates missing tables, then loads the ingredient catalogue
+ * and the seed recipes. Run it with {@code ./mealiq setup}.
  *
- * <pre>./mvnw -q compile exec:java -Dexec.mainClass=io.github.ayech14.mealiq.persistence.jdbc.DatabaseSetup</pre>
- *
- * <p>Safe to run more than once: existing tables are kept and catalogue rows are updated in
- * place, because ingredient IDs are derived from their names.
+ * <p>Safe to run more than once: existing tables are kept, and catalogue rows and recipes are
+ * updated in place, because their IDs are derived from their names.
  */
 public final class DatabaseSetup {
 
     private static final Pattern CREATE_TABLE = Pattern.compile("CREATE TABLE IF NOT EXISTS (\\w+)");
 
-    public record Result(List<String> tablesCreated, int ingredientsLoaded) {
+    public record Result(List<String> tablesCreated, int ingredientsLoaded, int recipesLoaded) {
     }
 
     private DatabaseSetup() {
@@ -38,8 +34,10 @@ public final class DatabaseSetup {
             }
         }
         database.createSchema();
-        int loaded = CatalogueLoader.load(new JdbcIngredientRepository(database));
-        return new Result(List.copyOf(missing), loaded);
+        JdbcIngredientRepository ingredients = new JdbcIngredientRepository(database);
+        int ingredientsLoaded = CatalogueLoader.load(ingredients);
+        int recipesLoaded = RecipeCatalogueLoader.load(ingredients, new JdbcRecipeRepository(database));
+        return new Result(List.copyOf(missing), ingredientsLoaded, recipesLoaded);
     }
 
     /** Table names defined in {@code db/schema.sql}, in creation order. */
@@ -59,18 +57,5 @@ public final class DatabaseSetup {
                 return rows.next();
             }
         });
-    }
-
-    public static void main(String[] args) {
-        try {
-            AppConfig config = AppConfig.load();
-            Result result = run(Database.from(config));
-            System.out.println("Tables created: " + (result.tablesCreated().isEmpty()
-                    ? "none (all tables already existed)" : String.join(", ", result.tablesCreated())));
-            System.out.println("Ingredients loaded or updated: " + result.ingredientsLoaded());
-        } catch (ConfigException | PersistenceException e) {
-            System.err.println(e.getMessage());
-            System.exit(1);
-        }
     }
 }

@@ -2,23 +2,41 @@ package io.github.ayech14.mealiq.application;
 
 import io.github.ayech14.mealiq.config.AppConfig;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
+import io.github.ayech14.mealiq.contracts.PlanRequest;
+import io.github.ayech14.mealiq.contracts.PlanningContext;
+import io.github.ayech14.mealiq.contracts.RecipeQuery;
+import io.github.ayech14.mealiq.contracts.ValidationResult;
 import io.github.ayech14.mealiq.domain.Ingredient;
+import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.Pantry;
 import io.github.ayech14.mealiq.domain.PantryItem;
+import io.github.ayech14.mealiq.domain.PlanningMode;
+import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.ResponseStatus;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.persistence.IngredientRepository;
+import io.github.ayech14.mealiq.persistence.RecipeRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.Database;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcIngredientRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcPantryRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcProfileRepository;
+import io.github.ayech14.mealiq.persistence.jdbc.JdbcRecipeRepository;
+import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
+import io.github.ayech14.mealiq.planning.PlanningStrategyFactory;
+import io.github.ayech14.mealiq.services.BudgetService;
+import io.github.ayech14.mealiq.services.ConstraintValidator;
 import io.github.ayech14.mealiq.services.NotFoundException;
+import io.github.ayech14.mealiq.services.NutritionService;
 import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.ProfileService;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
@@ -26,30 +44,54 @@ import java.util.UUID;
  * delegates to the services; interfaces only collect input and show results, so both
  * reach the same rules and give the same outcome.
  *
- * <p>Operations are added as features are implemented; this version covers F01 (profile)
- * and F02 (pantry).
+ * <p>Operations are added as features are implemented; this version covers F01 (profile),
+ * F02 (pantry) and deterministic recipe browsing with nutrition (parts of F03 and F06).
  */
 public class MealPlanningFacade {
+
+    /** The repositories and services behind the facade, grouped so wiring stays readable. */
+    public record Services(ProfileService profiles, PantryService pantry, IngredientRepository ingredients,
+                           RecipeRepository recipes, NutritionService nutrition, ConstraintValidator validator,
+                           PlanningStrategyFactory strategies, Clock clock) {
+    }
 
     private final ProfileService profileService;
     private final PantryService pantryService;
     private final IngredientRepository ingredientRepository;
+    private final RecipeRepository recipeRepository;
+    private final NutritionService nutritionService;
+    private final ConstraintValidator constraintValidator;
+    private final PlanningStrategyFactory strategyFactory;
+    private final Clock clock;
 
-    public MealPlanningFacade(ProfileService profileService, PantryService pantryService,
-                              IngredientRepository ingredientRepository) {
-        this.profileService = profileService;
-        this.pantryService = pantryService;
-        this.ingredientRepository = ingredientRepository;
+    public MealPlanningFacade(Services services) {
+        this.profileService = services.profiles();
+        this.pantryService = services.pantry();
+        this.ingredientRepository = services.ingredients();
+        this.recipeRepository = services.recipes();
+        this.nutritionService = services.nutrition();
+        this.constraintValidator = services.validator();
+        this.strategyFactory = services.strategies();
+        this.clock = services.clock();
     }
 
     /** Wires the services to the PostgreSQL repositories configured in {@code .env}. Opens no connection yet. */
     public static MealPlanningFacade fromConfig(AppConfig config) {
         Database database = Database.from(config);
         JdbcIngredientRepository ingredients = new JdbcIngredientRepository(database);
-        return new MealPlanningFacade(
+        NutritionService nutrition = new NutritionService();
+        // No grocery price data is connected yet, so every cost is unknown and BUDGET ranking is unavailable.
+        BudgetService budget = new BudgetService((ingredient, quantity) -> Optional.empty());
+        Clock clock = Clock.systemDefaultZone();
+        return new MealPlanningFacade(new Services(
                 new ProfileService(new JdbcProfileRepository(database), ingredients),
-                new PantryService(new JdbcPantryRepository(database), ingredients),
-                ingredients);
+                new PantryService(new JdbcPantryRepository(database), ingredients, clock),
+                ingredients,
+                new JdbcRecipeRepository(database),
+                nutrition,
+                new ConstraintValidator(),
+                new DefaultPlanningStrategyFactory(nutrition, budget),
+                clock));
     }
 
     /**
@@ -116,5 +158,73 @@ public class MealPlanningFacade {
     public List<Ingredient> searchIngredients(String text) {
         String needle = text == null ? "" : text.strip().toLowerCase(Locale.ROOT);
         return ingredientRepository.findAll().stream().filter(i -> i.name().contains(needle)).toList();
+    }
+
+    // ---- recipes (deterministic parts of F03) and nutrition (F06) ----
+
+    /**
+     * Recipes matching the query, without any that break the profile's allergies or diet,
+     * ranked by the strategy for {@code mode}. Each excluded recipe is listed in
+     * {@code conflicts} with the rule it breaks. Without a saved profile, nothing is excluded.
+     */
+    public AgentResponse browseRecipes(UUID profileId, RecipeQuery query, PlanningMode mode) {
+        Optional<UserProfile> saved = findProfile(profileId);
+        UserProfile profile = saved.orElseGet(() -> new UserProfile(profileId));
+        PlanningContext context = PlanningContext.of(new PlanRequest(profileId, LocalDate.now(clock), 1, mode, null),
+                profile, getPantry(profileId));
+        List<Recipe> allowed = new ArrayList<>();
+        List<String> excluded = new ArrayList<>();
+        for (Recipe recipe : recipeRepository.search(query)) {
+            ValidationResult check = constraintValidator.validateRestrictions(recipe, profile);
+            if (check.valid()) {
+                allowed.add(recipe);
+            } else {
+                excluded.addAll(check.violations());
+            }
+        }
+        List<Recipe> ranked = strategyFactory.strategyFor(context).rank(allowed, context);
+        return AgentResponse.builder(ranked.isEmpty() ? ResponseStatus.CONFLICT : ResponseStatus.SUCCESS)
+                .recipes(ranked)
+                .conflicts(excluded)
+                .rationale(saved.isPresent() ? "" : "No saved profile, so no allergies or diet rules were applied.")
+                .build();
+    }
+
+    /** Today's cooking-time limit from the saved profile; empty when none is set or no profile is saved. */
+    public OptionalInt cookingLimitToday(UUID profileId) {
+        return findProfile(profileId).map(p -> p.maxMinutesFor(LocalDate.now(clock).getDayOfWeek()))
+                .orElse(OptionalInt.empty());
+    }
+
+    /** A recipe by exact name, ignoring case. @throws NotFoundException listing names that contain it */
+    public Recipe findRecipe(String name) {
+        String wanted = name.strip().toLowerCase(Locale.ROOT);
+        List<Recipe> all = recipeRepository.search(RecipeQuery.any().withGenerated(true));
+        return all.stream().filter(r -> r.name().toLowerCase(Locale.ROOT).equals(wanted)).findFirst()
+                .orElseThrow(() -> {
+                    List<String> close = all.stream().map(Recipe::name)
+                            .filter(n -> n.toLowerCase(Locale.ROOT).contains(wanted)).toList();
+                    return new NotFoundException("No recipe named '" + name.strip() + "'"
+                            + (close.isEmpty() ? "" : ". Did you mean: " + String.join(", ", close) + "?"));
+                });
+    }
+
+    /** Calories and macros for {@code servings} portions, from catalogue data only (D09). */
+    public NutritionSummary recipeNutrition(Recipe recipe, int servings) {
+        return nutritionService.calculateNutrition(recipe, servings);
+    }
+
+    /** Allergy, diet and dislike findings for one recipe against a saved profile; empty result if none is saved. */
+    public ValidationResult checkRecipe(UUID profileId, Recipe recipe) {
+        return findProfile(profileId).map(p -> constraintValidator.validateRestrictions(recipe, p))
+                .orElseGet(ValidationResult::ok);
+    }
+
+    private Optional<UserProfile> findProfile(UUID profileId) {
+        try {
+            return Optional.of(profileService.getProfile(profileId));
+        } catch (NotFoundException e) {
+            return Optional.empty();
+        }
     }
 }
