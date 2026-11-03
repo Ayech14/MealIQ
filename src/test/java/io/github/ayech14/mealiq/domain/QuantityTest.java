@@ -76,4 +76,19 @@ class QuantityTest {
         assertEquals("12 unit", Quantity.of(12, "unit").toString());
         assertEquals("1.5 kg", Quantity.of(1.5, "kg").toString());
     }
+
+    @Test
+    void textRoundsToTwoDecimals() {
+        assertEquals("0.67 cup", new Quantity(2.0 / 3, Unit.CUP).toString());
+        assertEquals("1.5 kg", Quantity.of(1.5, "kg").toString());
+        assertEquals("100 g", Quantity.of(100.0, "g").toString());
+    }
+
+    @Test
+    void simplifiedUsesLargerUnitsOnlyFromAThousand() {
+        assertEquals(Quantity.of(1.5, "kg"), Quantity.of(1500, "g").simplified());
+        assertEquals(Quantity.of(2, "l"), Quantity.of(2000, "ml").simplified());
+        assertEquals(Quantity.of(999, "g"), Quantity.of(999, "g").simplified());
+        assertEquals(Quantity.of(3, "unit"), Quantity.of(3, "unit").simplified());
+    }
 }

@@ -23,6 +23,7 @@ import io.github.ayech14.mealiq.llm.ScriptedLLMClient;
 import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
+import io.github.ayech14.mealiq.services.GroceryService;
 import io.github.ayech14.mealiq.services.InMemoryRepositories;
 import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NutritionService;
@@ -91,7 +92,9 @@ class AgentControllerTest {
     }
 
     AgentController controller() {
-        return new AgentController(AgentAssembly.agent(llm, recipes, catalogue, nutrition, validator,
+        GroceryService groceries = new GroceryService(new InMemoryRepositories.GroceryLists(), pantry,
+                (i, q) -> Optional.empty());
+        return new AgentController(AgentAssembly.agent(llm, recipes, catalogue, nutrition, groceries, validator,
                 new DefaultPlanningStrategyFactory(nutrition, new BudgetService((i, q) -> Optional.empty())), 3),
                 profiles, pantry, new MealPlanService(plans), new ProposalValidator(recipes), validator);
     }

@@ -8,6 +8,7 @@ import io.github.ayech14.mealiq.llm.ScriptedLLMClient;
 import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
+import io.github.ayech14.mealiq.services.GroceryService;
 import io.github.ayech14.mealiq.services.InMemoryRepositories;
 import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NutritionService;
@@ -49,14 +50,16 @@ public final class TestFacades {
         ConstraintValidator validator = new ConstraintValidator(nutrition, budget);
         DefaultPlanningStrategyFactory strategies = new DefaultPlanningStrategyFactory(nutrition, budget);
         ScriptedLLMClient llm = new ScriptedLLMClient();
-        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, catalogue, nutrition, validator, strategies,
-                MAX_TOOL_STEPS);
+        GroceryService groceries = new GroceryService(new InMemoryRepositories.GroceryLists(), pantry, FLAT_PRICES);
+        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, catalogue, nutrition, groceries, validator,
+                strategies, MAX_TOOL_STEPS);
         InMemoryRepositories.MealPlans plans = new InMemoryRepositories.MealPlans();
         MealPlanService mealPlans = new MealPlanService(plans);
         AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
                 new ProposalValidator(recipes), validator);
         MealPlanningFacade facade = new MealPlanningFacade(new MealPlanningFacade.Services(
-                profiles, pantry, mealPlans, catalogue, recipes, nutrition, validator, strategies, controller, clock));
+                profiles, pantry, mealPlans, groceries, catalogue, recipes, nutrition, validator, strategies, controller,
+                clock));
         return new Fixture(facade, events, llm, plans);
     }
 }

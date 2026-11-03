@@ -1,5 +1,7 @@
 package io.github.ayech14.mealiq.domain;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Objects;
 
 /** An amount in a unit. Immutable; amounts are never negative. */
@@ -52,9 +54,22 @@ public record Quantity(double amount, Unit unit) {
         return new Quantity(Math.max(0, amount - other.convertTo(unit).amount), unit);
     }
 
+    /** The same amount in a larger unit when that reads better: 1500 g becomes 1.5 kg, 2000 ml becomes 2 l. */
+    public Quantity simplified() {
+        if (unit == Unit.G && amount >= 1000) {
+            return convertTo(Unit.KG);
+        }
+        if (unit == Unit.ML && amount >= 1000) {
+            return convertTo(Unit.L);
+        }
+        return this;
+    }
+
+    /** At most two decimals, without trailing zeros: "12 unit", "1.5 kg", "0.67 cup". */
     @Override
     public String toString() {
-        String number = amount == Math.rint(amount) ? String.valueOf((long) amount) : String.valueOf(amount);
+        String number = BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros()
+                .toPlainString();
         return number + " " + unit.symbol();
     }
 }

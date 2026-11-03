@@ -25,13 +25,14 @@ class MealPlanningCLITest {
 
     private MealPlanningFacade facade;
     private ScriptedLLMClient llm;
+    private TestFacades.Fixture fixture;
     private StringWriter out;
     private StringWriter err;
     private DatabaseSetup.Result setupResult = new DatabaseSetup.Result(List.of("profiles"), 146, 30);
 
     @BeforeEach
     void setUp() {
-        TestFacades.Fixture fixture = TestFacades.inMemory(LocalDate.of(2026, 11, 2));
+        fixture = TestFacades.inMemory(LocalDate.of(2026, 11, 2));
         facade = fixture.facade();
         llm = fixture.llm();
     }
@@ -295,5 +296,33 @@ class MealPlanningCLITest {
     void planGenerateRejectsBadDays() {
         assertEquals(1, run("plan", "generate", "--days", "30"));
         assertTrue(out.toString().contains("--days must be between 1 and 14."));
+    }
+
+    @Test
+    void groceryNeedsAPlanFirst() {
+        assertEquals(1, run("grocery", "generate"));
+        assertTrue(err.toString().contains("No meal plan yet."), err.toString());
+        assertEquals(1, run("grocery", "show"));
+        assertTrue(out.toString().contains("No shopping list yet."));
+    }
+
+    @Test
+    void groceryGenerateSubtractsThePantryAndPrices() {
+        var soup = facade.findRecipe("Lentil soup");
+        var plan = new io.github.ayech14.mealiq.domain.MealPlan(MealPlanningFacade.localProfileId("default"),
+                LocalDate.of(2026, 11, 2), 1, List.of(new io.github.ayech14.mealiq.domain.PlannedMeal(
+                        LocalDate.of(2026, 11, 2), io.github.ayech14.mealiq.domain.MealType.DINNER, soup, 4)));
+        plan.status(io.github.ayech14.mealiq.domain.PlanStatus.ACTIVE);
+        fixture.plans().save(plan);
+        run("pantry", "set", "lentils", "1", "kg");
+
+        assertEquals(0, run("grocery", "generate"));
+        String listed = out.toString();
+        assertTrue(listed.contains("  legume\n    lentils"), listed);
+        assertTrue(listed.matches("(?s).*lentils\\s+250 g\\s+250 g\\s+-\\s+-.*"), listed);
+        assertTrue(listed.contains("8 of 9 ingredients to buy. Estimated cost: $"), listed);
+
+        assertEquals(0, run("grocery", "show"));
+        assertTrue(out.toString().contains("lentils"));
     }
 }

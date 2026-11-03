@@ -19,8 +19,10 @@ import io.github.ayech14.mealiq.llm.ScriptedLLMClient;
 import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
+import io.github.ayech14.mealiq.services.GroceryService;
 import io.github.ayech14.mealiq.services.InMemoryRepositories;
 import io.github.ayech14.mealiq.services.NutritionService;
+import io.github.ayech14.mealiq.services.PantryService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +46,9 @@ class MealPlanningAgentTest {
     void setUp() {
         InMemoryRepositories.Catalogue catalogue = new InMemoryRepositories.Catalogue();
         NutritionService nutrition = new NutritionService();
-        agent = AgentAssembly.agent(llm, new InMemoryRepositories.Recipes(catalogue), catalogue, nutrition,
+        GroceryService groceries = new GroceryService(new InMemoryRepositories.GroceryLists(),
+                new PantryService(new InMemoryRepositories.Pantries(), catalogue), (i, q) -> Optional.empty());
+        agent = AgentAssembly.agent(llm, new InMemoryRepositories.Recipes(catalogue), catalogue, nutrition, groceries,
                 new ConstraintValidator(nutrition, new BudgetService((i, q) -> Optional.empty())), new DefaultPlanningStrategyFactory(nutrition,
                         new BudgetService((i, q) -> Optional.empty())), MAX_STEPS);
         profile = new UserProfile(profileId);

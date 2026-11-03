@@ -7,13 +7,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.ayech14.mealiq.contracts.PlanRequest;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
+import io.github.ayech14.mealiq.domain.MealPlan;
+import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.Pantry;
+import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.PlanningMode;
+import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
+import io.github.ayech14.mealiq.services.GroceryService;
 import io.github.ayech14.mealiq.services.InMemoryRepositories;
 import io.github.ayech14.mealiq.services.NutritionService;
+import io.github.ayech14.mealiq.services.PantryService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -89,5 +95,23 @@ class ToolsTest {
                 memory.retrieveRelevantContext(profileId, null));
         assertEquals(List.of("Recommended Trail mix"), memory.retrieveRelevantContext(profileId, "more trail food"));
         assertTrue(memory.retrieveRelevantContext(UUID.randomUUID(), "x").isEmpty());
+    }
+
+    @Test
+    void groceryListNeedsAnActivePlan() {
+        GroceryTool tool = new GroceryTool(new GroceryService(new InMemoryRepositories.GroceryLists(),
+                new PantryService(new InMemoryRepositories.Pantries(), catalogue), (i, q) -> Optional.empty()));
+        UserProfile profile = new UserProfile(profileId);
+        assertEquals("ERROR: there is no active meal plan yet", tool.execute(Map.of(), context(profile)).observation());
+        assertEquals(List.of("unknown argument 'planId'; allowed: "), tool.checkArguments(Map.of("planId", "x")));
+
+        Recipe soup = recipes.search(io.github.ayech14.mealiq.contracts.RecipeQuery.any()).stream()
+                .filter(r -> r.name().equals("Lentil soup")).findFirst().orElseThrow();
+        MealPlan plan = new MealPlan(profileId, LocalDate.of(2026, 11, 3), 1,
+                List.of(new PlannedMeal(LocalDate.of(2026, 11, 3), MealType.DINNER, soup, 1)));
+        PlanningContext withPlan = new PlanningContext(context(profile).request(), profile, Pantry.emptyFor(profileId),
+                plan, null, List.of(), List.of());
+        ToolResult result = tool.execute(Map.of(), withPlan);
+        assertTrue(result.summary().startsWith("9 item(s) to buy (some prices unknown):\n- "), result.summary());
     }
 }

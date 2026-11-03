@@ -1,6 +1,7 @@
 package io.github.ayech14.mealiq.services;
 
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
+import io.github.ayech14.mealiq.domain.GroceryList;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.Pantry;
@@ -10,6 +11,7 @@ import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.events.PlanImpactObserver;
 import io.github.ayech14.mealiq.events.PlanRelevantChange;
+import io.github.ayech14.mealiq.persistence.GroceryListRepository;
 import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.persistence.MealPlanRepository;
 import io.github.ayech14.mealiq.persistence.PantryRepository;
@@ -166,6 +168,25 @@ public final class InMemoryRepositories {
             return new MealPlan(plan.id(), plan.profileId(), plan.startDate(), plan.days(), plan.status(),
                     plan.meals().stream().map(m -> new PlannedMeal(m.id(), m.date(), m.mealType(), m.recipe(),
                             m.servings())).toList());
+        }
+    }
+
+    /** Grocery lists, one per plan as in the database. */
+    public static final class GroceryLists implements GroceryListRepository {
+        public final Map<UUID, GroceryList> byPlan = new LinkedHashMap<>();
+
+        @Override
+        public Optional<GroceryList> findByPlanId(UUID planId) {
+            return Optional.ofNullable(byPlan.get(planId)).map(GroceryLists::copy);
+        }
+
+        @Override
+        public void save(GroceryList list) {
+            byPlan.put(list.planId(), copy(list));
+        }
+
+        private static GroceryList copy(GroceryList list) {
+            return new GroceryList(list.id(), list.planId(), list.items(), list.estimatedCost(), list.isStale());
         }
     }
 
