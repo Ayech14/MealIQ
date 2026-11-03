@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.ayech14.mealiq.application.MealPlanningFacade;
 import io.github.ayech14.mealiq.application.TestFacades;
+import io.github.ayech14.mealiq.llm.LLMException;
+import io.github.ayech14.mealiq.llm.ScriptedLLMClient;
 import io.github.ayech14.mealiq.persistence.PersistenceException;
 import io.github.ayech14.mealiq.persistence.jdbc.DatabaseSetup;
 import java.io.PrintWriter;
@@ -22,13 +24,16 @@ import org.junit.jupiter.api.Test;
 class MealPlanningCLITest {
 
     private MealPlanningFacade facade;
+    private ScriptedLLMClient llm;
     private StringWriter out;
     private StringWriter err;
     private DatabaseSetup.Result setupResult = new DatabaseSetup.Result(List.of("profiles"), 146, 30);
 
     @BeforeEach
     void setUp() {
-        facade = TestFacades.inMemory(LocalDate.of(2026, 11, 2)).facade();
+        TestFacades.Fixture fixture = TestFacades.inMemory(LocalDate.of(2026, 11, 2));
+        facade = fixture.facade();
+        llm = fixture.llm();
     }
 
     private int run(String... args) {
@@ -219,5 +224,37 @@ class MealPlanningCLITest {
     void unknownRecipeSuggestsNames() {
         assertEquals(1, run("recipes", "show", "tacos"));
         assertTrue(err.toString().contains("Did you mean: Black bean tacos, Shrimp tacos?"), err.toString());
+    }
+
+    @Test
+    void recipesFindShowsTheAgentsChoiceReasonAndSteps() {
+        run("profile", "set", "--goal", "gain");
+        java.util.Map<String, Object> finish = new java.util.HashMap<>();
+        finish.put("action", "finish");
+        finish.put("tool", null);
+        finish.put("arguments", "{}");
+        finish.put("reason", "enough");
+        llm.queue(java.util.Map.of("action", "call_tool", "tool", "recipeSearch",
+                        "arguments", "{\"mealType\": \"dinner\"}", "reason", "dinners"), finish,
+                java.util.Map.of("recipes", List.of("Shrimp tacos"), "rationale", "Quick and protein-rich."));
+
+        assertEquals(0, run("recipes", "find", "quick high-protein dinner", "--max-minutes", "20", "--show-steps"));
+
+        String shown = out.toString();
+        assertTrue(shown.contains("Recommended"), shown);
+        assertTrue(shown.contains("Shrimp tacos"), shown);
+        assertTrue(shown.contains("Why: Quick and protein-rich."), shown);
+        assertTrue(shown.contains("Agent steps:\n  1. recipeSearch {\"mealType\": \"dinner\"} -> "), shown);
+        assertTrue(llm.calls().getFirst().prompt().contains("USER REQUEST: quick high-protein dinner"));
+        assertTrue(llm.calls().getFirst().prompt().contains("at most 20 minutes"));
+    }
+
+    @Test
+    void recipesFindReportsAnAiFailure() {
+        run("profile", "set");
+        llm.queue(new LLMException(LLMException.Kind.NOT_CONFIGURED, "no key"));
+        assertEquals(1, run("recipes", "find", "dinner"));
+        assertTrue(out.toString().contains("The AI agent is not set up: add LLM_API_KEY and LLM_MODEL to .env."),
+                out.toString());
     }
 }

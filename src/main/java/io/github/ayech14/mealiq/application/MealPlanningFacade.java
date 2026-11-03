@@ -1,5 +1,6 @@
 package io.github.ayech14.mealiq.application;
 
+import io.github.ayech14.mealiq.agent.MealPlanningAgent;
 import io.github.ayech14.mealiq.config.AppConfig;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
@@ -14,6 +15,9 @@ import io.github.ayech14.mealiq.domain.PlanningMode;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.ResponseStatus;
 import io.github.ayech14.mealiq.domain.UserProfile;
+import io.github.ayech14.mealiq.llm.LLMClient;
+import io.github.ayech14.mealiq.llm.LLMException;
+import io.github.ayech14.mealiq.llm.ProviderLLMAdapter;
 import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.persistence.RecipeRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.Database;
@@ -45,14 +49,14 @@ import java.util.UUID;
  * reach the same rules and give the same outcome.
  *
  * <p>Operations are added as features are implemented; this version covers F01 (profile),
- * F02 (pantry) and deterministic recipe browsing with nutrition (parts of F03 and F06).
+ * F02 (pantry), recipe browsing and agent recommendations (F03), and recipe nutrition (F06).
  */
 public class MealPlanningFacade {
 
     /** The repositories and services behind the facade, grouped so wiring stays readable. */
     public record Services(ProfileService profiles, PantryService pantry, IngredientRepository ingredients,
                            RecipeRepository recipes, NutritionService nutrition, ConstraintValidator validator,
-                           PlanningStrategyFactory strategies, Clock clock) {
+                           PlanningStrategyFactory strategies, AgentController agentController, Clock clock) {
     }
 
     private final ProfileService profileService;
@@ -62,6 +66,7 @@ public class MealPlanningFacade {
     private final NutritionService nutritionService;
     private final ConstraintValidator constraintValidator;
     private final PlanningStrategyFactory strategyFactory;
+    private final AgentController agentController;
     private final Clock clock;
 
     public MealPlanningFacade(Services services) {
@@ -72,26 +77,35 @@ public class MealPlanningFacade {
         this.nutritionService = services.nutrition();
         this.constraintValidator = services.validator();
         this.strategyFactory = services.strategies();
+        this.agentController = services.agentController();
         this.clock = services.clock();
     }
 
-    /** Wires the services to the PostgreSQL repositories configured in {@code .env}. Opens no connection yet. */
+    /**
+     * Wires the services to the PostgreSQL repositories and the LLM configured in {@code .env}.
+     * Opens no connection yet; without an API key, only the agent features report that they
+     * are not set up.
+     */
     public static MealPlanningFacade fromConfig(AppConfig config) {
         Database database = Database.from(config);
         JdbcIngredientRepository ingredients = new JdbcIngredientRepository(database);
+        JdbcRecipeRepository recipes = new JdbcRecipeRepository(database);
         NutritionService nutrition = new NutritionService();
         // No grocery price data is connected yet, so every cost is unknown and BUDGET ranking is unavailable.
         BudgetService budget = new BudgetService((ingredient, quantity) -> Optional.empty());
+        ConstraintValidator validator = new ConstraintValidator();
+        PlanningStrategyFactory strategies = new DefaultPlanningStrategyFactory(nutrition, budget);
         Clock clock = Clock.systemDefaultZone();
-        return new MealPlanningFacade(new Services(
-                new ProfileService(new JdbcProfileRepository(database), ingredients),
-                new PantryService(new JdbcPantryRepository(database), ingredients, clock),
-                ingredients,
-                new JdbcRecipeRepository(database),
-                nutrition,
-                new ConstraintValidator(),
-                new DefaultPlanningStrategyFactory(nutrition, budget),
-                clock));
+        ProfileService profiles = new ProfileService(new JdbcProfileRepository(database), ingredients);
+        PantryService pantry = new PantryService(new JdbcPantryRepository(database), ingredients, clock);
+        LLMClient llm = config.llmConfigured() ? ProviderLLMAdapter.fromConfig(config)
+                : (prompt, schema, instructions) -> {
+                    throw new LLMException(LLMException.Kind.NOT_CONFIGURED, "set LLM_API_KEY and LLM_MODEL in .env");
+                };
+        MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, ingredients, nutrition, validator, strategies,
+                config.maxToolSteps());
+        return new MealPlanningFacade(new Services(profiles, pantry, ingredients, recipes, nutrition, validator,
+                strategies, new AgentController(agent, profiles, pantry, validator), clock));
     }
 
     /**
@@ -188,6 +202,15 @@ public class MealPlanningFacade {
                 .conflicts(excluded)
                 .rationale(saved.isPresent() ? "" : "No saved profile, so no allergies or diet rules were applied.")
                 .build();
+    }
+
+    /**
+     * Asks the agent for recipes matching a free-text request (F03). {@code filters} are hard
+     * limits the user set explicitly; the agent may narrow them but never widen them.
+     */
+    public AgentResponse recommendRecipe(UUID profileId, String request, RecipeQuery filters, PlanningMode mode) {
+        return agentController.recommendRecipe(
+                new PlanRequest(profileId, LocalDate.now(clock), 1, mode, request), filters);
     }
 
     /** Today's cooking-time limit from the saved profile; empty when none is set or no profile is saved. */

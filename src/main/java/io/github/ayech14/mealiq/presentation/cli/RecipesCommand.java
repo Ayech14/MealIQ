@@ -8,6 +8,7 @@ import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.PlanningMode;
 import io.github.ayech14.mealiq.domain.Recipe;
+import io.github.ayech14.mealiq.domain.ResponseStatus;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Locale;
@@ -19,7 +20,7 @@ import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 import picocli.CommandLine.Model.CommandSpec;
 
-/** {@code mealiq recipes list|show}: browse the recipe collection (F03 deterministic search, F06 nutrition). */
+/** {@code mealiq recipes list|find|show}: browse recipes, ask the agent (F03), and see nutrition (F06). */
 @Command(name = "recipes", description = "Browse recipes that fit your profile.", mixinStandardHelpOptions = true)
 final class RecipesCommand implements Runnable {
 
@@ -69,29 +70,75 @@ final class RecipesCommand implements Runnable {
         if (shown.isEmpty()) {
             out.println("No recipe fits these filters and your restrictions.");
         } else {
-            OptionalInt timeLimit = cli.facade().cookingLimitToday(cli.profileId());
-            out.printf("  %-40s %6s %7s %9s%n", "Recipe (ranked by " + rank.name().toLowerCase(Locale.ROOT) + ")",
-                    "min", "kcal", "protein");
-            boolean anyOver = false;
-            for (Recipe recipe : shown) {
-                NutritionSummary serving = cli.facade().recipeNutrition(recipe, 1);
-                boolean over = timeLimit.isPresent() && recipe.totalMinutes() > timeLimit.getAsInt();
-                anyOver |= over;
-                out.printf("  %-40s %6s %7s %9s%n", recipe.name(), recipe.totalMinutes() + (over ? "*" : ""),
-                        serving.complete() ? String.valueOf(Math.round(serving.calories())) : "?",
-                        serving.complete() ? Math.round(serving.proteinG()) + " g" : "?");
-            }
+            printTable(shown, "Recipe (ranked by " + rank.name().toLowerCase(Locale.ROOT) + ")");
             out.println("Per serving. " + response.recipes().size() + " match"
                     + (response.recipes().size() == 1 ? "" : "es") + "; details: mealiq recipes show \"NAME\"");
-            if (anyOver) {
-                out.println("* Over today's cooking-time limit of " + timeLimit.getAsInt() + " minutes.");
-            }
+            printTimeNote(shown);
         }
         if (!response.conflicts().isEmpty()) {
             out.println("Left out because of your allergies or diet:");
             response.conflicts().forEach(c -> out.println("  " + c));
         }
         return MealPlanningCLI.OK;
+    }
+
+    @Command(name = "find", description = {
+        "Ask the AI agent for recipes matching your words; it searches, ranks and explains.",
+        "Example: mealiq recipes find \"quick high-protein dinner\" --max-minutes 20",
+        "Filter options are hard limits the agent cannot widen."})
+    int find(@Parameters(paramLabel = "REQUEST", description = "What you want, in your own words") String request,
+             @Option(names = "--meal", paramLabel = "TYPE") MealType meal,
+             @Option(names = "--max-minutes", paramLabel = "N") Integer maxMinutes,
+             @Option(names = "--include", paramLabel = "INGREDIENTS", split = ",") List<String> include,
+             @Option(names = "--exclude", paramLabel = "INGREDIENTS", split = ",") List<String> exclude,
+             @Option(names = "--rank", paramLabel = "BY", defaultValue = "nutrition",
+                     description = "Ranking the agent chooses from: nutrition or time (default: ${DEFAULT-VALUE})")
+             Rank rank,
+             @Option(names = "--show-steps", description = "Also print the agent's tool calls") boolean showSteps) {
+        RecipeQuery filters = new RecipeQuery(meal, maxMinutes, include, exclude, null, false);
+        AgentResponse response = cli.facade().recommendRecipe(cli.profileId(), request, filters, rank.mode);
+        PrintWriter out = cli.out();
+        if (response.status() == ResponseStatus.SUCCESS) {
+            printTable(response.recipes(), "Recommended");
+            printTimeNote(response.recipes());
+            out.println("Why: " + response.rationale());
+        } else {
+            out.println(response.rationale());
+        }
+        response.conflicts().forEach(c -> out.println("Note: " + c));
+        if (showSteps) {
+            out.println("Agent steps:");
+            if (response.agentSteps().isEmpty()) {
+                out.println("  (none)");
+            }
+            for (int i = 0; i < response.agentSteps().size(); i++) {
+                out.println("  " + (i + 1) + ". " + response.agentSteps().get(i).replace("\n", "\n     "));
+            }
+        }
+        if (response.status() == ResponseStatus.SUCCESS) {
+            out.println("Values come from USDA FoodData Central. A planning aid, not dietary advice.");
+            return MealPlanningCLI.OK;
+        }
+        return MealPlanningCLI.FAILED;
+    }
+
+    private void printTable(List<Recipe> recipes, String heading) {
+        OptionalInt timeLimit = cli.facade().cookingLimitToday(cli.profileId());
+        cli.out().printf("  %-40s %6s %7s %9s%n", heading, "min", "kcal", "protein");
+        for (Recipe recipe : recipes) {
+            NutritionSummary serving = cli.facade().recipeNutrition(recipe, 1);
+            boolean over = timeLimit.isPresent() && recipe.totalMinutes() > timeLimit.getAsInt();
+            cli.out().printf("  %-40s %6s %7s %9s%n", recipe.name(), recipe.totalMinutes() + (over ? "*" : ""),
+                    serving.complete() ? String.valueOf(Math.round(serving.calories())) : "?",
+                    serving.complete() ? Math.round(serving.proteinG()) + " g" : "?");
+        }
+    }
+
+    private void printTimeNote(List<Recipe> recipes) {
+        OptionalInt timeLimit = cli.facade().cookingLimitToday(cli.profileId());
+        if (timeLimit.isPresent() && recipes.stream().anyMatch(r -> r.totalMinutes() > timeLimit.getAsInt())) {
+            cli.out().println("* Over today's cooking-time limit of " + timeLimit.getAsInt() + " minutes.");
+        }
     }
 
     @Command(name = "show", description = "Ingredients, steps and nutrition of one recipe.")

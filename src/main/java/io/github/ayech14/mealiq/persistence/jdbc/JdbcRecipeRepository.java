@@ -10,7 +10,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,8 +53,6 @@ public final class JdbcRecipeRepository implements RecipeRepository {
             params.add(RecipeSource.GENERATED.name());
         }
         sql.append(" ORDER BY name, id");
-        List<String> include = terms(query.includeIngredients());
-        List<String> exclude = terms(query.excludeIngredients());
 
         return database.read(connection -> {
             JdbcLoader loader = new JdbcLoader(connection);
@@ -66,11 +63,7 @@ public final class JdbcRecipeRepository implements RecipeRepository {
                     candidates.add(loader.recipe(rows));
                 }
             }
-            return candidates.stream()
-                    .filter(r -> query.mealType() == null || r.mealTypes().contains(query.mealType()))
-                    .filter(r -> include.isEmpty() || usesAny(r, include))
-                    .filter(r -> !usesAny(r, exclude))
-                    .toList();
+            return candidates.stream().filter(query::matches).toList();
         });
     }
 
@@ -112,15 +105,5 @@ public final class JdbcRecipeRepository implements RecipeRepository {
             }
             return null;
         });
-    }
-
-    private static boolean usesAny(Recipe recipe, List<String> terms) {
-        return recipe.ingredients().stream()
-                .map(line -> line.ingredient().name())
-                .anyMatch(name -> terms.stream().anyMatch(name::contains));
-    }
-
-    private static List<String> terms(List<String> values) {
-        return values.stream().map(v -> v.strip().toLowerCase(Locale.ROOT)).filter(v -> !v.isEmpty()).toList();
     }
 }

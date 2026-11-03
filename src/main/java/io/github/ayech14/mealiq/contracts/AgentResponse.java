@@ -8,16 +8,20 @@ import io.github.ayech14.mealiq.domain.ResponseStatus;
 import java.util.List;
 import java.util.Objects;
 
-/** What the facade returns to the GUI and CLI. Fields that do not apply are null or empty. */
+/**
+ * What the facade returns to the GUI and CLI. Fields that do not apply are null or empty.
+ * {@code agentSteps} lists the agent's tool calls, so its reasoning can be shown and checked.
+ */
 public record AgentResponse(ResponseStatus status, MealPlan plan, PlanChange change, GroceryList groceryList,
                             BudgetStatus budgetStatus, List<Recipe> recipes, String rationale,
-                            List<String> conflicts) {
+                            List<String> conflicts, List<String> agentSteps) {
 
     public AgentResponse {
         Objects.requireNonNull(status, "status");
         recipes = recipes == null ? List.of() : List.copyOf(recipes);
         rationale = rationale == null ? "" : rationale;
         conflicts = conflicts == null ? List.of() : List.copyOf(conflicts);
+        agentSteps = agentSteps == null ? List.of() : List.copyOf(agentSteps);
     }
 
     public static Builder builder(ResponseStatus status) {
@@ -33,6 +37,7 @@ public record AgentResponse(ResponseStatus status, MealPlan plan, PlanChange cha
         private List<Recipe> recipes = List.of();
         private String rationale = "";
         private List<String> conflicts = List.of();
+        private List<String> agentSteps = List.of();
 
         private Builder(ResponseStatus status) {
             this.status = status;
@@ -73,8 +78,14 @@ public record AgentResponse(ResponseStatus status, MealPlan plan, PlanChange cha
             return this;
         }
 
+        public Builder agentSteps(List<String> value) {
+            agentSteps = value;
+            return this;
+        }
+
         public AgentResponse build() {
-            return new AgentResponse(status, plan, change, groceryList, budgetStatus, recipes, rationale, conflicts);
+            return new AgentResponse(status, plan, change, groceryList, budgetStatus, recipes, rationale, conflicts,
+                    agentSteps);
         }
     }
 }
