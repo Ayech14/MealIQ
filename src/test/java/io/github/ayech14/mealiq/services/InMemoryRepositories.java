@@ -2,12 +2,16 @@ package io.github.ayech14.mealiq.services;
 
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.domain.Ingredient;
+import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.Pantry;
+import io.github.ayech14.mealiq.domain.PlanStatus;
+import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.events.PlanImpactObserver;
 import io.github.ayech14.mealiq.events.PlanRelevantChange;
 import io.github.ayech14.mealiq.persistence.IngredientRepository;
+import io.github.ayech14.mealiq.persistence.MealPlanRepository;
 import io.github.ayech14.mealiq.persistence.PantryRepository;
 import io.github.ayech14.mealiq.persistence.ProfileRepository;
 import io.github.ayech14.mealiq.persistence.RecipeRepository;
@@ -134,6 +138,34 @@ public final class InMemoryRepositories {
         @Override
         public void save(Recipe recipe) {
             byId.put(recipe.id(), recipe); // recipes are immutable records
+        }
+    }
+
+    /** Meal plans, copied on save and load like a database round trip. */
+    public static final class MealPlans implements MealPlanRepository {
+        public final Map<UUID, MealPlan> rows = new LinkedHashMap<>();
+
+        @Override
+        public Optional<MealPlan> findById(UUID planId) {
+            return Optional.ofNullable(rows.get(planId)).map(MealPlans::copy);
+        }
+
+        @Override
+        public Optional<MealPlan> findActiveByProfileId(UUID profileId) {
+            return rows.values().stream()
+                    .filter(p -> p.profileId().equals(profileId) && p.status() == PlanStatus.ACTIVE)
+                    .max(Comparator.comparing(MealPlan::startDate)).map(MealPlans::copy);
+        }
+
+        @Override
+        public void save(MealPlan plan) {
+            rows.put(plan.id(), copy(plan));
+        }
+
+        private static MealPlan copy(MealPlan plan) {
+            return new MealPlan(plan.id(), plan.profileId(), plan.startDate(), plan.days(), plan.status(),
+                    plan.meals().stream().map(m -> new PlannedMeal(m.id(), m.date(), m.mealType(), m.recipe(),
+                            m.servings())).toList());
         }
     }
 

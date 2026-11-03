@@ -257,4 +257,43 @@ class MealPlanningCLITest {
         assertTrue(out.toString().contains("The AI agent is not set up: add LLM_API_KEY and LLM_MODEL to .env."),
                 out.toString());
     }
+
+    @Test
+    void planGenerateAndShow() {
+        run("profile", "set", "--calories", "1800");
+        assertEquals(1, run("plan", "show"));
+        assertTrue(out.toString().contains("No plan yet."));
+        java.util.Map<String, Object> finish = new java.util.HashMap<>();
+        finish.put("action", "finish");
+        finish.put("tool", null);
+        finish.put("arguments", "{}");
+        finish.put("reason", "done");
+        for (String type : List.of("breakfast", "lunch", "dinner")) {
+            llm.queue(java.util.Map.of("action", "call_tool", "tool", "recipeSearch",
+                    "arguments", "{\"mealType\": \"" + type + "\"}", "reason", type));
+        }
+        llm.queue(finish, java.util.Map.of("meals", List.of(
+                java.util.Map.of("day", 1, "mealType", "breakfast", "recipe", "Overnight oats"),
+                java.util.Map.of("day", 1, "mealType", "lunch", "recipe", "Lentil soup"),
+                java.util.Map.of("day", 1, "mealType", "dinner", "recipe", "Shrimp tacos")),
+                "rationale", "Light and varied.", "conflicts", List.of()));
+
+        assertEquals(0, run("plan", "generate", "--days", "1", "--start", "2026-11-02"));
+        String generated = out.toString();
+        assertTrue(generated.contains("Plan saved."), generated);
+        assertTrue(generated.contains("Plan 2026-11-02 to 2026-11-02 (1 day)"), generated);
+        assertTrue(generated.contains("Mon 2026-11-02"), generated);
+        assertTrue(generated.contains("  dinner     Shrimp tacos"), generated);
+        assertTrue(generated.contains("(target 1800 kcal, -)"), generated);
+        assertTrue(generated.indexOf("Why: Light and varied.") < generated.indexOf("not dietary advice"), generated);
+
+        assertEquals(0, run("plan", "show"));
+        assertTrue(out.toString().contains("  lunch      Lentil soup"), out.toString());
+    }
+
+    @Test
+    void planGenerateRejectsBadDays() {
+        assertEquals(1, run("plan", "generate", "--days", "30"));
+        assertTrue(out.toString().contains("--days must be between 1 and 14."));
+    }
 }

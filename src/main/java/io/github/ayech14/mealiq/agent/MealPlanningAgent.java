@@ -4,13 +4,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
+import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
+import io.github.ayech14.mealiq.domain.MealType;
+import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.llm.JsonSchema;
 import io.github.ayech14.mealiq.llm.LLMClient;
+import io.github.ayech14.mealiq.planning.MealSlots;
 import io.github.ayech14.mealiq.planning.PlanningStrategy;
 import io.github.ayech14.mealiq.planning.PlanningStrategyFactory;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -38,6 +44,19 @@ public class MealPlanningAgent {
     static final JsonSchema RECOMMENDATION = JsonSchema.object("recipe_recommendation")
             .property("recipes", JsonSchema.arrayOf(JsonSchema.string()))
             .property("rationale", JsonSchema.string())
+            .build();
+
+    /** Ranked candidates per meal type offered for the plan. */
+    static final int CANDIDATES_PER_TYPE = 8;
+
+    static final JsonSchema PLAN_PROPOSAL = JsonSchema.object("plan_proposal")
+            .property("meals", JsonSchema.arrayOf(JsonSchema.object("planned_meal")
+                    .property("day", described(JsonSchema.integer(), "1 for the first day of the plan"))
+                    .property("mealType", JsonSchema.enumOf("breakfast", "lunch", "dinner", "snack"))
+                    .property("recipe", described(JsonSchema.string(), "exact candidate name"))
+                    .asType()))
+            .property("rationale", JsonSchema.string())
+            .property("conflicts", JsonSchema.arrayOf(JsonSchema.string()))
             .build();
 
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -106,6 +125,70 @@ public class MealPlanningAgent {
         memory.recordDecision(profileId, "Recommended " + String.join(", ", result.stream().map(Recipe::name).toList())
                 + " for \"" + context.request().instruction() + "\"");
         return new RecipeRecommendation(result, rationale, calls);
+    }
+
+    /**
+     * Proposes a multi-day plan (F05, SD01). The LLM gathers candidates with tools, the strategy
+     * ranks them per meal type, and the LLM assigns them to slots. Nothing is validated or
+     * saved here: the controller does both.
+     *
+     * @throws io.github.ayech14.mealiq.llm.LLMException if the provider fails
+     */
+    public PlanAttempt createPlanProposal(PlanningContext context) {
+        List<MealType> slots = MealSlots.forDay(context.profile().mealsPerDay());
+        List<MealType> types = slots.stream().distinct().toList();
+        String goal = "Collect candidate recipes for a " + context.request().days() + "-day plan whose days each "
+                + "need: " + String.join(", ", slots.stream().map(t -> t.name().toLowerCase(Locale.ROOT)).toList())
+                + ". Call recipeSearch once per meal type (set mealType), within the cooking-time limits. "
+                + "Finish when every meal type has candidates.";
+        List<ToolCall> calls = new ArrayList<>(runToolLoop(context, goal, RecipeQuery.any(),
+                memory.retrieveRelevantContext(context.request().profileId(), context.request().instruction())));
+
+        Map<MealType, List<Recipe>> ranked = new EnumMap<>(MealType.class);
+        for (MealType type : types) {
+            List<Recipe> found = candidatesOf(calls, type);
+            if (found.isEmpty()) {
+                // The LLM skipped this meal type; search it so the plan can still be complete.
+                String args = "{\"mealType\": \"" + type.name().toLowerCase(Locale.ROOT) + "\"}";
+                calls.add(new ToolCall(RecipeTool.NAME, args, "automatic: no candidates yet for this meal type",
+                        toolManager.execute(RecipeTool.NAME, Map.of("mealType", type.name()), context)));
+                found = candidatesOf(calls, type);
+            }
+            ranked.put(type, rankRecipes(found, context).stream().limit(CANDIDATES_PER_TYPE).toList());
+        }
+
+        Map<String, Object> answer = llmClient.generateStructured(
+                promptBuilder.buildPlanningPrompt(context, ranked, slots), PLAN_PROPOSAL, PromptBuilder.INSTRUCTIONS);
+        List<PlannedMeal> meals = new ArrayList<>();
+        List<String> conflicts = new ArrayList<>();
+        for (Object item : (List<?>) answer.get("meals")) {
+            Map<?, ?> entry = (Map<?, ?>) item;
+            int day = ((Number) entry.get("day")).intValue();
+            MealType type = MealType.valueOf(((String) entry.get("mealType")).toUpperCase(Locale.ROOT));
+            String name = ((String) entry.get("recipe")).strip();
+            LocalDate date = context.request().startDate().plusDays(day - 1L);
+            ranked.values().stream().flatMap(List::stream).filter(r -> r.name().equalsIgnoreCase(name))
+                    .findFirst()
+                    .ifPresentOrElse(recipe -> meals.add(new PlannedMeal(date, type, recipe, 1)),
+                            () -> conflicts.add("Day " + day + " " + type.name().toLowerCase(Locale.ROOT) + ": '"
+                                    + name + "' is not one of the candidates, so the slot was left empty."));
+        }
+        ((List<?>) answer.get("conflicts")).forEach(c -> conflicts.add(String.valueOf(c)));
+        PlanningProposal proposal = new PlanningProposal(meals, context.request().mode(),
+                (String) answer.get("rationale"), conflicts);
+        return new PlanAttempt(proposal, calls);
+    }
+
+    /** Distinct recipes of a meal type returned by successful tool calls, in the order found. */
+    private static List<Recipe> candidatesOf(List<ToolCall> calls, MealType type) {
+        Map<UUID, Recipe> found = new LinkedHashMap<>();
+        for (ToolCall call : calls) {
+            if (call.result().success() && call.result().data() instanceof List<?> items) {
+                items.stream().filter(Recipe.class::isInstance).map(Recipe.class::cast)
+                        .filter(r -> r.mealTypes().contains(type)).forEach(r -> found.putIfAbsent(r.id(), r));
+            }
+        }
+        return new ArrayList<>(found.values());
     }
 
     /** Orders candidates with the strategy for the context's planning mode (Strategy, Factory Method). */

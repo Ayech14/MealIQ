@@ -50,4 +50,28 @@ class PantryShortfallTest {
         pantry.updateItem(new PantryItem(egg, Quantity.of(6, "unit"), TODAY.minusDays(1)));
         assertEquals(Quantity.of(2, "unit"), shortfall(egg, 2, "unit"));
     }
+
+    @Test
+    void takeUsesStockAndReturnsWhatIsMissing() {
+        pantry.updateItem(new PantryItem(egg, Quantity.of(3, "unit"), null));
+        assertTrue(pantry.take(IngredientRequirement.of(egg, 2, "unit"), TODAY).isZero());
+        assertEquals(Quantity.of(1, "unit"), pantry.items().get(egg.id()).quantity());
+        assertEquals(Quantity.of(1, "unit"), pantry.take(IngredientRequirement.of(egg, 2, "unit"), TODAY));
+        assertEquals(0, pantry.items().get(egg.id()).quantity().amount(), 1e-9);
+    }
+
+    @Test
+    void takeAcrossDimensionsReducesByWeight() {
+        pantry.updateItem(new PantryItem(egg, Quantity.of(4, "unit"), null)); // 200 g
+        assertTrue(pantry.take(IngredientRequirement.of(egg, 50, "g"), TODAY).isZero());
+        assertEquals(3, pantry.items().get(egg.id()).quantity().amount(), 1e-9);
+    }
+
+    @Test
+    void copyIsIndependent() {
+        pantry.updateItem(new PantryItem(egg, Quantity.of(2, "unit"), null));
+        Pantry copy = pantry.copy();
+        copy.take(IngredientRequirement.of(egg, 2, "unit"), TODAY);
+        assertEquals(Quantity.of(2, "unit"), pantry.items().get(egg.id()).quantity());
+    }
 }

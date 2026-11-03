@@ -45,7 +45,7 @@ class MealPlanningAgentTest {
         InMemoryRepositories.Catalogue catalogue = new InMemoryRepositories.Catalogue();
         NutritionService nutrition = new NutritionService();
         agent = AgentAssembly.agent(llm, new InMemoryRepositories.Recipes(catalogue), catalogue, nutrition,
-                new ConstraintValidator(), new DefaultPlanningStrategyFactory(nutrition,
+                new ConstraintValidator(nutrition, new BudgetService((i, q) -> Optional.empty())), new DefaultPlanningStrategyFactory(nutrition,
                         new BudgetService((i, q) -> Optional.empty())), MAX_STEPS);
         profile = new UserProfile(profileId);
     }

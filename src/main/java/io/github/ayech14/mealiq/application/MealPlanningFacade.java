@@ -8,6 +8,7 @@ import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
 import io.github.ayech14.mealiq.domain.Ingredient;
+import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.Pantry;
 import io.github.ayech14.mealiq.domain.PantryItem;
@@ -22,6 +23,7 @@ import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.persistence.RecipeRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.Database;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcIngredientRepository;
+import io.github.ayech14.mealiq.persistence.jdbc.JdbcMealPlanRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcPantryRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcProfileRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcRecipeRepository;
@@ -29,16 +31,19 @@ import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
 import io.github.ayech14.mealiq.planning.PlanningStrategyFactory;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
+import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NotFoundException;
 import io.github.ayech14.mealiq.services.NutritionService;
 import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.ProfileService;
+import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
@@ -49,18 +54,21 @@ import java.util.UUID;
  * reach the same rules and give the same outcome.
  *
  * <p>Operations are added as features are implemented; this version covers F01 (profile),
- * F02 (pantry), recipe browsing and agent recommendations (F03), and recipe nutrition (F06).
+ * F02 (pantry), recipe browsing and agent recommendations (F03), weekly plans (F05) and
+ * nutrition analysis (F06).
  */
 public class MealPlanningFacade {
 
     /** The repositories and services behind the facade, grouped so wiring stays readable. */
-    public record Services(ProfileService profiles, PantryService pantry, IngredientRepository ingredients,
-                           RecipeRepository recipes, NutritionService nutrition, ConstraintValidator validator,
-                           PlanningStrategyFactory strategies, AgentController agentController, Clock clock) {
+    public record Services(ProfileService profiles, PantryService pantry, MealPlanService mealPlans,
+                           IngredientRepository ingredients, RecipeRepository recipes, NutritionService nutrition,
+                           ConstraintValidator validator, PlanningStrategyFactory strategies,
+                           AgentController agentController, Clock clock) {
     }
 
     private final ProfileService profileService;
     private final PantryService pantryService;
+    private final MealPlanService mealPlanService;
     private final IngredientRepository ingredientRepository;
     private final RecipeRepository recipeRepository;
     private final NutritionService nutritionService;
@@ -72,6 +80,7 @@ public class MealPlanningFacade {
     public MealPlanningFacade(Services services) {
         this.profileService = services.profiles();
         this.pantryService = services.pantry();
+        this.mealPlanService = services.mealPlans();
         this.ingredientRepository = services.ingredients();
         this.recipeRepository = services.recipes();
         this.nutritionService = services.nutrition();
@@ -93,7 +102,7 @@ public class MealPlanningFacade {
         NutritionService nutrition = new NutritionService();
         // No grocery price data is connected yet, so every cost is unknown and BUDGET ranking is unavailable.
         BudgetService budget = new BudgetService((ingredient, quantity) -> Optional.empty());
-        ConstraintValidator validator = new ConstraintValidator();
+        ConstraintValidator validator = new ConstraintValidator(nutrition, budget);
         PlanningStrategyFactory strategies = new DefaultPlanningStrategyFactory(nutrition, budget);
         Clock clock = Clock.systemDefaultZone();
         ProfileService profiles = new ProfileService(new JdbcProfileRepository(database), ingredients);
@@ -102,10 +111,13 @@ public class MealPlanningFacade {
                 : (prompt, schema, instructions) -> {
                     throw new LLMException(LLMException.Kind.NOT_CONFIGURED, "set LLM_API_KEY and LLM_MODEL in .env");
                 };
+        MealPlanService mealPlans = new MealPlanService(new JdbcMealPlanRepository(database));
         MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, ingredients, nutrition, validator, strategies,
                 config.maxToolSteps());
-        return new MealPlanningFacade(new Services(profiles, pantry, ingredients, recipes, nutrition, validator,
-                strategies, new AgentController(agent, profiles, pantry, validator), clock));
+        AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
+                new ProposalValidator(recipes), validator);
+        return new MealPlanningFacade(new Services(profiles, pantry, mealPlans, ingredients, recipes, nutrition,
+                validator, strategies, controller, clock));
     }
 
     /**
@@ -172,6 +184,32 @@ public class MealPlanningFacade {
     public List<Ingredient> searchIngredients(String text) {
         String needle = text == null ? "" : text.strip().toLowerCase(Locale.ROOT);
         return ingredientRepository.findAll().stream().filter(i -> i.name().contains(needle)).toList();
+    }
+
+    // ---- F05 weekly plans and F06 nutrition analysis ----
+
+    /** Asks the agent for a plan; it is saved only if it passes validation (SD01). */
+    public AgentResponse generateWeeklyPlan(PlanRequest request) {
+        return agentController.generateWeeklyPlan(request);
+    }
+
+    public Optional<MealPlan> getActivePlan(UUID profileId) {
+        return mealPlanService.getActivePlan(profileId);
+    }
+
+    /** Total nutrition of a whole plan, from catalogue data only (D09). */
+    public NutritionSummary analyzeNutrition(UUID planId) {
+        return nutritionService.calculateNutrition(mealPlanService.getPlan(planId).meals());
+    }
+
+    /** Nutrition per day of a plan, in date order, including days without meals. */
+    public Map<LocalDate, NutritionSummary> dailyNutrition(MealPlan plan) {
+        return nutritionService.dailyTotals(plan);
+    }
+
+    /** The day a plan starting today would begin on; interfaces use it as the default start. */
+    public LocalDate today() {
+        return LocalDate.now(clock);
     }
 
     // ---- recipes (deterministic parts of F03) and nutrition (F06) ----

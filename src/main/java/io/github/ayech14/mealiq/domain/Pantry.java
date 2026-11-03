@@ -55,6 +55,39 @@ public final class Pantry {
         return new Quantity(needed.amount() * missingShare, needed.unit());
     }
 
+    /**
+     * Uses stock for a requirement and returns what is still missing (see {@link #shortfall}).
+     * The item's quantity goes down by what was used, in the item's own unit.
+     */
+    public Quantity take(IngredientRequirement requirement, LocalDate on) {
+        Quantity missing = shortfall(requirement, on);
+        PantryItem item = items.get(requirement.ingredient().id());
+        Quantity needed = requirement.quantity();
+        if (item == null || missing.amount() >= needed.amount()) {
+            return missing;
+        }
+        Quantity used = new Quantity(needed.amount() - missing.amount(), needed.unit());
+        Quantity left;
+        if (item.quantity().isCompatible(used.unit())) {
+            left = item.quantity().subtract(used);
+        } else {
+            // Different dimensions were compared by weight in shortfall(), so both weights exist.
+            double usedGrams = requirement.ingredient().toGrams(used).orElseThrow();
+            double stockGrams = requirement.ingredient().toGrams(item.quantity()).orElseThrow();
+            left = new Quantity(item.quantity().amount() * Math.max(0, 1 - usedGrams / stockGrams),
+                    item.quantity().unit());
+        }
+        items.put(item.ingredient().id(), new PantryItem(item.ingredient(), left, item.expiryDate()));
+        return missing;
+    }
+
+    /** An independent copy, for working out what a plan would use without changing the real pantry. */
+    public Pantry copy() {
+        Pantry copy = new Pantry(id, profileId);
+        copy.items.putAll(items); // items are immutable records
+        return copy;
+    }
+
     public void updateItem(PantryItem item) {
         items.put(item.ingredient().id(), item);
     }

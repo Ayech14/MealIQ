@@ -10,12 +10,14 @@ import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.domain.Pantry;
 import io.github.ayech14.mealiq.domain.PlanningMode;
 import io.github.ayech14.mealiq.domain.UserProfile;
+import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
 import io.github.ayech14.mealiq.services.InMemoryRepositories;
 import io.github.ayech14.mealiq.services.NutritionService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -47,7 +49,8 @@ class ToolsTest {
 
     @Test
     void recipeSearchChecksArgumentTypes() {
-        RecipeTool tool = new RecipeTool(recipes, new ConstraintValidator(), nutrition);
+        RecipeTool tool = new RecipeTool(recipes,
+                new ConstraintValidator(nutrition, new BudgetService((i, q) -> Optional.empty())), nutrition);
         assertEquals(List.of("'mealType' must be one of [breakfast, lunch, dinner, snack]",
                         "'include' must be a list of strings"),
                 tool.checkArguments(Map.of("mealType", "brunch", "include", "egg")));

@@ -9,9 +9,11 @@ import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
 import io.github.ayech14.mealiq.services.InMemoryRepositories;
+import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NutritionService;
 import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.ProfileService;
+import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -22,7 +24,7 @@ import java.util.Optional;
 public final class TestFacades {
 
     public record Fixture(MealPlanningFacade facade, InMemoryRepositories.RecordingObserver pantryEvents,
-                          ScriptedLLMClient llm) {
+                          ScriptedLLMClient llm, InMemoryRepositories.MealPlans plans) {
     }
 
     public static final int MAX_TOOL_STEPS = 4;
@@ -43,15 +45,18 @@ public final class TestFacades {
         NutritionService nutrition = new NutritionService();
         ProfileService profiles = new ProfileService(new InMemoryRepositories.Profiles(), catalogue);
         InMemoryRepositories.Recipes recipes = new InMemoryRepositories.Recipes(catalogue);
-        ConstraintValidator validator = new ConstraintValidator();
-        DefaultPlanningStrategyFactory strategies =
-                new DefaultPlanningStrategyFactory(nutrition, new BudgetService(FLAT_PRICES));
+        BudgetService budget = new BudgetService(FLAT_PRICES);
+        ConstraintValidator validator = new ConstraintValidator(nutrition, budget);
+        DefaultPlanningStrategyFactory strategies = new DefaultPlanningStrategyFactory(nutrition, budget);
         ScriptedLLMClient llm = new ScriptedLLMClient();
         MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, catalogue, nutrition, validator, strategies,
                 MAX_TOOL_STEPS);
+        InMemoryRepositories.MealPlans plans = new InMemoryRepositories.MealPlans();
+        MealPlanService mealPlans = new MealPlanService(plans);
+        AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
+                new ProposalValidator(recipes), validator);
         MealPlanningFacade facade = new MealPlanningFacade(new MealPlanningFacade.Services(
-                profiles, pantry, catalogue, recipes, nutrition, validator, strategies,
-                new AgentController(agent, profiles, pantry, validator), clock));
-        return new Fixture(facade, events, llm);
+                profiles, pantry, mealPlans, catalogue, recipes, nutrition, validator, strategies, controller, clock));
+        return new Fixture(facade, events, llm, plans);
     }
 }

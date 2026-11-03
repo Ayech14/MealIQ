@@ -8,6 +8,7 @@ import io.github.ayech14.mealiq.contracts.ValidationResult;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -15,7 +16,8 @@ class ConstraintValidatorTest {
 
     private final InMemoryRepositories.Catalogue catalogue = new InMemoryRepositories.Catalogue();
     private final InMemoryRepositories.Recipes recipes = new InMemoryRepositories.Recipes(catalogue);
-    private final ConstraintValidator validator = new ConstraintValidator();
+    private final ConstraintValidator validator =
+            new ConstraintValidator(new NutritionService(), new BudgetService((i, q) -> Optional.empty()));
 
     private Recipe recipe(String name) {
         return recipes.search(io.github.ayech14.mealiq.contracts.RecipeQuery.any()).stream()

@@ -1,23 +1,125 @@
 package io.github.ayech14.mealiq.services;
 
+import io.github.ayech14.mealiq.contracts.PlanningContext;
+import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
 import io.github.ayech14.mealiq.domain.DietRules;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.IngredientRequirement;
+import io.github.ayech14.mealiq.domain.NutritionSummary;
+import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.Set;
 import java.util.TreeSet;
 
 /**
  * Deterministic checks of recipes and plans against the profile (D04). Allergies and
  * dietary rules are hard: a breach is a violation. Dislikes are soft: only a warning.
  *
- * <p>This version checks single recipes (F03); plan, change and time validation follow
- * with meal-plan generation.
+ * <p>For a plan, cooking time and budget are also checked as limits (F11, F12): a plan over
+ * either is invalid, never saved silently. Nutrition targets are goals, so a day far from
+ * them is a warning. Plan-change validation follows with plan modification.
  */
 public class ConstraintValidator {
+
+    /** A day this far from the calorie target, as a share of it, gets a warning. */
+    static final double CALORIE_TOLERANCE = 0.20;
+    /** A day below this share of the protein target gets a warning. */
+    static final double PROTEIN_MINIMUM_SHARE = 0.8;
+
+    private final NutritionService nutritionService;
+    private final BudgetService budgetService;
+
+    public ConstraintValidator(NutritionService nutritionService, BudgetService budgetService) {
+        this.nutritionService = nutritionService;
+        this.budgetService = budgetService;
+    }
+
+    /** Restrictions, time, budget and nutrition of a proposed plan for the context's profile. */
+    public ValidationResult validatePlan(PlanningProposal proposal, PlanningContext context) {
+        UserProfile profile = context.profile();
+        Set<String> violations = new LinkedHashSet<>();
+        Set<String> warnings = new LinkedHashSet<>();
+        LocalDate start = context.request().startDate();
+        for (PlannedMeal meal : proposal.meals()) {
+            ValidationResult restrictions = validateRestrictions(meal.recipe(), profile);
+            violations.addAll(restrictions.violations());
+            warnings.addAll(restrictions.warnings());
+            if (!validateTime(meal, profile)) {
+                violations.add(ProposalValidator.label(meal.date(), meal.mealType(), start) + ": "
+                        + meal.recipe().name() + " takes " + meal.recipe().totalMinutes() + " min, over the "
+                        + profile.maxMinutesFor(meal.date().getDayOfWeek()).getAsInt() + "-minute limit for "
+                        + meal.date().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + ".");
+            }
+        }
+        checkBudget(proposal, context, violations, warnings);
+        checkNutrition(proposal, context, warnings);
+        return new ValidationResult(violations.isEmpty(), List.copyOf(violations), List.copyOf(warnings));
+    }
+
+    /** Whether the meal fits the cooking-time limit of its day; a day without a limit always fits. */
+    public boolean validateTime(PlannedMeal meal, UserProfile profile) {
+        OptionalInt limit = profile.maxMinutesFor(meal.date().getDayOfWeek());
+        return limit.isEmpty() || meal.recipe().totalMinutes() <= limit.getAsInt();
+    }
+
+    private void checkBudget(PlanningProposal proposal, PlanningContext context, Set<String> violations,
+                             Set<String> warnings) {
+        BigDecimal weekly = context.profile().weeklyBudget();
+        if (weekly.signum() == 0) {
+            return; // no budget set
+        }
+        int days = context.request().days();
+        BigDecimal budget = weekly.multiply(BigDecimal.valueOf(days)).divide(BigDecimal.valueOf(7), 2,
+                RoundingMode.HALF_UP);
+        Optional<BigDecimal> cost = budgetService.estimateCost(proposal.meals(), context.pantry());
+        if (cost.isEmpty()) {
+            warnings.add("The cost could not be estimated (some prices are unknown), so the budget of $"
+                    + budget + " was not checked.");
+        } else if (cost.get().compareTo(budget) > 0) {
+            violations.add("Estimated grocery cost $" + cost.get() + " is over the budget of $" + budget
+                    + " for " + days + " day(s).");
+        }
+    }
+
+    private void checkNutrition(PlanningProposal proposal, PlanningContext context, Set<String> warnings) {
+        UserProfile profile = context.profile();
+        LocalDate start = context.request().startDate();
+        for (int day = 0; day < context.request().days(); day++) {
+            LocalDate date = start.plusDays(day);
+            List<PlannedMeal> meals = proposal.meals().stream().filter(m -> m.date().equals(date)).toList();
+            if (meals.isEmpty()) {
+                continue;
+            }
+            NutritionSummary total = nutritionService.calculateNutrition(meals);
+            String label = "Day " + (day + 1) + " (" + date + ")";
+            if (!total.complete()) {
+                warnings.add(label + ": nutrition is incomplete, so targets were not checked.");
+                continue;
+            }
+            Integer calories = profile.dailyCalorieTarget();
+            if (calories != null && Math.abs(total.calories() - calories) > calories * CALORIE_TOLERANCE) {
+                warnings.add(label + ": " + Math.round(total.calories()) + " kcal against a target of " + calories
+                        + ".");
+            }
+            Integer protein = profile.dailyProteinTargetG();
+            if (protein != null && total.proteinG() < protein * PROTEIN_MINIMUM_SHARE) {
+                warnings.add(label + ": " + Math.round(total.proteinG()) + " g protein against a target of "
+                        + protein + " g.");
+            }
+        }
+    }
 
     /**
      * A required ingredient that breaks an allergy or diet makes the recipe invalid. An

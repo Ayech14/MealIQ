@@ -2,14 +2,18 @@ package io.github.ayech14.mealiq.agent;
 
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
+import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.PantryItem;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.services.NutritionService;
+import java.time.LocalDate;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -77,6 +81,53 @@ public class PromptBuilder {
                  recipes from this list that best fit the request, best first, using their exact names. \
                 Prefer the ranking unless the request says otherwise. In the rationale (2-4 sentences), \
                 explain the choice using only the facts above.""");
+        return prompt.toString();
+    }
+
+    /**
+     * Asks for a full plan built only from the ranked candidates of each meal type. Violations
+     * from a rejected attempt are listed so the retry can fix them (SD01).
+     */
+    public String buildPlanningPrompt(PlanningContext context, Map<MealType, List<Recipe>> candidates,
+                                      List<MealType> slots) {
+        StringBuilder prompt = new StringBuilder();
+        appendRequest(prompt, context, RecipeQuery.any());
+        appendProfile(prompt, context);
+        LocalDate start = context.request().startDate();
+        prompt.append("PLAN: ").append(context.request().days()).append(" day(s) from ").append(start)
+                .append(" (day 1 is ").append(start.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH))
+                .append("). Each day needs exactly: ")
+                .append(slots.stream().map(t -> t.name().toLowerCase(Locale.ROOT)).collect(Collectors.joining(", ")))
+                .append(".\n");
+        List<String> limits = new ArrayList<>();
+        for (int day = 1; day <= context.request().days(); day++) {
+            OptionalInt limit = context.profile().maxMinutesFor(start.plusDays(day - 1L).getDayOfWeek());
+            if (limit.isPresent()) {
+                limits.add("day " + day + ": " + limit.getAsInt() + " min");
+            }
+        }
+        if (!limits.isEmpty()) {
+            prompt.append("COOKING-TIME LIMIT PER MEAL: ").append(String.join(", ", limits)).append('\n');
+        }
+        for (MealType type : slots.stream().distinct().toList()) {
+            prompt.append(type.name()).append(" CANDIDATES, best first by the ")
+                    .append(context.request().mode().name().toLowerCase(Locale.ROOT).replace('_', ' '))
+                    .append(" ranking (exact facts per serving):\n");
+            List<Recipe> ranked = candidates.getOrDefault(type, List.of());
+            if (ranked.isEmpty()) {
+                prompt.append("(none)\n");
+            }
+            ranked.forEach(r -> prompt.append("- ").append(facts(r, context)).append('\n'));
+        }
+        if (!context.violations().isEmpty()) {
+            prompt.append("YOUR PREVIOUS PLAN WAS REJECTED FOR THESE REASONS; FIX THEM:\n");
+            context.violations().forEach(v -> prompt.append("- ").append(v).append('\n'));
+        }
+        prompt.append("""
+                Build the plan: one entry per meal slot, using exact candidate names for that meal type. \
+                Respect the cooking-time limits, aim for the calorie and protein targets across each day, \
+                use pantry items early, and vary the meals across days. In the rationale (2-4 sentences), \
+                explain the main trade-offs. List anything you could not satisfy in conflicts.""");
         return prompt.toString();
     }
 

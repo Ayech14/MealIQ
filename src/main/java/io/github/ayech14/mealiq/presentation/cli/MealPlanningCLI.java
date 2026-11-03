@@ -28,7 +28,7 @@ import picocli.CommandLine.ScopeType;
  */
 @Command(name = "mealiq", mixinStandardHelpOptions = true, version = "MealIQ 0.1.0",
         description = "Meal planning and grocery optimization. A planning aid, not medical or dietary advice.",
-        subcommands = {ProfileCommand.class, PantryCommand.class, RecipesCommand.class})
+        subcommands = {ProfileCommand.class, PantryCommand.class, RecipesCommand.class, PlanCommand.class})
 public final class MealPlanningCLI implements Runnable {
 
     static final int OK = 0;

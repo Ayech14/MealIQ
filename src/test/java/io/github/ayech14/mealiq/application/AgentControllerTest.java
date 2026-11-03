@@ -24,9 +24,11 @@ import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
 import io.github.ayech14.mealiq.services.InMemoryRepositories;
+import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NutritionService;
 import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.ProfileService;
+import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
@@ -43,8 +45,10 @@ class AgentControllerTest {
     final InMemoryRepositories.Catalogue catalogue = new InMemoryRepositories.Catalogue();
     final InMemoryRepositories.Recipes recipes = new InMemoryRepositories.Recipes(catalogue);
     final NutritionService nutrition = new NutritionService();
-    final ConstraintValidator validator = new ConstraintValidator();
+    final ConstraintValidator validator =
+            new ConstraintValidator(nutrition, new BudgetService((i, q) -> Optional.empty()));
     final UUID profileId = UUID.randomUUID();
+    final InMemoryRepositories.MealPlans plans = new InMemoryRepositories.MealPlans();
     ProfileService profiles;
     PantryService pantry;
 
@@ -82,13 +86,14 @@ class AgentControllerTest {
         MealPlanningAgent agent = new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition),
                 new ConversationMemory(5), new DefaultPlanningStrategyFactory(nutrition,
                         new BudgetService((i, q) -> Optional.empty())), 2);
-        return new AgentController(agent, profiles, pantry, validator);
+        return new AgentController(agent, profiles, pantry, new MealPlanService(plans),
+                new ProposalValidator(recipes), validator);
     }
 
     AgentController controller() {
         return new AgentController(AgentAssembly.agent(llm, recipes, catalogue, nutrition, validator,
                 new DefaultPlanningStrategyFactory(nutrition, new BudgetService((i, q) -> Optional.empty())), 3),
-                profiles, pantry, validator);
+                profiles, pantry, new MealPlanService(plans), new ProposalValidator(recipes), validator);
     }
 
     static Map<String, Object> finish() {
