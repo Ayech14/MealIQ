@@ -3,14 +3,20 @@ package io.github.ayech14.mealiq.presentation.cli;
 import io.github.ayech14.mealiq.application.MealPlanningFacade;
 import io.github.ayech14.mealiq.config.AppConfig;
 import io.github.ayech14.mealiq.config.ConfigException;
+import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.persistence.PersistenceException;
 import io.github.ayech14.mealiq.persistence.jdbc.Database;
 import io.github.ayech14.mealiq.persistence.jdbc.DatabaseSetup;
 import io.github.ayech14.mealiq.services.InvalidInputException;
 import io.github.ayech14.mealiq.services.NotFoundException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -41,13 +47,18 @@ public final class MealPlanningCLI implements Runnable {
 
     private final MealPlanningFacade facade;
     private final Supplier<DatabaseSetup.Result> databaseSetup;
+    private final BufferedReader in;
     private final CommandLine commandLine;
 
-    /** {@code databaseSetup} prepares the database for the {@code setup} command. */
+    /**
+     * {@code databaseSetup} prepares the database for the {@code setup} command; {@code in}
+     * answers confirmation questions.
+     */
     public MealPlanningCLI(MealPlanningFacade facade, Supplier<DatabaseSetup.Result> databaseSetup,
-                           PrintWriter out, PrintWriter err) {
+                           BufferedReader in, PrintWriter out, PrintWriter err) {
         this.facade = facade;
         this.databaseSetup = databaseSetup;
+        this.in = in;
         this.commandLine = new CommandLine(this)
                 .setCaseInsensitiveEnumValuesAllowed(true)
                 .setOut(out)
@@ -61,6 +72,7 @@ public final class MealPlanningCLI implements Runnable {
             AppConfig config = AppConfig.load();
             MealPlanningCLI cli = new MealPlanningCLI(MealPlanningFacade.fromConfig(config),
                     () -> DatabaseSetup.run(Database.from(config)),
+                    new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)),
                     new PrintWriter(System.out, true), new PrintWriter(System.err, true));
             exitCode = cli.executeCommand(List.of(args));
         } catch (ConfigException e) {
@@ -99,6 +111,18 @@ public final class MealPlanningCLI implements Runnable {
         found.forEach(i -> out().printf("  %-24s %s%n", i.name(), i.category()));
         out().println(found.size() + " ingredient" + (found.size() == 1 ? "" : "s") + ".");
         return OK;
+    }
+
+    /** Asks the user to confirm a previewed change; anything but "y" or "yes" (or no input) declines. */
+    public boolean promptConfirmation(PlanChange change) {
+        out().print("Apply this change? [y/N] ");
+        out().flush();
+        try {
+            String answer = in.readLine();
+            return answer != null && List.of("y", "yes").contains(answer.strip().toLowerCase(Locale.ROOT));
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     MealPlanningFacade facade() {

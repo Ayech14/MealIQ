@@ -1,16 +1,22 @@
 package io.github.ayech14.mealiq.services;
 
+import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
+import io.github.ayech14.mealiq.domain.ChangeType;
+import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.PlannedMeal;
+import io.github.ayech14.mealiq.domain.Recipe;
+import io.github.ayech14.mealiq.domain.RecipeSource;
 import io.github.ayech14.mealiq.persistence.RecipeRepository;
 import io.github.ayech14.mealiq.planning.MealSlots;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -89,6 +95,65 @@ public class ProposalValidator {
             }
         });
         return new ValidationResult(violations.isEmpty(), violations, warnings);
+    }
+
+    /**
+     * Checks a proposed change against the active plan in {@code context}: every target is a
+     * meal of the plan keeping its day and meal type, a replacement is a stored recipe of
+     * that meal type, a substitution is a variant of the current recipe, and no day ends up
+     * with the same recipe twice.
+     */
+    public ValidationResult validate(PlanChange change, PlanningContext context) {
+        if (change.needsClarification()) {
+            return ValidationResult.failed("The change needs an answer first: " + change.clarificationQuestion());
+        }
+        MealPlan plan = context.activePlan();
+        if (plan == null) {
+            return ValidationResult.failed("There is no active plan to change.");
+        }
+        if (change.proposal().meals().isEmpty()) {
+            return ValidationResult.failed("The change does not change any meal.");
+        }
+        List<String> violations = new ArrayList<>();
+        Map<UUID, PlannedMeal> after = new LinkedHashMap<>();
+        plan.meals().forEach(m -> after.put(m.id(), m));
+        for (PlannedMeal proposed : change.proposal().meals()) {
+            PlannedMeal current = after.get(proposed.id());
+            if (current == null) {
+                violations.add("Meal " + proposed.id() + " is not part of the plan.");
+                continue;
+            }
+            String slot = label(current.date(), current.mealType(), plan.startDate());
+            if (!proposed.date().equals(current.date()) || proposed.mealType() != current.mealType()) {
+                violations.add(slot + ": a change must keep the meal's day and meal type.");
+            }
+            Recipe recipe = proposed.recipe();
+            if (change.changeType() == ChangeType.SUBSTITUTE_INGREDIENT) {
+                if (recipe.source() != RecipeSource.VARIANT
+                        || recipe.ingredients().size() != current.recipe().ingredients().size()) {
+                    violations.add(slot + ": " + recipe.name() + " is not a substitution of " + current.recipe().name()
+                            + ".");
+                }
+            } else if (recipeRepository.findById(recipe.id()).isEmpty()) {
+                violations.add(slot + ": " + recipe.name() + " is not a stored recipe.");
+            } else if (!recipe.mealTypes().contains(current.mealType())) {
+                violations.add(slot + ": " + recipe.name() + " is not a "
+                        + current.mealType().name().toLowerCase(Locale.ROOT) + " recipe.");
+            } else if (recipe.id().equals(current.recipe().id())) {
+                violations.add(slot + ": the meal already is " + recipe.name() + ".");
+            }
+            after.put(proposed.id(), new PlannedMeal(current.id(), current.date(), current.mealType(), recipe,
+                    current.servings()));
+        }
+        Map<String, Integer> sameDay = new HashMap<>();
+        after.values().forEach(m -> sameDay.merge(m.date() + "/" + m.recipe().name(), 1, Integer::sum));
+        sameDay.forEach((key, count) -> {
+            if (count > 1) {
+                violations.add(key.substring(key.indexOf('/') + 1) + " would be planned " + count
+                        + " times on one day.");
+            }
+        });
+        return new ValidationResult(violations.isEmpty(), violations, List.of());
     }
 
     /** "Day 2 (2026-11-04) lunch", so messages read the way the plan is shown. */

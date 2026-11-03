@@ -1,7 +1,10 @@
 package io.github.ayech14.mealiq.presentation.cli;
 
 import io.github.ayech14.mealiq.contracts.AgentResponse;
+import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
+import io.github.ayech14.mealiq.domain.AppliedChange;
+import io.github.ayech14.mealiq.domain.GroceryList;
 import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.PlannedMeal;
@@ -19,11 +22,15 @@ import java.util.Map;
 import java.util.Optional;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
 import picocli.CommandLine.Spec;
 import picocli.CommandLine.Model.CommandSpec;
 
-/** {@code mealiq plan generate|show}: weekly meal plans (F05) with daily nutrition (F06). */
+/**
+ * {@code mealiq plan generate|show|modify|substitute|cheaper|undo|history}: weekly plans (F05,
+ * F06) and confirmed changes with undo (F08, F09, F10).
+ */
 @Command(name = "plan", description = "Generate or show your meal plan.", mixinStandardHelpOptions = true)
 final class PlanCommand implements Runnable {
 
@@ -79,16 +86,133 @@ final class PlanCommand implements Runnable {
         response.conflicts().forEach(c -> out.println((response.status() == ResponseStatus.SUCCESS ? "Note: " : "  ")
                 + c));
         if (showSteps) {
-            out.println("Agent steps:");
-            for (int i = 0; i < response.agentSteps().size(); i++) {
-                out.println("  " + (i + 1) + ". " + response.agentSteps().get(i).replace("\n", "\n     "));
-            }
+            printSteps(response);
         }
         if (response.status() == ResponseStatus.SUCCESS) {
             printDisclaimer();
             return MealPlanningCLI.OK;
         }
         return MealPlanningCLI.FAILED;
+    }
+
+    @Command(name = "modify", description = {
+        "Change the plan in your own words; you see the change before it is applied.",
+        "Example: mealiq plan modify \"make Wednesday's dinner vegetarian\""})
+    int modify(@Parameters(paramLabel = "REQUEST") String request,
+               @Option(names = "--mode", paramLabel = "MODE", defaultValue = "nutrition",
+                       description = "Ranking for candidates: nutrition, time or budget (default: ${DEFAULT-VALUE})")
+               Mode mode,
+               @Option(names = {"-y", "--yes"}, description = "Apply without asking") boolean yes,
+               @Option(names = "--show-steps", description = "Also print the agent's tool calls") boolean showSteps) {
+        return confirmFlow(cli.facade().modifyPlan(cli.profileId(), request, mode.mode), yes, showSteps);
+    }
+
+    @Command(name = "substitute", description = {
+        "Replace an ingredient in every planned meal that uses it.",
+        "Example: mealiq plan substitute milk"})
+    int substitute(@Parameters(paramLabel = "INGREDIENT") String ingredient,
+                   @Option(names = {"-y", "--yes"}, description = "Apply without asking") boolean yes,
+                   @Option(names = "--show-steps", description = "Also print the agent's tool calls")
+                   boolean showSteps) {
+        return confirmFlow(cli.facade().requestSubstitution(cli.profileId(), ingredient), yes, showSteps);
+    }
+
+    @Command(name = "cheaper", description = "When the groceries are over budget, swap meals for cheaper ones.")
+    int cheaper(@Option(names = {"-y", "--yes"}, description = "Apply without asking") boolean yes,
+                @Option(names = "--show-steps", description = "Also print the agent's tool calls") boolean showSteps) {
+        return confirmFlow(cli.facade().suggestCheaperPlan(cli.profileId()), yes, showSteps);
+    }
+
+    @Command(name = "undo", description = "Undo the last applied change.")
+    int undo() {
+        AgentResponse response = cli.facade().undoLastChange(cli.profileId());
+        cli.out().println(response.rationale());
+        if (response.status() != ResponseStatus.SUCCESS) {
+            return MealPlanningCLI.FAILED;
+        }
+        printGroceryLine(response);
+        return MealPlanningCLI.OK;
+    }
+
+    @Command(name = "history", description = "List the applied changes that can be undone, oldest first.")
+    int history() {
+        List<AppliedChange> changes = cli.facade().changeHistory(cli.profileId());
+        if (changes.isEmpty()) {
+            cli.out().println("No changes yet.");
+        }
+        for (int i = 0; i < changes.size(); i++) {
+            cli.out().println("  " + (i + 1) + ". " + changes.get(i).description());
+        }
+        return MealPlanningCLI.OK;
+    }
+
+    /** Shows the agent's answer; a proposed change is previewed and applied only if confirmed. */
+    private int confirmFlow(AgentResponse response, boolean yes, boolean showSteps) {
+        PrintWriter out = cli.out();
+        if (showSteps) {
+            printSteps(response);
+        }
+        switch (response.status()) {
+            case NEEDS_CONFIRMATION -> {
+                return previewAndConfirm(response, yes);
+            }
+            case NEEDS_CLARIFICATION -> out.println("Question: " + response.rationale()
+                    + " Ask again with more detail.");
+            case SUCCESS -> out.println(response.rationale());
+            default -> {
+                out.println(response.rationale());
+                response.conflicts().forEach(c -> out.println("  " + c));
+            }
+        }
+        return response.status() == ResponseStatus.SUCCESS ? MealPlanningCLI.OK : MealPlanningCLI.FAILED;
+    }
+
+    private int previewAndConfirm(AgentResponse response, boolean yes) {
+        PrintWriter out = cli.out();
+        PlanChange change = response.change();
+        out.println("Proposed change:");
+        for (PlannedMeal proposed : change.proposal().meals()) {
+            PlannedMeal current = response.plan().findMeal(proposed.id());
+            NutritionSummary n = cli.facade().recipeNutrition(proposed.recipe(), proposed.servings());
+            out.println("  " + current.date().getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + " "
+                    + current.date() + " " + current.mealType().name().toLowerCase(Locale.ROOT) + ": "
+                    + current.recipe().name() + " -> " + proposed.recipe().name() + " (" + proposed.recipe()
+                    .totalMinutes() + " min, " + kcal(n) + " kcal, " + protein(n) + " protein)");
+        }
+        if (!response.rationale().isEmpty()) {
+            out.println("Why: " + response.rationale());
+        }
+        response.conflicts().forEach(c -> out.println("Note: " + c));
+        if (!yes && !cli.promptConfirmation(change)) {
+            out.println("Cancelled. The plan is unchanged.");
+            return MealPlanningCLI.OK;
+        }
+        AgentResponse applied = cli.facade().executeChange(response.plan().id(), change);
+        if (applied.status() != ResponseStatus.SUCCESS) {
+            out.println(applied.rationale());
+            return MealPlanningCLI.FAILED;
+        }
+        out.println("Applied: " + applied.rationale() + ". Undo with: mealiq plan undo");
+        printGroceryLine(applied);
+        return MealPlanningCLI.OK;
+    }
+
+    private void printGroceryLine(AgentResponse response) {
+        GroceryList list = response.groceryList();
+        if (list != null) {
+            long toBuy = list.items().stream().filter(i -> !i.toBuy().isZero()).count();
+            cli.out().println("Grocery list refreshed: " + toBuy + " item(s) to buy, at least $" + list.total() + ".");
+        }
+    }
+
+    private void printSteps(AgentResponse response) {
+        cli.out().println("Agent steps:");
+        if (response.agentSteps().isEmpty()) {
+            cli.out().println("  (none)");
+        }
+        for (int i = 0; i < response.agentSteps().size(); i++) {
+            cli.out().println("  " + (i + 1) + ". " + response.agentSteps().get(i).replace("\n", "\n     "));
+        }
     }
 
     @Command(name = "show", description = "Show the active plan with nutrition per day.")

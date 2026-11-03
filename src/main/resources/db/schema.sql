@@ -113,3 +113,17 @@ CREATE TABLE IF NOT EXISTS grocery_items (
     estimated_price     NUMERIC(10, 2),
     PRIMARY KEY (list_id, position)
 );
+
+CREATE TABLE IF NOT EXISTS plan_changes (
+    plan_id                  UUID         NOT NULL REFERENCES meal_plans (id) ON DELETE CASCADE,
+    position                 INTEGER      NOT NULL,
+    change_id                UUID         NOT NULL,
+    change_type              VARCHAR(30)  NOT NULL,
+    description              TEXT         NOT NULL,
+    meal_id                  UUID         NOT NULL,
+    before_recipe_id         UUID         NOT NULL REFERENCES recipes (id),
+    after_recipe_id          UUID         NOT NULL REFERENCES recipes (id),
+    original_ingredient_id   UUID         REFERENCES ingredients (id),
+    substitute_ingredient_id UUID         REFERENCES ingredients (id),
+    PRIMARY KEY (plan_id, position)
+);

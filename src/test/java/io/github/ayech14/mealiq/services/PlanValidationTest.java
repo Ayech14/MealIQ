@@ -5,11 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.ayech14.mealiq.application.TestFacades;
+import io.github.ayech14.mealiq.commands.SubstituteIngredientCommand;
+import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
+import io.github.ayech14.mealiq.domain.ChangeType;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.MealType;
@@ -135,6 +138,73 @@ class PlanValidationTest {
     }
 
     @Nested
+    class Changes {
+
+        final ProposalValidator validator = new ProposalValidator(recipes);
+        final MealPlan plan = new MealPlan(profileId, START, 1, oneGoodDay().meals());
+
+        PlanningContext withPlan() {
+            return new PlanningContext(context(1).request(), profile, pantry, plan, null, List.of(), List.of());
+        }
+
+        ValidationResult change(ChangeType type, PlannedMeal... meals) {
+            return validator.validate(PlanChange.proposed(type, List.of(), new PlanningProposal(List.of(meals),
+                    PlanningMode.NUTRITION_GOAL, "", List.of()), ""), withPlan());
+        }
+
+        PlannedMeal target(MealType type) {
+            return plan.meals().stream().filter(m -> m.mealType() == type).findFirst().orElseThrow();
+        }
+
+        @Test
+        void aReplacementMustBeAStoredRecipeOfTheSlotsType() {
+            PlannedMeal dinner = target(MealType.DINNER);
+            assertTrue(change(ChangeType.REPLACE_MEAL, new PlannedMeal(dinner.id(), START, MealType.DINNER,
+                    recipe("Turkey chili"), 1)).valid());
+            assertEquals(List.of("Day 1 (2026-11-03) dinner: Overnight oats is not a dinner recipe."),
+                    change(ChangeType.REPLACE_MEAL, new PlannedMeal(dinner.id(), START, MealType.DINNER,
+                            recipe("Overnight oats"), 1)).violations().subList(0, 1));
+            assertEquals(List.of("Day 1 (2026-11-03) dinner: the meal already is Shrimp tacos."),
+                    change(ChangeType.REPLACE_MEAL, new PlannedMeal(dinner.id(), START, MealType.DINNER,
+                            recipe("Shrimp tacos"), 1)).violations());
+            Recipe invented = Recipe.builder("Invented stew").mealTypes(MealType.DINNER).build();
+            assertEquals(List.of("Day 1 (2026-11-03) dinner: Invented stew is not a stored recipe."),
+                    change(ChangeType.REPLACE_MEAL, new PlannedMeal(dinner.id(), START, MealType.DINNER, invented,
+                            1)).violations());
+        }
+
+        @Test
+        void targetsMustBeMealsOfThePlanKeepingTheirSlot() {
+            assertEquals(1, change(ChangeType.REPLACE_MEAL, new PlannedMeal(START, MealType.DINNER,
+                    recipe("Turkey chili"), 1)).violations().size());
+            PlannedMeal dinner = target(MealType.DINNER);
+            assertEquals(List.of("Day 1 (2026-11-03) dinner: a change must keep the meal's day and meal type."),
+                    change(ChangeType.REPLACE_MEAL, new PlannedMeal(dinner.id(), START.plusDays(1), MealType.DINNER,
+                            recipe("Turkey chili"), 1)).violations());
+        }
+
+        @Test
+        void aSubstitutionMustBeAVariantOfTheCurrentRecipe() {
+            PlannedMeal breakfast = target(MealType.BREAKFAST);
+            Recipe variant = SubstituteIngredientCommand.variant(breakfast.recipe(),
+                    catalogue.findByName("milk").orElseThrow(), catalogue.findByName("soy milk").orElseThrow());
+            assertTrue(change(ChangeType.SUBSTITUTE_INGREDIENT, new PlannedMeal(breakfast.id(), START,
+                    MealType.BREAKFAST, variant, 1)).valid());
+            assertFalse(change(ChangeType.SUBSTITUTE_INGREDIENT, new PlannedMeal(breakfast.id(), START,
+                    MealType.BREAKFAST, recipe("Tofu scramble"), 1)).valid());
+        }
+
+        @Test
+        void emptyOrPlanlessChangesAreRefused() {
+            assertEquals(List.of("The change does not change any meal."),
+                    change(ChangeType.REPLACE_MEAL).violations());
+            PlanChange any = PlanChange.proposed(ChangeType.REPLACE_MEAL, List.of(), oneGoodDay(), "");
+            assertEquals(List.of("There is no active plan to change."),
+                    validator.validate(any, context(1)).violations());
+        }
+    }
+
+    @Nested
     class Constraints {
 
         ConstraintValidator validator(BudgetService budget) {
@@ -224,7 +294,8 @@ class PlanValidationTest {
     class Storage {
 
         final InMemoryRepositories.MealPlans repository = new InMemoryRepositories.MealPlans();
-        final MealPlanService service = new MealPlanService(repository);
+        final MealPlanService service = new MealPlanService(repository, recipes,
+                new InMemoryRepositories.PlanChanges());
 
         @Test
         void newPlanIsActiveAndArchivesThePreviousOne() {

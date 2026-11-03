@@ -3,15 +3,18 @@ package io.github.ayech14.mealiq.agent;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.domain.CostEstimate;
+import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.PantryItem;
+import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.NutritionService;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -134,6 +137,59 @@ public class PromptBuilder {
                 twice on one day, and vary the meals across days. In the rationale (2-4 sentences), \
                 explain the main trade-offs. List anything you could not satisfy in conflicts.""");
         return prompt.toString();
+    }
+
+    /** Asks how to change the active plan, using only the candidates the tools found (F10, SD03). */
+    public String buildChangePrompt(PlanningContext context, String instruction, List<Recipe> candidates) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("CHANGE REQUEST: ").append(instruction).append('\n');
+        appendProfile(prompt, context);
+        appendPlan(prompt, context);
+        prompt.append("CANDIDATE RECIPES (exact facts per serving):\n");
+        if (candidates.isEmpty()) {
+            prompt.append("(none)\n");
+        }
+        candidates.forEach(r -> prompt.append("- ").append(facts(r, context)).append(" [")
+                .append(r.mealTypes().stream().map(t -> t.name().toLowerCase(Locale.ROOT)).sorted()
+                        .collect(Collectors.joining("/"))).append("]\n"));
+        prompt.append("""
+                Decide which meals of the plan the request means and what replaces them. Set action to \
+                "replace" and list each replacement by day number, meal type and an exact candidate name of \
+                that meal type; change only what the request asks for, and never put a recipe twice on one \
+                day. If it is unclear which meal is meant, set action to "clarify", leave replacements empty \
+                and ask one short question. If the plan already does what is asked, set action to "no_change" \
+                and say why. Explain the choice in the rationale (1-3 sentences).""");
+        return prompt.toString();
+    }
+
+    /** Asks the LLM to choose substitutes from deterministic candidates for the affected meals (F09). */
+    public String buildSubstitutionPrompt(PlanningContext context, Map<String, List<String>> candidatesByIngredient,
+                                          List<String> affectedMeals) {
+        StringBuilder prompt = new StringBuilder();
+        appendProfile(prompt, context);
+        prompt.append("MEALS USING THE INGREDIENTS TO REPLACE:\n");
+        affectedMeals.forEach(m -> prompt.append("- ").append(m).append('\n'));
+        prompt.append("ALLOWED SUBSTITUTES, best first (from the ingredient catalogue, already checked against "
+                + "allergies, diet and dislikes):\n");
+        candidatesByIngredient.forEach((ingredient, options) -> prompt.append("- ").append(ingredient).append(": ")
+                .append(options.isEmpty() ? "(none)" : String.join(", ", options)).append('\n'));
+        prompt.append("""
+                For each ingredient with options, choose one substitute by its exact name. Prefer the first \
+                option unless another fits these meals or the user's goals better. Explain in the rationale \
+                (1-2 sentences).""");
+        return prompt.toString();
+    }
+
+    private static void appendPlan(StringBuilder prompt, PlanningContext context) {
+        MealPlan plan = context.activePlan();
+        prompt.append("CURRENT PLAN (day 1 is ").append(plan.startDate()).append("):\n");
+        for (PlannedMeal meal : plan.meals()) {
+            long day = ChronoUnit.DAYS.between(plan.startDate(), meal.date()) + 1;
+            prompt.append("- day ").append(day).append(" (")
+                    .append(meal.date().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH)).append(") ")
+                    .append(meal.mealType().name().toLowerCase(Locale.ROOT)).append(": ")
+                    .append(meal.recipe().name()).append('\n');
+        }
     }
 
     String facts(Recipe recipe, PlanningContext context) {

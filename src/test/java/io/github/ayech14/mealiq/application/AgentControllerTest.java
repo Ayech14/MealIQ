@@ -84,20 +84,26 @@ class AgentControllerTest {
                         "all snacks");
             }
         });
-        MealPlanningAgent agent = new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition, new BudgetService((i, q) -> Optional.empty())),
-                new ConversationMemory(5), new DefaultPlanningStrategyFactory(nutrition,
-                        new BudgetService((i, q) -> Optional.empty())), 2);
-        return new AgentController(agent, profiles, pantry, new MealPlanService(plans),
-                new ProposalValidator(recipes), validator);
+        BudgetService budget = new BudgetService((i, q) -> Optional.empty());
+        MealPlanningAgent agent = new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition, budget),
+                new ConversationMemory(5), new DefaultPlanningStrategyFactory(nutrition, budget), 2);
+        return new AgentController(agent, profiles, pantry, planService(), new ProposalValidator(recipes), validator,
+                groceries());
     }
 
     AgentController controller() {
-        GroceryService groceries = new GroceryService(new InMemoryRepositories.GroceryLists(), pantry,
-                (i, q) -> Optional.empty());
         BudgetService budget = new BudgetService((i, q) -> Optional.empty());
-        return new AgentController(AgentAssembly.agent(llm, recipes, catalogue, nutrition, budget, groceries, validator,
-                new DefaultPlanningStrategyFactory(nutrition, budget), 3),
-                profiles, pantry, new MealPlanService(plans), new ProposalValidator(recipes), validator);
+        return new AgentController(AgentAssembly.agent(llm, recipes, catalogue, nutrition, budget, groceries(),
+                validator, new DefaultPlanningStrategyFactory(nutrition, budget), 3),
+                profiles, pantry, planService(), new ProposalValidator(recipes), validator, groceries());
+    }
+
+    MealPlanService planService() {
+        return new MealPlanService(plans, recipes, new InMemoryRepositories.PlanChanges());
+    }
+
+    GroceryService groceries() {
+        return new GroceryService(new InMemoryRepositories.GroceryLists(), pantry, (i, q) -> Optional.empty());
     }
 
     static Map<String, Object> finish() {

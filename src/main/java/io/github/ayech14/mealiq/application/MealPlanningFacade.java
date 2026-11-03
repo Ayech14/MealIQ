@@ -3,10 +3,12 @@ package io.github.ayech14.mealiq.application;
 import io.github.ayech14.mealiq.agent.MealPlanningAgent;
 import io.github.ayech14.mealiq.config.AppConfig;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
+import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
+import io.github.ayech14.mealiq.domain.AppliedChange;
 import io.github.ayech14.mealiq.domain.BudgetStatus;
 import io.github.ayech14.mealiq.domain.CostEstimate;
 import io.github.ayech14.mealiq.domain.GroceryList;
@@ -31,6 +33,7 @@ import io.github.ayech14.mealiq.persistence.jdbc.JdbcGroceryListRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcIngredientRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcMealPlanRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcPantryRepository;
+import io.github.ayech14.mealiq.persistence.jdbc.JdbcPlanChangeRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcProfileRepository;
 import io.github.ayech14.mealiq.persistence.jdbc.JdbcRecipeRepository;
 import io.github.ayech14.mealiq.planning.DefaultPlanningStrategyFactory;
@@ -62,7 +65,8 @@ import java.util.UUID;
  *
  * <p>Operations are added as features are implemented; this version covers F01 (profile),
  * F02 (pantry), recipe browsing and agent recommendations (F03), weekly plans (F05),
- * nutrition analysis (F06), grocery lists with prices and budget checks (F07, F08, F12).
+ * nutrition analysis (F06), grocery lists with prices and budget checks (F07, F08, F12), and
+ * confirmed plan changes with undo (F09, F10).
  */
 public class MealPlanningFacade {
 
@@ -122,12 +126,13 @@ public class MealPlanningFacade {
                 : (prompt, schema, instructions) -> {
                     throw new LLMException(LLMException.Kind.NOT_CONFIGURED, "set LLM_API_KEY and LLM_MODEL in .env");
                 };
-        MealPlanService mealPlans = new MealPlanService(new JdbcMealPlanRepository(database));
+        MealPlanService mealPlans = new MealPlanService(new JdbcMealPlanRepository(database), recipes,
+                new JdbcPlanChangeRepository(database));
         GroceryService groceries = new GroceryService(new JdbcGroceryListRepository(database), pantry, prices);
         MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, ingredients, nutrition, budget, groceries, validator,
                 strategies, config.maxToolSteps());
         AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
-                new ProposalValidator(recipes), validator);
+                new ProposalValidator(recipes), validator, groceries);
         return new MealPlanningFacade(new Services(profiles, pantry, mealPlans, groceries, ingredients, recipes,
                 nutrition, budget, validator, strategies, controller, clock));
     }
@@ -217,6 +222,58 @@ public class MealPlanningFacade {
     /** Nutrition per day of a plan, in date order, including days without meals. */
     public Map<LocalDate, NutritionSummary> dailyNutrition(MealPlan plan) {
         return nutritionService.dailyTotals(plan);
+    }
+
+    // ---- F09 substitution, F10 typed changes, F08 budget alternatives, undo ----
+
+    /** Asks the agent how to apply a typed change to the active plan; a valid change waits for confirmation. */
+    public AgentResponse modifyPlan(UUID profileId, String instruction, PlanningMode mode) {
+        return agentController.interpretModification(activePlanOrThrow(profileId), instruction, mode);
+    }
+
+    /** Proposes a substitute for an ingredient in every meal of the active plan that uses it. */
+    public AgentResponse requestSubstitution(UUID profileId, String ingredientName) {
+        Ingredient ingredient = ingredientRepository.findByName(ingredientName).orElseThrow(() ->
+                new NotFoundException("'" + ingredientName.strip() + "' is not in the ingredient catalogue"));
+        return agentController.requestSubstitution(activePlanOrThrow(profileId), ingredient);
+    }
+
+    /**
+     * Proposes cheaper meals when the active plan's groceries are over budget (UC07 from UC06).
+     * A plan within budget, or without one, gets a SUCCESS answer and no change.
+     */
+    public AgentResponse suggestCheaperPlan(UUID profileId) {
+        AgentResponse groceries = generateOptimizedGroceryList(profileId);
+        if (groceries.budgetStatus() == null || groceries.budgetStatus().withinBudget()) {
+            return AgentResponse.builder(ResponseStatus.SUCCESS).groceryList(groceries.groceryList())
+                    .budgetStatus(groceries.budgetStatus())
+                    .rationale(groceries.budgetStatus() == null ? "No weekly budget is set."
+                            : "The plan is already within budget.").build();
+        }
+        return agentController.resolveBudgetConflict(activePlanOrThrow(profileId), groceries.budgetStatus());
+    }
+
+    /** Applies a change the user confirmed (only one this application proposed). */
+    public AgentResponse executeChange(UUID planId, PlanChange change) {
+        return agentController.confirmChange(planId, change);
+    }
+
+    /** Reverts the newest confirmed change of the active plan and refreshes its grocery list. */
+    public AgentResponse undoLastChange(UUID profileId) {
+        MealPlan plan = activePlanOrThrow(profileId);
+        List<AppliedChange> history = mealPlanService.changeHistory(plan.id());
+        if (history.isEmpty()) {
+            return AgentResponse.builder(ResponseStatus.FAILED).rationale("There is no change to undo.").build();
+        }
+        MealPlan restored = mealPlanService.undoLastChange(plan.id());
+        return AgentResponse.builder(ResponseStatus.SUCCESS).plan(restored)
+                .groceryList(groceryService.refreshForPlan(restored))
+                .rationale("Undone: " + history.getLast().description()).build();
+    }
+
+    /** Confirmed changes of the active plan that can still be undone, oldest first. */
+    public List<AppliedChange> changeHistory(UUID profileId) {
+        return mealPlanService.changeHistory(activePlanOrThrow(profileId).id());
     }
 
     // ---- F07 grocery list, F08 optimization and F12 budget ----

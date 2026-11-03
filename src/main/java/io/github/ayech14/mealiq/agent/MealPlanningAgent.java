@@ -3,9 +3,14 @@ package io.github.ayech14.mealiq.agent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.ayech14.mealiq.commands.SubstituteIngredientCommand;
+import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
+import io.github.ayech14.mealiq.domain.ChangeType;
+import io.github.ayech14.mealiq.domain.Ingredient;
+import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Recipe;
@@ -21,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -57,6 +63,25 @@ public class MealPlanningAgent {
                     .asType()))
             .property("rationale", JsonSchema.string())
             .property("conflicts", JsonSchema.arrayOf(JsonSchema.string()))
+            .build();
+
+    static final JsonSchema PLAN_CHANGE = JsonSchema.object("plan_change")
+            .property("action", JsonSchema.enumOf("replace", "clarify", "no_change"))
+            .property("replacements", JsonSchema.arrayOf(JsonSchema.object("replacement")
+                    .property("day", described(JsonSchema.integer(), "1 for the first day of the plan"))
+                    .property("mealType", JsonSchema.enumOf("breakfast", "lunch", "dinner", "snack"))
+                    .property("recipe", described(JsonSchema.string(), "exact candidate name"))
+                    .asType()))
+            .property("question", JsonSchema.nullable(JsonSchema.string()))
+            .property("rationale", JsonSchema.string())
+            .build();
+
+    static final JsonSchema SUBSTITUTION = JsonSchema.object("substitution")
+            .property("choices", JsonSchema.arrayOf(JsonSchema.object("choice")
+                    .property("ingredient", JsonSchema.string())
+                    .property("substitute", JsonSchema.string())
+                    .asType()))
+            .property("rationale", JsonSchema.string())
             .build();
 
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -189,6 +214,151 @@ public class MealPlanningAgent {
             }
         }
         return new ArrayList<>(found.values());
+    }
+
+    /**
+     * Interprets a typed change request against the active plan in {@code context} (F10, SD03).
+     * The LLM searches for candidates with tools, then picks which meals to replace and with
+     * which candidate, or asks one clarification question. The plan itself is not touched.
+     *
+     * @throws io.github.ayech14.mealiq.llm.LLMException if the provider fails
+     */
+    public ChangeAttempt proposeChange(PlanningContext context, String instruction) {
+        MealPlan plan = context.activePlan();
+        String goal = "Find candidate recipes for this change to the plan: \"" + instruction + "\". Search with "
+                + "filters that fit the request (meal type, time, ingredients), then finish.";
+        List<ToolCall> calls = runToolLoop(context, goal, RecipeQuery.any(),
+                memory.retrieveRelevantContext(context.request().profileId(), instruction));
+        Map<UUID, Recipe> found = new LinkedHashMap<>();
+        for (ToolCall call : calls) {
+            if (call.result().success() && call.result().data() instanceof List<?> items) {
+                items.stream().filter(Recipe.class::isInstance).map(Recipe.class::cast)
+                        .forEach(r -> found.putIfAbsent(r.id(), r));
+            }
+        }
+        List<Recipe> candidates = rankRecipes(new ArrayList<>(found.values()), context).stream()
+                .limit(CANDIDATES_PER_TYPE * 2L).toList();
+        Map<String, Object> answer = llmClient.generateStructured(
+                promptBuilder.buildChangePrompt(context, instruction, candidates), PLAN_CHANGE,
+                PromptBuilder.INSTRUCTIONS);
+        String rationale = (String) answer.get("rationale");
+        if ("clarify".equals(answer.get("action"))) {
+            Object question = answer.get("question");
+            return new ChangeAttempt(PlanChange.clarification(ChangeType.REPLACE_MEAL,
+                    question == null || String.valueOf(question).isBlank()
+                            ? "Which meal do you want to change?" : String.valueOf(question)), calls);
+        }
+        List<PlannedMeal> replacements = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        if ("no_change".equals(answer.get("action"))) {
+            // The plan already does what was asked: an empty proposal, explained by the rationale.
+            return new ChangeAttempt(PlanChange.proposed(ChangeType.REPLACE_MEAL, List.of(),
+                    new PlanningProposal(List.of(), context.request().mode(), rationale, List.of()), rationale), calls);
+        }
+        for (Object item : (List<?>) answer.get("replacements")) {
+            Map<?, ?> entry = (Map<?, ?>) item;
+            int day = ((Number) entry.get("day")).intValue();
+            MealType type = MealType.valueOf(((String) entry.get("mealType")).toUpperCase(Locale.ROOT));
+            String name = ((String) entry.get("recipe")).strip();
+            LocalDate date = plan.startDate().plusDays(day - 1L);
+            Optional<PlannedMeal> slot = plan.mealsOn(date).stream().filter(m -> m.mealType() == type)
+                    .filter(m -> replacements.stream().noneMatch(r -> r.id().equals(m.id()))).findFirst();
+            Optional<Recipe> recipe = candidates.stream().filter(r -> r.name().equalsIgnoreCase(name)).findFirst();
+            String label = "Day " + day + " " + type.name().toLowerCase(Locale.ROOT);
+            if (slot.isEmpty()) {
+                problems.add(label + " is not a meal of the plan.");
+            } else if (recipe.isEmpty()) {
+                problems.add(label + ": '" + name + "' is not one of the candidates.");
+            } else if (recipe.get().id().equals(slot.get().recipe().id())) {
+                continue; // already planned there: nothing to change for this slot
+            } else {
+                replacements.add(new PlannedMeal(slot.get().id(), date, type, recipe.get(), slot.get().servings()));
+            }
+        }
+        PlanningProposal proposal = new PlanningProposal(replacements, context.request().mode(), rationale, problems);
+        return new ChangeAttempt(PlanChange.proposed(ChangeType.REPLACE_MEAL,
+                replacements.stream().map(PlannedMeal::id).toList(), proposal, rationale), calls);
+    }
+
+    /**
+     * Proposes substitutes for ingredients in every planned meal that uses them (F09). The
+     * candidates come from {@code substituteIngredient}, already filtered by the profile; the
+     * LLM chooses among them and explains. The plan itself is not touched.
+     *
+     * @throws io.github.ayech14.mealiq.llm.LLMException if the provider fails
+     */
+    public ChangeAttempt proposeSubstitution(PlanningContext context, List<Ingredient> targets) {
+        MealPlan plan = context.activePlan();
+        List<ToolCall> calls = new ArrayList<>();
+        Map<String, List<Ingredient>> options = new LinkedHashMap<>();
+        for (Ingredient target : targets) {
+            String args = "{\"ingredient\": \"" + target.name() + "\"}";
+            ToolResult result = toolManager.execute(SubstitutionTool.NAME, Map.of("ingredient", target.name()),
+                    context);
+            calls.add(new ToolCall(SubstitutionTool.NAME, args, "candidates for " + target.name(), result));
+            List<Ingredient> found = result.success() && result.data() instanceof List<?> items
+                    ? items.stream().filter(Ingredient.class::isInstance).map(Ingredient.class::cast).toList()
+                    : List.of();
+            options.put(target.name(), found);
+        }
+        List<PlannedMeal> affected = plan.meals().stream().filter(m -> targets.stream().anyMatch(t -> uses(m, t)))
+                .toList();
+        if (affected.isEmpty()) {
+            return new ChangeAttempt(PlanChange.clarification(ChangeType.SUBSTITUTE_INGREDIENT, "No meal in the plan "
+                    + "uses " + String.join(" or ", targets.stream().map(Ingredient::name).toList())
+                    + ". Which ingredient do you mean?"), calls);
+        }
+        List<String> problems = new ArrayList<>();
+        options.forEach((name, found) -> {
+            if (found.isEmpty()) {
+                problems.add("No compatible substitute for " + name + " in the catalogue.");
+            }
+        });
+        Map<String, Ingredient> chosen = new LinkedHashMap<>();
+        String rationale = "";
+        if (options.values().stream().anyMatch(o -> !o.isEmpty())) {
+            Map<String, List<String>> names = new LinkedHashMap<>();
+            options.forEach((name, found) -> names.put(name, found.stream().map(Ingredient::name).toList()));
+            Map<String, Object> answer = llmClient.generateStructured(promptBuilder.buildSubstitutionPrompt(context,
+                    names, affected.stream().map(m -> m.date() + " " + m.mealType().name().toLowerCase(Locale.ROOT)
+                            + ": " + m.recipe().name()).toList()), SUBSTITUTION, PromptBuilder.INSTRUCTIONS);
+            rationale = (String) answer.get("rationale");
+            for (Object item : (List<?>) answer.get("choices")) {
+                Map<?, ?> choice = (Map<?, ?>) item;
+                String ingredient = String.valueOf(choice.get("ingredient")).strip();
+                String substitute = String.valueOf(choice.get("substitute")).strip();
+                options.getOrDefault(ingredient, List.of()).stream()
+                        .filter(i -> i.name().equalsIgnoreCase(substitute)).findFirst()
+                        .ifPresentOrElse(i -> chosen.put(ingredient, i), () -> problems.add("'" + substitute
+                                + "' is not an allowed substitute for " + ingredient + "."));
+            }
+        }
+        List<PlannedMeal> changed = new ArrayList<>();
+        for (PlannedMeal meal : affected) {
+            Recipe recipe = meal.recipe();
+            for (Ingredient target : targets) {
+                Ingredient substitute = chosen.get(target.name());
+                if (substitute != null && recipe.ingredients().stream()
+                        .anyMatch(l -> l.ingredient().id().equals(target.id()))) {
+                    recipe = SubstituteIngredientCommand.variant(recipe, target, substitute);
+                }
+            }
+            if (!recipe.equals(meal.recipe())) {
+                changed.add(new PlannedMeal(meal.id(), meal.date(), meal.mealType(), recipe, meal.servings()));
+            }
+        }
+        PlanningProposal proposal = new PlanningProposal(changed, context.request().mode(), rationale, problems);
+        return new ChangeAttempt(PlanChange.proposed(ChangeType.SUBSTITUTE_INGREDIENT,
+                changed.stream().map(PlannedMeal::id).toList(), proposal, rationale), calls);
+    }
+
+    /** Remembers a confirmed decision, so later requests can refer to it. */
+    public void recordDecision(UUID profileId, String decision) {
+        memory.recordDecision(profileId, decision);
+    }
+
+    private static boolean uses(PlannedMeal meal, Ingredient ingredient) {
+        return meal.recipe().ingredients().stream().anyMatch(l -> l.ingredient().id().equals(ingredient.id()));
     }
 
     /** Orders candidates with the strategy for the context's planning mode (Strategy, Factory Method). */

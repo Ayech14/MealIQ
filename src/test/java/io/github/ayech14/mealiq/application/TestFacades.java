@@ -25,7 +25,8 @@ import java.util.Optional;
 public final class TestFacades {
 
     public record Fixture(MealPlanningFacade facade, InMemoryRepositories.RecordingObserver pantryEvents,
-                          ScriptedLLMClient llm, InMemoryRepositories.MealPlans plans) {
+                          ScriptedLLMClient llm, InMemoryRepositories.MealPlans plans,
+                          InMemoryRepositories.PlanChanges changes) {
     }
 
     public static final int MAX_TOOL_STEPS = 4;
@@ -54,12 +55,13 @@ public final class TestFacades {
         MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, catalogue, nutrition, budget, groceries, validator,
                 strategies, MAX_TOOL_STEPS);
         InMemoryRepositories.MealPlans plans = new InMemoryRepositories.MealPlans();
-        MealPlanService mealPlans = new MealPlanService(plans);
+        InMemoryRepositories.PlanChanges changes = new InMemoryRepositories.PlanChanges();
+        MealPlanService mealPlans = new MealPlanService(plans, recipes, changes);
         AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
-                new ProposalValidator(recipes), validator);
+                new ProposalValidator(recipes), validator, groceries);
         MealPlanningFacade facade = new MealPlanningFacade(new MealPlanningFacade.Services(
                 profiles, pantry, mealPlans, groceries, catalogue, recipes, nutrition, budget, validator, strategies,
                 controller, clock));
-        return new Fixture(facade, events, llm, plans);
+        return new Fixture(facade, events, llm, plans, changes);
     }
 }

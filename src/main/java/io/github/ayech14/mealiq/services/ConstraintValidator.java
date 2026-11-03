@@ -1,5 +1,6 @@
 package io.github.ayech14.mealiq.services;
 
+import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
@@ -7,6 +8,7 @@ import io.github.ayech14.mealiq.domain.CostEstimate;
 import io.github.ayech14.mealiq.domain.DietRules;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.IngredientRequirement;
+import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.Recipe;
@@ -15,12 +17,15 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.UUID;
 
 /**
  * Deterministic checks of recipes and plans against the profile (D04). Allergies and
@@ -28,7 +33,7 @@ import java.util.TreeSet;
  *
  * <p>For a plan, cooking time and budget are also checked as limits (F11, F12): a plan over
  * either is invalid, never saved silently. Nutrition targets are goals, so a day far from
- * them is a warning. Plan-change validation follows with plan modification.
+ * them is a warning. A change is checked for its own meals and its effect on the plan.
  */
 public class ConstraintValidator {
 
@@ -47,23 +52,42 @@ public class ConstraintValidator {
 
     /** Restrictions, time, budget and nutrition of a proposed plan for the context's profile. */
     public ValidationResult validatePlan(PlanningProposal proposal, PlanningContext context) {
-        UserProfile profile = context.profile();
         Set<String> violations = new LinkedHashSet<>();
         Set<String> warnings = new LinkedHashSet<>();
-        LocalDate start = context.request().startDate();
         for (PlannedMeal meal : proposal.meals()) {
-            ValidationResult restrictions = validateRestrictions(meal.recipe(), profile);
-            violations.addAll(restrictions.violations());
-            warnings.addAll(restrictions.warnings());
-            if (!validateTime(meal, profile)) {
-                violations.add(ProposalValidator.label(meal.date(), meal.mealType(), start) + ": "
-                        + meal.recipe().name() + " takes " + meal.recipe().totalMinutes() + " min, over the "
-                        + profile.maxMinutesFor(meal.date().getDayOfWeek()).getAsInt() + "-minute limit for "
-                        + meal.date().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + ".");
-            }
+            checkMeal(meal, context, violations, warnings);
         }
         checkBudget(proposal, context, violations, warnings);
-        checkNutrition(proposal, context, warnings);
+        checkNutrition(proposal, context, warnings, null);
+        return new ValidationResult(violations.isEmpty(), List.copyOf(violations), List.copyOf(warnings));
+    }
+
+    /**
+     * The effects of a proposed change on the active plan in {@code context}: restrictions and
+     * time of the changed meals, the budget of the whole plan after the change, and nutrition
+     * of the days it touches. The cost difference is reported for the preview (F09, F10).
+     */
+    public ValidationResult validateChange(PlanChange change, PlanningContext context) {
+        MealPlan plan = context.activePlan();
+        Map<UUID, PlannedMeal> proposed = new LinkedHashMap<>();
+        change.proposal().meals().forEach(m -> proposed.put(m.id(), m));
+        List<PlannedMeal> after = plan.meals().stream().map(m -> proposed.containsKey(m.id())
+                ? new PlannedMeal(m.id(), m.date(), m.mealType(), proposed.get(m.id()).recipe(), m.servings())
+                : m).toList();
+        Set<String> violations = new LinkedHashSet<>();
+        Set<String> warnings = new LinkedHashSet<>();
+        after.stream().filter(m -> proposed.containsKey(m.id()))
+                .forEach(meal -> checkMeal(meal, context, violations, warnings));
+        PlanningProposal result = new PlanningProposal(after, context.request().mode(), "", List.of());
+        checkBudget(result, context, violations, warnings);
+        CostEstimate before = budgetService.estimateCost(plan.meals(), context.pantry());
+        CostEstimate changed = budgetService.estimateCost(after, context.pantry());
+        if (!before.equals(changed)) {
+            warnings.add("Grocery cost for the plan goes from " + before + " to " + changed + ".");
+        }
+        Set<LocalDate> days = new LinkedHashSet<>();
+        change.proposal().meals().forEach(m -> days.add(m.date()));
+        checkNutrition(result, context, warnings, days);
         return new ValidationResult(violations.isEmpty(), List.copyOf(violations), List.copyOf(warnings));
     }
 
@@ -71,6 +95,20 @@ public class ConstraintValidator {
     public boolean validateTime(PlannedMeal meal, UserProfile profile) {
         OptionalInt limit = profile.maxMinutesFor(meal.date().getDayOfWeek());
         return limit.isEmpty() || meal.recipe().totalMinutes() <= limit.getAsInt();
+    }
+
+    /** Allergies, diet and cooking time of one meal. */
+    private void checkMeal(PlannedMeal meal, PlanningContext context, Set<String> violations, Set<String> warnings) {
+        UserProfile profile = context.profile();
+        ValidationResult restrictions = validateRestrictions(meal.recipe(), profile);
+        violations.addAll(restrictions.violations());
+        warnings.addAll(restrictions.warnings());
+        if (!validateTime(meal, profile)) {
+            violations.add(ProposalValidator.label(meal.date(), meal.mealType(), context.request().startDate()) + ": "
+                    + meal.recipe().name() + " takes " + meal.recipe().totalMinutes() + " min, over the "
+                    + profile.maxMinutesFor(meal.date().getDayOfWeek()).getAsInt() + "-minute limit for "
+                    + meal.date().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + ".");
+        }
     }
 
     private void checkBudget(PlanningProposal proposal, PlanningContext context, Set<String> violations,
@@ -93,11 +131,16 @@ public class ConstraintValidator {
         }
     }
 
-    private void checkNutrition(PlanningProposal proposal, PlanningContext context, Set<String> warnings) {
+    /** Days far from the targets; {@code onlyDays} limits the check, null checks every day. */
+    private void checkNutrition(PlanningProposal proposal, PlanningContext context, Set<String> warnings,
+                                Set<LocalDate> onlyDays) {
         UserProfile profile = context.profile();
         LocalDate start = context.request().startDate();
         for (int day = 0; day < context.request().days(); day++) {
             LocalDate date = start.plusDays(day);
+            if (onlyDays != null && !onlyDays.contains(date)) {
+                continue;
+            }
             List<PlannedMeal> meals = proposal.meals().stream().filter(m -> m.date().equals(date)).toList();
             if (meals.isEmpty()) {
                 continue;

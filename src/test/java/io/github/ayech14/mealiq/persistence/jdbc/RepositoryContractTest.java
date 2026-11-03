@@ -7,11 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
+import io.github.ayech14.mealiq.domain.AppliedChange;
+import io.github.ayech14.mealiq.domain.ChangeType;
 import io.github.ayech14.mealiq.domain.GroceryItem;
 import io.github.ayech14.mealiq.domain.GroceryList;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.IngredientRequirement;
 import io.github.ayech14.mealiq.domain.MealPlan;
+import io.github.ayech14.mealiq.domain.MealSwap;
 import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.Pantry;
@@ -59,9 +62,12 @@ abstract class RepositoryContractTest {
     /** A database with an empty, freshly created schema. */
     abstract Database freshDatabase();
 
+    /** The database the repositories of this test use. */
+    Database database;
+
     @BeforeEach
     void setUp() {
-        Database database = freshDatabase();
+        database = freshDatabase();
         ingredients = new JdbcIngredientRepository(database);
         recipes = new JdbcRecipeRepository(database);
         profiles = new JdbcProfileRepository(database);
@@ -296,6 +302,44 @@ abstract class RepositoryContractTest {
             assertTrue(plans.findActiveByProfileId(profile.id()).isEmpty());
             MealPlan active = savePlan(PlanStatus.ACTIVE, START.plusDays(7));
             assertEquals(active.id(), plans.findActiveByProfileId(profile.id()).orElseThrow().id());
+        }
+    }
+
+
+    @Nested
+    class PlanChanges {
+
+        @Test
+        void changesAreStoredInOrderAndRemovedNewestFirst() {
+            JdbcPlanChangeRepository changes = new JdbcPlanChangeRepository(database);
+            Recipe chickenRice = dinner("Chicken rice", chicken, rice);
+            Recipe tofuRice = dinner("Tofu rice", tofu, rice);
+            recipes.save(chickenRice);
+            recipes.save(tofuRice);
+            PlannedMeal first = new PlannedMeal(START, MealType.DINNER, chickenRice, 1);
+            PlannedMeal second = new PlannedMeal(START.plusDays(1), MealType.DINNER, chickenRice, 1);
+            MealPlan plan = new MealPlan(profile.id(), START, 2, List.of(first, second));
+            plans.save(plan);
+
+            AppliedChange replace = new AppliedChange(UUID.randomUUID(), ChangeType.REPLACE_MEAL, "replace both",
+                    List.of(new MealSwap(first.id(), chickenRice, tofuRice, null, null),
+                            new MealSwap(second.id(), chickenRice, tofuRice, null, null)));
+            AppliedChange substitute = new AppliedChange(UUID.randomUUID(), ChangeType.SUBSTITUTE_INGREDIENT,
+                    "tofu for chicken", List.of(new MealSwap(first.id(), tofuRice, chickenRice, chicken, tofu)));
+            changes.append(plan.id(), replace);
+            changes.append(plan.id(), substitute);
+
+            List<AppliedChange> all = changes.findAll(plan.id());
+            assertEquals(List.of("replace both", "tofu for chicken"),
+                    all.stream().map(AppliedChange::description).toList());
+            assertEquals(2, all.getFirst().swaps().size());
+            MealSwap swap = all.getLast().swaps().getFirst();
+            assertEquals("Chicken rice", swap.after().name());
+            assertEquals(tofu.id(), swap.substitute().id());
+
+            assertEquals(substitute.changeId(), changes.removeLast(plan.id()).orElseThrow().changeId());
+            assertEquals(replace.changeId(), changes.removeLast(plan.id()).orElseThrow().changeId());
+            assertTrue(changes.removeLast(plan.id()).isEmpty());
         }
     }
 

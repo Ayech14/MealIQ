@@ -28,12 +28,14 @@ public record RecipeQuery(MealType mealType, Integer maxMinutes, List<String> in
     /**
      * Whether a recipe meets every filter except cost (which needs prices): meal type, total
      * time, source, at least one included ingredient, and none of the excluded ones.
+     * Substitution variants never match; they belong to the plans that use them.
      */
     public boolean matches(Recipe recipe) {
         List<String> include = terms(includeIngredients);
         List<String> exclude = terms(excludeIngredients);
         return (mealType == null || recipe.mealTypes().contains(mealType))
                 && (maxMinutes == null || recipe.totalMinutes() <= maxMinutes)
+                && recipe.source() != RecipeSource.VARIANT
                 && (allowGenerated || recipe.source() != RecipeSource.GENERATED)
                 && (include.isEmpty() || usesAny(recipe, include))
                 && !usesAny(recipe, exclude);

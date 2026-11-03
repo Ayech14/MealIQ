@@ -42,6 +42,9 @@ final class GroceryCommand implements Runnable {
             cli.out().println(response.rationale());
         }
         response.conflicts().forEach(c -> cli.out().println("Note: " + c));
+        if (status != null && !status.withinBudget()) {
+            cli.out().println("Ask the agent for cheaper meals with: mealiq plan cheaper");
+        }
         return MealPlanningCLI.OK;
     }
 

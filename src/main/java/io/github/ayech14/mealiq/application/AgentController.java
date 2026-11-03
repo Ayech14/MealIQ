@@ -1,20 +1,26 @@
 package io.github.ayech14.mealiq.application;
 
+import io.github.ayech14.mealiq.agent.ChangeAttempt;
 import io.github.ayech14.mealiq.agent.MealPlanningAgent;
 import io.github.ayech14.mealiq.agent.PlanAttempt;
 import io.github.ayech14.mealiq.agent.RecipeRecommendation;
 import io.github.ayech14.mealiq.agent.ToolCall;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
+import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.contracts.ValidationResult;
+import io.github.ayech14.mealiq.domain.BudgetStatus;
+import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.MealPlan;
+import io.github.ayech14.mealiq.domain.PlanningMode;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.ResponseStatus;
 import io.github.ayech14.mealiq.domain.UserProfile;
 import io.github.ayech14.mealiq.llm.LLMException;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
+import io.github.ayech14.mealiq.services.GroceryService;
 import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NotFoundException;
 import io.github.ayech14.mealiq.services.PantryService;
@@ -22,13 +28,18 @@ import io.github.ayech14.mealiq.services.ProfileService;
 import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /**
  * Coordinates agent use cases: builds the planning context, runs the agent, and checks
  * what it returns with deterministic validators before anything reaches the user (D01, D04).
  *
- * <p>This version covers recipe recommendation (F03) and weekly plans (F05); plan changes
- * follow.
+ * <p>Covers recipe recommendation (F03), weekly plans (F05) and plan changes (F08 budget
+ * alternatives, F09 substitution, F10 typed changes). A proposed change is validated and
+ * held until the user confirms it; only {@link #confirmChange} applies it (D03).
  */
 public class AgentController {
 
@@ -41,16 +52,19 @@ public class AgentController {
     private final MealPlanService mealPlanService;
     private final ProposalValidator proposalValidator;
     private final ConstraintValidator constraintValidator;
+    private final GroceryService groceryService;
+    private final Map<UUID, PlanChange> pendingChanges = new ConcurrentHashMap<>();
 
     public AgentController(MealPlanningAgent agent, ProfileService profileService, PantryService pantryService,
                            MealPlanService mealPlanService, ProposalValidator proposalValidator,
-                           ConstraintValidator constraintValidator) {
+                           ConstraintValidator constraintValidator, GroceryService groceryService) {
         this.agent = agent;
         this.profileService = profileService;
         this.pantryService = pantryService;
         this.mealPlanService = mealPlanService;
         this.proposalValidator = proposalValidator;
         this.constraintValidator = constraintValidator;
+        this.groceryService = groceryService;
     }
 
     /**
@@ -144,6 +158,86 @@ public class AgentController {
                 .rationale(safe.size() == recommendation.recipes().size() ? recommendation.rationale()
                         : recommendation.rationale() + " (Some recommendations were removed by the restriction check.)")
                 .conflicts(notes).agentSteps(steps).build();
+    }
+
+    /** A typed change such as "make Wednesday's dinner vegetarian" (F10, SD03). */
+    public AgentResponse interpretModification(MealPlan plan, String instruction, PlanningMode mode) {
+        return propose(plan, mode, instruction, context -> agent.proposeChange(context, instruction));
+    }
+
+    /** Substitutes for an ingredient in every planned meal that uses it (F09, UC07). */
+    public AgentResponse requestSubstitution(MealPlan plan, Ingredient ingredient) {
+        return propose(plan, PlanningMode.NUTRITION_GOAL, "replace " + ingredient.name(),
+                context -> agent.proposeSubstitution(context, List.of(ingredient)));
+    }
+
+    /** Cheaper replacements when the grocery list is over budget (F08, UC07 from UC06). */
+    public AgentResponse resolveBudgetConflict(MealPlan plan, BudgetStatus status) {
+        String instruction = "Make the plan cheaper: the groceries are over budget by $" + status.shortfall()
+                + ". The biggest costs are " + String.join(", ", status.costDrivers().stream()
+                        .map(i -> i.ingredient().name()).toList())
+                + ". Replace as few meals as needed with cheaper candidates.";
+        return propose(plan, PlanningMode.BUDGET, instruction, context -> agent.proposeChange(context, instruction));
+    }
+
+    /**
+     * Applies a change this controller proposed and the user confirmed, then records the
+     * decision and refreshes the grocery list (SD03). Anything else is refused.
+     */
+    public AgentResponse confirmChange(UUID planId, PlanChange change) {
+        PlanChange pending = pendingChanges.remove(change.id());
+        if (pending == null) {
+            return AgentResponse.builder(ResponseStatus.FAILED)
+                    .rationale("That change was not proposed here or was already handled. Ask for it again.").build();
+        }
+        MealPlan plan = mealPlanService.executeChange(planId, pending);
+        String applied = mealPlanService.changeHistory(planId).getLast().description();
+        agent.recordDecision(plan.profileId(), "Applied: " + applied);
+        return AgentResponse.builder(ResponseStatus.SUCCESS).plan(plan).change(pending)
+                .groceryList(groceryService.refreshForPlan(plan)).rationale(applied).build();
+    }
+
+    /** Validates what the agent proposes and holds a valid change for confirmation. */
+    private AgentResponse propose(MealPlan plan, PlanningMode mode, String instruction,
+                                  Function<PlanningContext, ChangeAttempt> proposer) {
+        PlanningContext context;
+        try {
+            context = new PlanningContext(new PlanRequest(plan.profileId(), plan.startDate(), plan.days(), mode,
+                    instruction), profileService.getProfile(plan.profileId()),
+                    pantryService.getPantry(plan.profileId()), plan, null, List.of(), List.of());
+        } catch (NotFoundException e) {
+            return AgentResponse.builder(ResponseStatus.NEEDS_CLARIFICATION)
+                    .rationale("Create your profile first, so changes fit you.").build();
+        }
+        ChangeAttempt attempt;
+        try {
+            attempt = proposer.apply(context);
+        } catch (LLMException e) {
+            return AgentResponse.builder(ResponseStatus.FAILED).rationale(failureMessage(e)).build();
+        }
+        List<String> steps = attempt.toolCalls().stream().map(ToolCall::describe).toList();
+        PlanChange change = attempt.change();
+        if (change.needsClarification()) {
+            return AgentResponse.builder(ResponseStatus.NEEDS_CLARIFICATION).change(change)
+                    .rationale(change.clarificationQuestion()).agentSteps(steps).build();
+        }
+        if (change.proposal().meals().isEmpty() && change.proposal().conflicts().isEmpty()) {
+            return AgentResponse.builder(ResponseStatus.SUCCESS).plan(plan)
+                    .rationale("Nothing to change: " + change.rationale()).agentSteps(steps).build();
+        }
+        ValidationResult structure = proposalValidator.validate(change, context);
+        ValidationResult result = structure.valid()
+                ? structure.merge(constraintValidator.validateChange(change, context)) : structure;
+        List<String> notes = new ArrayList<>(result.valid() ? result.warnings() : result.violations());
+        notes.addAll(change.proposal().conflicts());
+        if (!result.valid()) {
+            return AgentResponse.builder(ResponseStatus.CONFLICT).change(change)
+                    .rationale("The change was not applied: it breaks these rules. Nothing was changed.")
+                    .conflicts(notes).agentSteps(steps).build();
+        }
+        pendingChanges.put(change.id(), change);
+        return AgentResponse.builder(ResponseStatus.NEEDS_CONFIRMATION).plan(plan).change(change)
+                .rationale(change.rationale()).conflicts(notes).agentSteps(steps).build();
     }
 
     private PlanningContext buildContext(PlanRequest request) {

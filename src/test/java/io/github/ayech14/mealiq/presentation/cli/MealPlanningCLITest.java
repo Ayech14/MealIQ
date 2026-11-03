@@ -10,7 +10,9 @@ import io.github.ayech14.mealiq.llm.LLMException;
 import io.github.ayech14.mealiq.llm.ScriptedLLMClient;
 import io.github.ayech14.mealiq.persistence.PersistenceException;
 import io.github.ayech14.mealiq.persistence.jdbc.DatabaseSetup;
+import java.io.BufferedReader;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -37,6 +39,9 @@ class MealPlanningCLITest {
         llm = fixture.llm();
     }
 
+    /** What the user types at confirmation questions in the next run. */
+    private String input = "";
+
     private int run(String... args) {
         out = new StringWriter();
         err = new StringWriter();
@@ -45,7 +50,7 @@ class MealPlanningCLITest {
                 throw new PersistenceException("Database read failed: Connection refused");
             }
             return setupResult;
-        }, new PrintWriter(out, true), new PrintWriter(err, true));
+        }, new BufferedReader(new StringReader(input)), new PrintWriter(out, true), new PrintWriter(err, true));
         return cli.executeCommand(List.of(args));
     }
 
@@ -338,5 +343,93 @@ class MealPlanningCLITest {
 
         assertEquals(0, run("grocery", "show"));
         assertTrue(out.toString().contains("lentils"));
+    }
+
+    /** Saves an active one-day plan straight into the fake repository. */
+    private void activePlan(String breakfast, String lunch, String dinner) {
+        LocalDate day = LocalDate.of(2026, 11, 2);
+        var plan = new io.github.ayech14.mealiq.domain.MealPlan(MealPlanningFacade.localProfileId("default"), day, 1,
+                List.of(new io.github.ayech14.mealiq.domain.PlannedMeal(day,
+                                io.github.ayech14.mealiq.domain.MealType.BREAKFAST, facade.findRecipe(breakfast), 1),
+                        new io.github.ayech14.mealiq.domain.PlannedMeal(day,
+                                io.github.ayech14.mealiq.domain.MealType.LUNCH, facade.findRecipe(lunch), 1),
+                        new io.github.ayech14.mealiq.domain.PlannedMeal(day,
+                                io.github.ayech14.mealiq.domain.MealType.DINNER, facade.findRecipe(dinner), 1)));
+        plan.status(io.github.ayech14.mealiq.domain.PlanStatus.ACTIVE);
+        fixture.plans().save(plan);
+    }
+
+    private void queueDinnerSwap(String recipe) {
+        java.util.Map<String, Object> finish = new java.util.HashMap<>();
+        finish.put("action", "finish");
+        finish.put("tool", null);
+        finish.put("arguments", "{}");
+        finish.put("reason", "done");
+        java.util.Map<String, Object> change = new java.util.HashMap<>();
+        change.put("action", "replace");
+        change.put("replacements", List.of(java.util.Map.of("day", 1, "mealType", "dinner", "recipe", recipe)));
+        change.put("question", null);
+        change.put("rationale", "Meat-free.");
+        llm.queue(java.util.Map.of("action", "call_tool", "tool", "recipeSearch",
+                "arguments", "{\"mealType\": \"dinner\"}", "reason", "dinners"), finish, change);
+    }
+
+    @Test
+    void planModifyAppliesOnlyWhenTheUserSaysYes() {
+        run("profile", "set");
+        activePlan("Overnight oats", "Lentil soup", "Chicken stir-fry");
+
+        queueDinnerSwap("Black bean tacos");
+        input = "n\n";
+        assertEquals(0, run("plan", "modify", "make dinner vegetarian"));
+        String declined = out.toString();
+        assertTrue(declined.contains("Proposed change:\n  Mon 2026-11-02 dinner: Chicken stir-fry -> Black bean tacos"),
+                declined);
+        assertTrue(declined.contains("Why: Meat-free."), declined);
+        assertTrue(declined.contains("Apply this change? [y/N] Cancelled. The plan is unchanged."), declined);
+
+        queueDinnerSwap("Black bean tacos");
+        input = "y\n";
+        assertEquals(0, run("plan", "modify", "make dinner vegetarian"));
+        assertTrue(out.toString().contains("Applied: Replace 2026-11-02 dinner: Chicken stir-fry -> Black bean tacos. "
+                + "Undo with: mealiq plan undo"), out.toString());
+        assertTrue(out.toString().contains("Grocery list refreshed: "), out.toString());
+
+        assertEquals(0, run("plan", "history"));
+        assertTrue(out.toString().contains("1. Replace 2026-11-02 dinner"), out.toString());
+        assertEquals(0, run("plan", "undo"));
+        assertTrue(out.toString().contains("Undone: Replace 2026-11-02 dinner"), out.toString());
+        assertEquals(1, run("plan", "undo"));
+        assertTrue(out.toString().contains("There is no change to undo."));
+    }
+
+    @Test
+    void planModifyWithYesSkipsTheQuestion() {
+        run("profile", "set");
+        activePlan("Overnight oats", "Lentil soup", "Chicken stir-fry");
+        queueDinnerSwap("Black bean tacos");
+        assertEquals(0, run("plan", "modify", "vegetarian dinner", "--yes"));
+        assertFalse(out.toString().contains("Apply this change?"));
+        assertTrue(out.toString().contains("Applied: "));
+    }
+
+    @Test
+    void planSubstituteShowsTheVariant() {
+        run("profile", "set");
+        activePlan("Overnight oats", "Lentil soup", "Chicken stir-fry");
+        llm.queue(java.util.Map.of("choices", List.of(java.util.Map.of("ingredient", "milk", "substitute",
+                "soy milk")), "rationale", "Dairy-free."));
+        assertEquals(0, run("plan", "substitute", "milk", "--yes"));
+        String shown = out.toString();
+        assertTrue(shown.contains("breakfast: Overnight oats -> Overnight oats (soy milk for milk)"), shown);
+        assertTrue(shown.contains("Applied: Substitute 2026-11-02 breakfast: soy milk for milk in Overnight oats"),
+                shown);
+    }
+
+    @Test
+    void planChangesNeedAPlan() {
+        run("profile", "set");
+        assertEquals(1, run("plan", "modify", "anything"));
+        assertTrue(err.toString().contains("No meal plan yet."), err.toString());
     }
 }
