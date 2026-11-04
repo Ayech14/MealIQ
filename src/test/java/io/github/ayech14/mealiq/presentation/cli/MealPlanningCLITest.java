@@ -492,4 +492,16 @@ class MealPlanningCLITest {
         assertEquals(0, run("recipes", "list", "--generated", "--meal", "breakfast", "--limit", "30"));
         assertTrue(out.toString().contains("Oat porridge"));
     }
+
+    @Test
+    void askRunsTheActionTheAgentChoseAndConfirmsChanges() {
+        java.util.Map<String, Object> answer = AssistantTestRequests.pantry("egg", 6);
+        llm.queue(answer);
+        input = "y\n";
+        assertEquals(0, run("ask", "I", "bought", "6", "eggs"));
+        String shown = out.toString();
+        assertTrue(shown.contains("Update your pantry?\n  egg: 6 unit\nApply? [y/N] Done."), shown);
+        assertEquals(0, run("pantry", "list"));
+        assertTrue(out.toString().contains("egg"));
+    }
 }

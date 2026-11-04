@@ -7,6 +7,7 @@ import io.github.ayech14.mealiq.agent.RecipeDraft;
 import io.github.ayech14.mealiq.agent.RecipeRecommendation;
 import io.github.ayech14.mealiq.agent.ToolCall;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
+import io.github.ayech14.mealiq.contracts.AssistantRequest;
 import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanImpact;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
@@ -29,6 +30,7 @@ import io.github.ayech14.mealiq.services.NotFoundException;
 import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.ProfileService;
 import io.github.ayech14.mealiq.services.ProposalValidator;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +48,11 @@ import java.util.function.Function;
  * held until the user confirms it; only {@link #confirmChange} applies it (D03).
  */
 public class AgentController {
+
+    /** Asked when there is no profile yet: suggestions must respect allergies and diet. */
+    static final String PROFILE_FIRST = "First tell me about any allergies or diet, so I never suggest food you "
+            + "can't eat. For example: \"I'm vegetarian and allergic to peanuts\", or \"no restrictions\". You "
+            + "can also fill in the Profile tab.";
 
     /** A rejected proposal is retried once with its violations (SD01). */
     static final int MAX_PLAN_ATTEMPTS = 2;
@@ -83,7 +90,7 @@ public class AgentController {
             context = buildContext(request);
         } catch (NotFoundException e) {
             return AgentResponse.builder(ResponseStatus.NEEDS_CLARIFICATION)
-                    .rationale("Create your profile first (meals per day, goals, allergies), so the plan fits you.")
+                    .rationale(PROFILE_FIRST)
                     .build();
         }
         List<String> steps = new ArrayList<>();
@@ -132,7 +139,7 @@ public class AgentController {
             context = buildContext(request);
         } catch (NotFoundException e) {
             return AgentResponse.builder(ResponseStatus.NEEDS_CLARIFICATION)
-                    .rationale("Create your profile first (goals, allergies, diet), so recommendations fit you.")
+                    .rationale(PROFILE_FIRST)
                     .build();
         }
         RecipeRecommendation recommendation;
@@ -176,7 +183,7 @@ public class AgentController {
             context = buildContext(request);
         } catch (NotFoundException e) {
             return AgentResponse.builder(ResponseStatus.NEEDS_CLARIFICATION)
-                    .rationale("Create your profile first (allergies, diet), so the recipe is safe for you.").build();
+                    .rationale(PROFILE_FIRST).build();
         }
         RecipeDraft draft;
         try {
@@ -204,6 +211,27 @@ public class AgentController {
     /** The generated recipe with this ID, if this controller generated and validated it; it can be taken once. */
     public Optional<Recipe> takeGeneratedRecipe(UUID recipeId) {
         return Optional.ofNullable(pendingRecipes.remove(recipeId));
+    }
+
+    /**
+     * What a typed message asks for (the assistant). Without a saved profile the defaults are
+     * used, so a first message such as "I'm vegetarian" can still be understood.
+     *
+     * @throws LLMException if the provider fails
+     */
+    public AssistantRequest interpretRequest(UUID profileId, String message, LocalDate today) {
+        UserProfile profile;
+        List<String> notes = new ArrayList<>();
+        try {
+            profile = profileService.getProfile(profileId);
+        } catch (NotFoundException e) {
+            profile = new UserProfile(profileId);
+            notes.add("The user has no saved profile yet: recipes, plans and changes need one first.");
+        }
+        PlanningContext context = new PlanningContext(new PlanRequest(profileId, today, 1,
+                PlanningMode.NUTRITION_GOAL, message), profile, pantryService.getPantry(profileId),
+                mealPlanService.getActivePlan(profileId).orElse(null), null, notes, List.of());
+        return agent.interpretRequest(context, message);
     }
 
     /** A typed change such as "make Wednesday's dinner vegetarian" (F10, SD03). */
@@ -262,7 +290,7 @@ public class AgentController {
                     pantryService.getPantry(plan.profileId()), plan, null, List.of(), List.of());
         } catch (NotFoundException e) {
             return AgentResponse.builder(ResponseStatus.NEEDS_CLARIFICATION)
-                    .rationale("Create your profile first, so changes fit you.").build();
+                    .rationale(PROFILE_FIRST).build();
         }
         ChangeAttempt attempt;
         try {

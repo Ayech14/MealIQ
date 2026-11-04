@@ -4,8 +4,10 @@ import io.github.ayech14.mealiq.application.MealPlanningFacade;
 import io.github.ayech14.mealiq.persistence.PersistenceException;
 import io.github.ayech14.mealiq.services.InvalidInputException;
 import io.github.ayech14.mealiq.services.NotFoundException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -106,15 +108,35 @@ final class GuiContext {
     void showError(Throwable error) {
         String text = switch (error) {
             case InvalidInputException invalid -> "Not saved:\n" + String.join("\n", invalid.errors().entrySet()
-                    .stream().map(e -> "  " + e.getKey() + ": " + e.getValue()).toList());
+                    .stream().map(e -> "  " + FIELD_NAMES.getOrDefault(e.getKey(), e.getKey()) + ": " + e.getValue())
+                    .toList());
             case NotFoundException missing -> missing.getMessage();
-            case PersistenceException database -> database.getMessage()
-                    + "\n\nCheck that PostgreSQL is running (docker compose up -d) and run: ./mealiq setup";
-            default -> "Unexpected error: " + error;
+            case PersistenceException database when cannotConnect(database) -> "MealIQ cannot reach its database."
+                    + "\n\nStart it with: docker compose up -d\nThe first time, also run: ./mealiq setup";
+            case PersistenceException database -> "Saving failed: " + database.getMessage();
+            default -> "Something went wrong: " + error.getMessage();
         };
         Alert alert = new Alert(Alert.AlertType.ERROR, text, ButtonType.OK);
         alert.setHeaderText(null);
         alert.showAndWait();
+    }
+
+    /** Service field names as the screens label them. */
+    private static final Map<String, String> FIELD_NAMES = Map.of(
+            "dailyCalorieTarget", "Calories per day", "dailyProteinTargetG", "Protein per day",
+            "dietaryRestrictions", "Diet", "allergies", "Allergies", "preferredFoods", "Likes",
+            "dislikedFoods", "Dislikes", "mealsPerDay", "Meals per day", "weeklyBudget", "Weekly budget",
+            "maxCookMinutes", "Max cooking minutes", "ingredient", "Ingredient");
+
+    /** SQL state class 08 means the connection itself failed, not the statement. */
+    private static boolean cannotConnect(PersistenceException error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sql && sql.getSQLState() != null
+                    && sql.getSQLState().startsWith("08")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void showInfo(String title, String text) {

@@ -93,6 +93,7 @@ final class PantryView {
     }
 
     private void save() {
+        message.setText("");
         String name = ingredient.getEditor().getText();
         double value;
         try {

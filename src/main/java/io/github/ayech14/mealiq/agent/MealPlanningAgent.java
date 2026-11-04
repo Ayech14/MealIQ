@@ -4,17 +4,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.ayech14.mealiq.commands.SubstituteIngredientCommand;
+import io.github.ayech14.mealiq.contracts.AssistantRequest;
 import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanImpact;
+import io.github.ayech14.mealiq.contracts.PlanRequest;
 import io.github.ayech14.mealiq.contracts.PlanningContext;
 import io.github.ayech14.mealiq.contracts.PlanningProposal;
 import io.github.ayech14.mealiq.contracts.RecipeQuery;
 import io.github.ayech14.mealiq.domain.ChangeEventType;
 import io.github.ayech14.mealiq.domain.ChangeType;
+import io.github.ayech14.mealiq.domain.DietRules;
 import io.github.ayech14.mealiq.domain.Ingredient;
 import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.MealType;
 import io.github.ayech14.mealiq.domain.PlannedMeal;
+import io.github.ayech14.mealiq.domain.PlanningMode;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.RecipeSource;
 import io.github.ayech14.mealiq.llm.JsonSchema;
@@ -23,7 +27,9 @@ import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.planning.MealSlots;
 import io.github.ayech14.mealiq.planning.PlanningStrategy;
 import io.github.ayech14.mealiq.planning.PlanningStrategyFactory;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -513,6 +519,107 @@ public class MealPlanningAgent {
             }
         }
         return problems;
+    }
+
+    /** Units the assistant may use for pantry quantities. */
+    static final List<String> PANTRY_UNITS = List.of("g", "kg", "ml", "l", "unit", "dozen", "cup", "tbsp", "tsp");
+
+    /**
+     * The assistant's schema. Pantry ingredients must be exact catalogue names, so "rice"
+     * becomes "white rice" or "brown rice" and never an unknown ingredient.
+     */
+    static JsonSchema assistantSchema(List<String> catalogue) {
+        return JsonSchema.object("assistant_request")
+            .property("action", JsonSchema.enumOf(Arrays.stream(AssistantRequest.Action.values())
+                    .map(a -> a.name().toLowerCase(Locale.ROOT)).toArray(String[]::new)))
+            .property("reply", described(JsonSchema.string(), "one or two friendly sentences to the user"))
+            .property("mealType", JsonSchema.nullable(JsonSchema.enumOf("breakfast", "lunch", "dinner", "snack")))
+            .property("maxMinutes", JsonSchema.nullable(JsonSchema.integer()))
+            .property("include", JsonSchema.arrayOf(JsonSchema.string()))
+            .property("exclude", JsonSchema.arrayOf(JsonSchema.string()))
+            .property("days", JsonSchema.nullable(JsonSchema.integer()))
+            .property("mode", JsonSchema.nullable(JsonSchema.enumOf("nutrition", "time", "budget")))
+            .property("ingredient", JsonSchema.nullable(JsonSchema.string()))
+            .property("pantry", JsonSchema.arrayOf(JsonSchema.object("pantry_line")
+                    .property("ingredient", JsonSchema.enumOf(catalogue.toArray(String[]::new)))
+                    .property("amount", described(JsonSchema.number(), "how many of the unit: a dozen eggs is 12 "
+                            + "with unit \"unit\" (or 1 with unit \"dozen\"); 0 means none left"))
+                    .property("unit", JsonSchema.enumOf(PANTRY_UNITS.toArray(String[]::new)))
+                    .asType()))
+            .property("profile", JsonSchema.object("profile_update")
+                    .property("addDiet", JsonSchema.arrayOf(JsonSchema.enumOf(DietRules.supportedRestrictions()
+                            .toArray(String[]::new))))
+                    .property("removeDiet", JsonSchema.arrayOf(JsonSchema.enumOf(DietRules.supportedRestrictions()
+                            .toArray(String[]::new))))
+                    .property("addAllergies", JsonSchema.arrayOf(JsonSchema.enumOf(DietRules.knownAllergens()
+                            .toArray(String[]::new))))
+                    .property("removeAllergies", JsonSchema.arrayOf(JsonSchema.enumOf(DietRules.knownAllergens()
+                            .toArray(String[]::new))))
+                    .property("addLikes", JsonSchema.arrayOf(JsonSchema.string()))
+                    .property("addDislikes", JsonSchema.arrayOf(JsonSchema.string()))
+                    .property("calories", JsonSchema.nullable(JsonSchema.integer()))
+                    .property("protein", JsonSchema.nullable(JsonSchema.integer()))
+                    .property("mealsPerDay", JsonSchema.nullable(JsonSchema.integer()))
+                    .property("weeklyBudget", JsonSchema.nullable(JsonSchema.number()))
+                    .asType())
+            .build();
+    }
+
+    /**
+     * Works out what a typed message asks for (the assistant). The LLM only picks the action
+     * and its arguments from the user's words; running it, with every check and confirmation,
+     * is the facade's job.
+     *
+     * @throws io.github.ayech14.mealiq.llm.LLMException if the provider fails
+     */
+    public AssistantRequest interpretRequest(PlanningContext context, String message) {
+        List<String> catalogue = ingredientRepository.findAll().stream().map(Ingredient::name).toList();
+        Map<String, Object> answer = llmClient.generateStructured(promptBuilder.buildAssistantPrompt(context,
+                message, memory.retrieveRelevantContext(context.request().profileId(), message)),
+                assistantSchema(catalogue), PromptBuilder.INSTRUCTIONS);
+        AssistantRequest.Action action = AssistantRequest.Action.valueOf(
+                ((String) answer.get("action")).toUpperCase(Locale.ROOT));
+        Object meal = answer.get("mealType");
+        Integer maxMinutes = positive(answer.get("maxMinutes"));
+        RecipeQuery filters = new RecipeQuery(meal == null ? null
+                : MealType.valueOf(((String) meal).toUpperCase(Locale.ROOT)), maxMinutes,
+                strings(answer.get("include")), strings(answer.get("exclude")), null, false);
+        Integer days = positive(answer.get("days"));
+        Object mode = answer.get("mode");
+        List<AssistantRequest.PantryLine> pantry = new ArrayList<>();
+        for (Object item : (List<?>) answer.get("pantry")) {
+            Map<?, ?> line = (Map<?, ?>) item;
+            pantry.add(new AssistantRequest.PantryLine(String.valueOf(line.get("ingredient")).strip(),
+                    Math.max(0, ((Number) line.get("amount")).doubleValue()), (String) line.get("unit")));
+        }
+        Map<?, ?> p = (Map<?, ?>) answer.get("profile");
+        AssistantRequest.ProfileUpdate profile = new AssistantRequest.ProfileUpdate(
+                Set.copyOf(strings(p.get("addDiet"))), Set.copyOf(strings(p.get("removeDiet"))),
+                Set.copyOf(strings(p.get("addAllergies"))), Set.copyOf(strings(p.get("removeAllergies"))),
+                Set.copyOf(strings(p.get("addLikes"))), Set.copyOf(strings(p.get("addDislikes"))),
+                positive(p.get("calories")), positive(p.get("protein")), positive(p.get("mealsPerDay")),
+                p.get("weeklyBudget") instanceof Number n && n.doubleValue() >= 0
+                        ? BigDecimal.valueOf(n.doubleValue()) : null);
+        Object ingredient = answer.get("ingredient");
+        memory.recordDecision(context.request().profileId(), "User asked \"" + message + "\" (" + action.name()
+                .toLowerCase(Locale.ROOT) + ")");
+        return new AssistantRequest(action, (String) answer.get("reply"), filters,
+                days == null ? null : Math.min(days, PlanRequest.MAX_DAYS),
+                mode == null ? null : switch ((String) mode) {
+                    case "time" -> PlanningMode.TIME_AWARE;
+                    case "budget" -> PlanningMode.BUDGET;
+                    default -> PlanningMode.NUTRITION_GOAL;
+                }, ingredient == null || String.valueOf(ingredient).isBlank() ? null : String.valueOf(ingredient)
+                        .strip(), pantry, profile);
+    }
+
+    private static Integer positive(Object value) {
+        return value instanceof Number n && n.intValue() > 0 ? n.intValue() : null;
+    }
+
+    private static List<String> strings(Object value) {
+        return value instanceof List<?> list ? list.stream().map(String::valueOf).map(String::strip)
+                .filter(v -> !v.isEmpty()).toList() : List.of();
     }
 
     /** Remembers a confirmed decision, so later requests can refer to it. */

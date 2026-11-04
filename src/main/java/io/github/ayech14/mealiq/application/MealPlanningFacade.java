@@ -3,6 +3,7 @@ package io.github.ayech14.mealiq.application;
 import io.github.ayech14.mealiq.agent.MealPlanningAgent;
 import io.github.ayech14.mealiq.config.AppConfig;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
+import io.github.ayech14.mealiq.contracts.AssistantRequest;
 import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanImpact;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
@@ -45,6 +46,7 @@ import io.github.ayech14.mealiq.planning.PlanningStrategyFactory;
 import io.github.ayech14.mealiq.services.BudgetService;
 import io.github.ayech14.mealiq.services.ConstraintValidator;
 import io.github.ayech14.mealiq.services.GroceryService;
+import io.github.ayech14.mealiq.services.InvalidInputException;
 import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NotFoundException;
 import io.github.ayech14.mealiq.services.NutritionService;
@@ -52,6 +54,7 @@ import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.PlanImpactAssessor;
 import io.github.ayech14.mealiq.services.ProfileService;
 import io.github.ayech14.mealiq.services.ProposalValidator;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -61,7 +64,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The single application boundary shared by the GUI and the CLI (Facade, D02). Each method
@@ -95,6 +101,9 @@ public class MealPlanningFacade {
     private final PlanningStrategyFactory strategyFactory;
     private final AgentController agentController;
     private final Clock clock;
+    /** Assistant updates waiting for confirmation, and the profile each belongs to. */
+    private final Map<UUID, Runnable> pendingUpdates = new ConcurrentHashMap<>();
+    private final Map<UUID, UUID> pendingOwners = new ConcurrentHashMap<>();
 
     public MealPlanningFacade(Services services) {
         this.profileService = services.profiles();
@@ -203,6 +212,7 @@ public class MealPlanningFacade {
      * affected meals are listed in {@code conflicts} as an impact notice (SD04).
      */
     public AgentResponse updatePantry(UUID profileId, PantryItem item) {
+        ensureProfile(profileId);
         pantryService.updateItem(profileId, item);
         return AgentResponse.builder(ResponseStatus.SUCCESS)
                 .rationale("Pantry updated: " + item.ingredient().name() + " " + item.quantity() + ".")
@@ -297,6 +307,193 @@ public class MealPlanningFacade {
         return AgentResponse.builder(ResponseStatus.SUCCESS).plan(restored)
                 .groceryList(groceryService.refreshForPlan(restored))
                 .rationale("Undone: " + history.getLast().description()).build();
+    }
+
+    // ---- the assistant: one typed message, any action ----
+
+    /**
+     * Answers a typed message: the agent works out what it asks for, and the matching use case
+     * runs with all its usual checks. Plan changes, generated recipes, and pantry or profile
+     * updates come back unapplied, for the user to confirm.
+     */
+    public AssistantReply ask(UUID profileId, String message) {
+        AssistantRequest request;
+        try {
+            request = agentController.interpretRequest(profileId, message, LocalDate.now(clock));
+        } catch (LLMException e) {
+            return new AssistantReply(AssistantRequest.Action.ANSWER, AgentController.failureMessage(e), null, null);
+        }
+        String reply = request.reply();
+        PlanningMode mode = request.mode() == null ? PlanningMode.NUTRITION_GOAL : request.mode();
+        return switch (request.action()) {
+            case ANSWER -> new AssistantReply(request.action(), reply, null, null);
+            case RECIPES -> {
+                AgentResponse found = recommendRecipe(profileId, message, request.filters(), mode);
+                // UC03 5a: when the collection has nothing, offer to generate a recipe instead.
+                yield found.status() == ResponseStatus.CONFLICT && found.recipes().isEmpty()
+                        ? new AssistantReply(request.action(), reply + "\nNothing in the recipe collection fits. "
+                                + "I can write a new recipe for this that you review before saving.", found, null)
+                        : withResult(request, found);
+            }
+            case NEW_RECIPE -> withResult(request, generateRecipe(profileId, message,
+                    request.filters().withGenerated(true)));
+            case PLAN -> withResult(request, generateWeeklyPlan(new PlanRequest(profileId, LocalDate.now(clock),
+                    request.days() == null ? 7 : request.days(), mode, message)));
+            case SHOW_PLAN, CHANGE_PLAN, SUBSTITUTE, ADAPT, CHEAPER, GROCERIES -> planAction(profileId, message,
+                    request, mode);
+            case PANTRY -> pantryUpdate(profileId, request);
+            case PROFILE -> profileUpdate(profileId, request);
+        };
+    }
+
+    /**
+     * Applies a pantry or profile update the assistant proposed, after the user confirmed it.
+     * Only updates proposed for this profile are accepted, each once.
+     */
+    public AgentResponse confirmUpdate(UUID profileId, UUID updateId) {
+        Runnable update = profileId.equals(pendingOwners.get(updateId)) ? pendingUpdates.remove(updateId) : null;
+        if (update == null) {
+            return AgentResponse.builder(ResponseStatus.FAILED)
+                    .rationale("That update was not proposed here or was already applied.").build();
+        }
+        pendingOwners.remove(updateId);
+        update.run();
+        return AgentResponse.builder(ResponseStatus.SUCCESS).rationale("Done.")
+                .conflicts(pendingImpact(profileId).map(PlanImpact::conflicts).orElse(List.of())).build();
+    }
+
+    private AssistantReply withResult(AssistantRequest request, AgentResponse result) {
+        return new AssistantReply(request.action(), request.reply(), result, null);
+    }
+
+    private AssistantReply planAction(UUID profileId, String message, AssistantRequest request, PlanningMode mode) {
+        if (mealPlanService.getActivePlan(profileId).isEmpty()) {
+            return new AssistantReply(request.action(), "You don't have a meal plan yet. Ask me to make one, "
+                    + "for example \"plan 3 days of quick meals\".", null, null);
+        }
+        AgentResponse result = switch (request.action()) {
+            case CHANGE_PLAN -> modifyPlan(profileId, message, mode);
+            case SUBSTITUTE -> request.ingredient() == null
+                    ? AgentResponse.builder(ResponseStatus.NEEDS_CLARIFICATION)
+                            .rationale("Which ingredient should I replace?").build()
+                    : requestSubstitution(profileId, request.ingredient());
+            case ADAPT -> adaptPlan(profileId);
+            case CHEAPER -> suggestCheaperPlan(profileId);
+            case GROCERIES -> generateOptimizedGroceryList(profileId);
+            default -> AgentResponse.builder(ResponseStatus.SUCCESS).plan(activePlanOrThrow(profileId)).build();
+        };
+        return withResult(request, result);
+    }
+
+    private AssistantReply pantryUpdate(UUID profileId, AssistantRequest request) {
+        if (request.pantry().isEmpty()) {
+            return new AssistantReply(request.action(), "Which ingredient, and how much do you have?", null, null);
+        }
+        List<PantryItem> items = new ArrayList<>();
+        List<String> lines = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        for (AssistantRequest.PantryLine line : request.pantry()) {
+            try {
+                PantryItem item = pantryItem(line.ingredient(), line.amount(), line.unit(), null);
+                items.add(item);
+                lines.add(item.ingredient().name() + ": " + (item.quantity().isZero() ? "none left"
+                        : item.quantity().toString()));
+            } catch (InvalidInputException e) {
+                problems.add(line.ingredient() + ": " + String.join("; ", e.errors().values()));
+            }
+        }
+        if (items.isEmpty()) {
+            return new AssistantReply(request.action(), "I couldn't match that to the ingredient catalogue:\n"
+                    + String.join("\n", problems), null, null);
+        }
+        String text = request.reply() + (problems.isEmpty() ? "" : "\nSkipped: " + String.join("; ", problems));
+        return pending(profileId, request, text, "Update your pantry?", lines,
+                () -> items.forEach(item -> updatePantry(profileId, item)));
+    }
+
+    private AssistantReply profileUpdate(UUID profileId, AssistantRequest request) {
+        AssistantRequest.ProfileUpdate change = request.profile();
+        Optional<UserProfile> saved = findProfile(profileId);
+        if (change.isEmpty() && saved.isEmpty()) {
+            // "No restrictions" from a new user: save the default profile so planning can start.
+            UserProfile created = new UserProfile(profileId);
+            return pending(profileId, request, request.reply(), "Create your profile?",
+                    List.of("No diet rules or allergies", "3 meals a day, no budget or time limits"),
+                    () -> updateProfile(created));
+        }
+        if (change.isEmpty()) {
+            return new AssistantReply(request.action(), request.reply().isEmpty()
+                    ? "What should I change in your profile?" : request.reply(), null, null);
+        }
+        UserProfile current = saved.orElseGet(() -> new UserProfile(profileId));
+        UserProfile updated = current.copy()
+                .dietaryRestrictions(changed(current.dietaryRestrictions(), change.addDiet(), change.removeDiet()))
+                .allergies(changed(current.allergies(), change.addAllergies(), change.removeAllergies()))
+                .preferredFoods(changed(current.preferredFoods(), change.addLikes(), Set.of()))
+                .dislikedFoods(changed(current.dislikedFoods(), change.addDislikes(), Set.of()));
+        if (change.calories() != null) {
+            updated.dailyCalorieTarget(change.calories());
+        }
+        if (change.protein() != null) {
+            updated.dailyProteinTargetG(change.protein());
+        }
+        if (change.mealsPerDay() != null) {
+            updated.mealsPerDay(change.mealsPerDay());
+        }
+        if (change.weeklyBudget() != null) {
+            updated.weeklyBudget(change.weeklyBudget());
+        }
+        Map<String, String> errors = profileService.validate(updated);
+        if (!errors.isEmpty()) {
+            return new AssistantReply(request.action(), "I can't save that: " + String.join("; ", errors.values()),
+                    null, null);
+        }
+        List<String> lines = new ArrayList<>();
+        describeChange(lines, "Diet", current.dietaryRestrictions(), updated.dietaryRestrictions());
+        describeChange(lines, "Allergies", current.allergies(), updated.allergies());
+        describeChange(lines, "Likes", current.preferredFoods(), updated.preferredFoods());
+        describeChange(lines, "Dislikes", current.dislikedFoods(), updated.dislikedFoods());
+        if (change.calories() != null) {
+            lines.add("Calories per day: " + change.calories());
+        }
+        if (change.protein() != null) {
+            lines.add("Protein per day: " + change.protein() + " g");
+        }
+        if (change.mealsPerDay() != null) {
+            lines.add("Meals per day: " + change.mealsPerDay());
+        }
+        if (change.weeklyBudget() != null) {
+            lines.add("Weekly budget: $" + change.weeklyBudget().setScale(2, RoundingMode.HALF_UP));
+        }
+        if (lines.isEmpty() && saved.isPresent()) {
+            return new AssistantReply(request.action(), "Your profile already says that.", null, null);
+        }
+        if (lines.isEmpty()) {
+            lines.add("No diet rules or allergies");
+        }
+        return pending(profileId, request, request.reply(), "Update your profile?", lines,
+                () -> updateProfile(updated));
+    }
+
+    private AssistantReply pending(UUID profileId, AssistantRequest request, String text, String title,
+                                   List<String> lines, Runnable apply) {
+        UUID id = UUID.randomUUID();
+        pendingUpdates.put(id, apply);
+        pendingOwners.put(id, profileId);
+        return new AssistantReply(request.action(), text, null, new AssistantReply.PendingUpdate(id, title, lines));
+    }
+
+    private static Set<String> changed(Set<String> current, Set<String> add, Set<String> remove) {
+        Set<String> result = new TreeSet<>(current);
+        result.addAll(add);
+        result.removeAll(remove);
+        return result;
+    }
+
+    private static void describeChange(List<String> lines, String label, Set<String> before, Set<String> after) {
+        if (!before.equals(after)) {
+            lines.add(label + ": " + (after.isEmpty() ? "none" : String.join(", ", new TreeSet<>(after))));
+        }
     }
 
     // ---- F11 and F13 adaptation ----
@@ -472,6 +669,14 @@ public class MealPlanningFacade {
     public ValidationResult checkRecipe(UUID profileId, Recipe recipe) {
         return findProfile(profileId).map(p -> constraintValidator.validateRestrictions(recipe, p))
                 .orElseGet(ValidationResult::ok);
+    }
+
+    /**
+     * The saved profile, or a new one with default settings saved first. A pantry belongs to a
+     * profile, so using the pantry before filling in the profile must not fail.
+     */
+    public UserProfile ensureProfile(UUID profileId) {
+        return findProfile(profileId).orElseGet(() -> profileService.updateProfile(new UserProfile(profileId)));
     }
 
     private Optional<UserProfile> findProfile(UUID profileId) {

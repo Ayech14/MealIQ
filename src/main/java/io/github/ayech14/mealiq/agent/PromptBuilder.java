@@ -201,6 +201,51 @@ public class PromptBuilder {
         return prompt.toString();
     }
 
+    /** What each assistant action does, for the LLM to choose from. */
+    static final String ASSISTANT_ACTIONS = """
+            ACTIONS (choose exactly one):
+            - recipes: suggest stored recipes (set mealType, maxMinutes, include, exclude, mode when said)
+            - new_recipe: write a brand-new recipe (same filters; include = ingredients it must use)
+            - plan: make a new meal plan (days, default 7; mode nutrition, time or budget)
+            - change_plan: change meals in the current plan, e.g. "make Wednesday's dinner vegetarian"
+            - substitute: replace one ingredient in every planned meal (ingredient)
+            - adapt: fix the plan after pantry or profile changes
+            - cheaper: make the current plan cheaper
+            - groceries: make or show the shopping list and budget check
+            - pantry: set what the user has at home (pantry lines; amount 0 means they ran out)
+            - profile: anything the user says about themselves: goals, diet, allergies, likes, dislikes, \
+            calories, protein, meals per day, budget, or that they have no restrictions
+            - show_plan: show the current plan
+            - answer: just reply, for greetings, help, or questions answered by the facts above. Never \
+            state nutrition, prices or other numbers that are not given above.
+            """;
+
+    /** Asks the LLM what a typed message wants, given the user's situation (the assistant). */
+    public String buildAssistantPrompt(PlanningContext context, String message, List<String> memory) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("TODAY: ").append(context.request().startDate()).append(" (")
+                .append(context.request().startDate().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH))
+                .append(")\n");
+        appendProfile(prompt, context);
+        context.priorDecisions().forEach(note -> prompt.append("NOTE: ").append(note).append('\n'));
+        if (context.activePlan() != null) {
+            appendPlan(prompt, context);
+        } else {
+            prompt.append("CURRENT PLAN: none yet\n");
+        }
+        if (!memory.isEmpty()) {
+            prompt.append("EARLIER IN THIS CONVERSATION:\n");
+            memory.forEach(m -> prompt.append("- ").append(m).append('\n'));
+        }
+        prompt.append(ASSISTANT_ACTIONS);
+        prompt.append("USER MESSAGE: ").append(message).append('\n');
+        prompt.append("""
+                Choose the action that does what the user asks and fill only the fields it needs; leave the \
+                others null or empty. Use catalogue-style ingredient names (e.g. "egg", "chicken breast"). The \
+                reply tells the user in plain words what you are about to do, or answers them.""");
+        return prompt.toString();
+    }
+
     private static void appendPlan(StringBuilder prompt, PlanningContext context) {
         MealPlan plan = context.activePlan();
         prompt.append("CURRENT PLAN (day 1 is ").append(plan.startDate()).append("):\n");

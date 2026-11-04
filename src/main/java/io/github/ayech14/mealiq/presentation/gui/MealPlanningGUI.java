@@ -17,8 +17,9 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
 /**
- * The desktop interface: one tab per area, all calling {@link MealPlanningFacade} like the
- * CLI does, so both give the same results (D02). Start it with {@code ./mealiq-gui}.
+ * The desktop interface: the Assistant conversation first, then one tab per area, all calling
+ * {@link MealPlanningFacade} like the CLI does, so both give the same results (D02). Start it
+ * with {@code ./mealiq-gui}.
  */
 public final class MealPlanningGUI extends Application {
 
@@ -36,13 +37,15 @@ public final class MealPlanningGUI extends Application {
 
     /** The whole window content for a context; also used to render the screens in tests. */
     static BorderPane build(GuiContext context) {
+        AssistantView assistant = new AssistantView(context);
         ProfileView profile = new ProfileView(context);
         PantryView pantry = new PantryView(context);
         RecipesView recipes = new RecipesView(context);
         PlanView plan = new PlanView(context);
         GroceryView grocery = new GroceryView(context);
-        TabPane tabs = new TabPane(tab("Profile", profile.view()), tab("Pantry", pantry.view()),
-                tab("Recipes", recipes.view()), tab("Plan", plan.view()), tab("Groceries", grocery.view()));
+        TabPane tabs = new TabPane(tab("Assistant", assistant.view()), tab("Profile", profile.view()),
+                tab("Pantry", pantry.view()), tab("Recipes", recipes.view()), tab("Plan", plan.view()),
+                tab("Groceries", grocery.view()));
 
         TextField profileName = new TextField(context.profileName());
         profileName.setPrefColumnCount(10);

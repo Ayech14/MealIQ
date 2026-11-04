@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.image.PixelReader;
@@ -76,9 +78,33 @@ public final class GuiSnapshots {
         });
         settle(context);
         TabPane tabs = (TabPane) root[0].getCenter();
+        // Two assistant turns: a pantry update that waits for Apply, then recipe suggestions.
+        fixture.llm().queue(AssistantAnswers.pantryRanOut("egg"));
+        Map<String, Object> finish = new HashMap<>();
+        finish.put("action", "finish");
+        finish.put("tool", null);
+        finish.put("arguments", "{}");
+        finish.put("reason", "enough candidates");
+        fixture.llm().queue(AssistantAnswers.recipes("Here are quick, protein-rich dinners.", "dinner", 30),
+                Map.of("action", "call_tool", "tool", "recipeSearch",
+                        "arguments", "{\"mealType\": \"dinner\", \"maxMinutes\": 30}", "reason", "quick dinners"),
+                finish, Map.of("recipes", List.of("Shrimp tacos", "Chicken stir-fry"),
+                        "rationale", "Both are ready in under 30 minutes with over 35 g of protein."));
+        onFx(() -> {
+            root[0].applyCss();
+            root[0].layout();
+            root[0].lookupAll(".hyperlink").stream().filter(n -> n instanceof Hyperlink h
+                    && h.getText().equals("I ran out of eggs")).findFirst()
+                    .map(Hyperlink.class::cast).ifPresent(Hyperlink::fire);
+        });
+        settle(context);
+        onFx(() -> root[0].lookupAll(".hyperlink").stream().filter(n -> n instanceof Hyperlink h
+                && h.getText().startsWith("Suggest a high-protein dinner")).findFirst()
+                .map(Hyperlink.class::cast).ifPresent(Hyperlink::fire));
+        settle(context);
         // Only the selected tab is in the scene, so open Recipes before pressing its Browse button.
         onFx(() -> {
-            tabs.getSelectionModel().select(2);
+            tabs.getSelectionModel().select(3);
             root[0].applyCss(); // without a window, the tab's controls exist only after a layout pass
             root[0].layout();
         });
@@ -89,7 +115,7 @@ public final class GuiSnapshots {
                 .filter(t -> t.getColumns().getFirst().getText().equals("Recipe")).findFirst()
                 .ifPresent(t -> t.getSelectionModel().select(1)));
         settle(context);
-        String[] names = {"profile", "pantry", "recipes", "plan", "groceries"};
+        String[] names = {"assistant", "profile", "pantry", "recipes", "plan", "groceries"};
         for (int i = 0; i < names.length; i++) {
             int index = i;
             onFx(() -> tabs.getSelectionModel().select(index));

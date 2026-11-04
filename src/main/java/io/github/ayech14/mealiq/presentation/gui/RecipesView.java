@@ -96,7 +96,8 @@ final class RecipesView {
     }
 
     private RecipeQuery query(boolean allowGenerated) {
-        MealType type = "any".equals(meal.getValue()) ? null : MealType.valueOf(meal.getValue().toUpperCase(Locale.ROOT));
+        MealType type = "any".equals(meal.getValue()) ? null
+                : MealType.valueOf(meal.getValue().toUpperCase(Locale.ROOT));
         Integer minutes = maxMinutes.getText().isBlank() ? null : Integer.valueOf(maxMinutes.getText().strip());
         return new RecipeQuery(type, minutes, split(include), split(exclude), null, allowGenerated);
     }
@@ -140,6 +141,11 @@ final class RecipesView {
                     message.setText(result.message());
                     if (!result.rows().isEmpty()) {
                         table.getSelectionModel().selectFirst();
+                    } else if (result.status() == ResponseStatus.CONFLICT && context.confirm(
+                            "Nothing in the recipe collection fits",
+                            "No stored recipe matches \"" + text + "\" with these filters and your restrictions.\n\n"
+                                    + "Ask the AI to write a new recipe for it? You will see it before it is saved.")) {
+                        generate();
                     }
                 });
     }
@@ -171,7 +177,7 @@ final class RecipesView {
                 });
     }
 
-    private record Result(List<Row> rows, String message) {
+    private record Result(List<Row> rows, String message, ResponseStatus status) {
     }
 
     private Result rows(AgentResponse response) {
@@ -193,7 +199,7 @@ final class RecipesView {
         if (!response.agentSteps().isEmpty()) {
             text.append("\nAgent steps: ").append(response.agentSteps().size()).append(" tool call(s).");
         }
-        return new Result(rows, text.toString());
+        return new Result(rows, text.toString(), response.status());
     }
 
     private static List<String> split(TextField field) {
