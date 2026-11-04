@@ -29,10 +29,10 @@ EECS3311 Software Design course project, York University.
 | ID | Feature | What you get |
 |---|---|---|
 | F01 | Goals and preferences | Goal, calorie and protein targets, diet rules, allergies, likes, dislikes, meals per day, weekly budget, cooking minutes per weekday |
-| F02 | Pantry | What you have at home, with quantities and expiry dates; expired items are not counted |
+| F02 | Pantry | What you have at home, with quantities and expiry dates; expired items are not counted. Type foods the way you say them: "eggs" works, and "beef" asks which kind |
 | F03 | Recipe search and recommendation | The agent searches, ranks by nutrition, time or cost, and explains its picks |
 | F04 | AI recipe generation | A new recipe from catalogue ingredients you can eat, previewed before saving |
-| F05 | Weekly meal plans | A validated multi-day plan with daily nutrition against your targets |
+| F05 | Weekly meal plans | A validated multi-day plan with daily nutrition against your targets, with portions of one or two servings sized to reach them |
 | F06 | Nutrition analysis | Calories, protein, carbohydrates and fat from USDA data, per serving, day and plan |
 | F07 | Grocery list | What to buy for the plan after your pantry, in one line per ingredient |
 | F08 | Grocery optimization | Prices, the budget result with the exact shortfall, and cheaper meals when over budget |
@@ -42,6 +42,7 @@ EECS3311 Software Design course project, York University.
 | F12 | Budget-aware planning | Cost-aware ranking, and plans checked against the budget |
 | F13 | Plan adaptation | After a pantry or profile change, the affected meals are flagged and can be fixed |
 | N01 | Assistant | One place to ask for any of the above in your own words |
+| N02 | Agent check-up | The home page shows today's meals and what the agent noticed (a plan that no longer fits, expiring food, groceries over budget), each with a fix the agent can carry out after you approve it |
 
 ## Why it is an agent
 
@@ -51,6 +52,7 @@ MealIQ is not a chatbot that forwards text to an LLM. Its `MealPlanningAgent`:
 - **Chooses among ranked options.** It picks from candidates that deterministic planning strategies have already ranked, and explains its choice using only facts it was given.
 - **Proposes; it never applies.** Plans and changes come back as structured proposals that validators check against allergies, diet, cooking time and budget. A rejected plan is retried once with the reasons. A change is applied only after you confirm it, through a command you can undo.
 - **Reacts to change.** When your pantry or profile changes, the affected meals are flagged at once without calling the LLM, and the agent can adapt only those meals.
+- **Takes the initiative.** The home page's check-up notices what needs attention and proposes the next step; one click hands it to the agent, which still shows you the change first.
 - **Remembers.** It keeps earlier decisions in memory for follow-up requests.
 
 All arithmetic, which covers nutrition, quantities, prices and validation, is done by deterministic code, never by the LLM.
@@ -95,7 +97,9 @@ Run these from the project folder; the first run compiles the project.
 ./mealiq-gui
 ```
 
-It opens on the **Assistant** tab, where you type what you want or pick a suggestion. The other tabs are **Profile**, **Pantry**, **Recipes**, **Plan** and **Groceries**. Use the **Profile** field at the top to switch between people.
+It opens on **Home**: today's meals, your pantry and shopping status, and the agent's check-up with suggested next steps. The sidebar also has **Ask the agent** (type what you want or pick a suggestion), **Meal plan**, **Pantry**, **Recipes**, **Groceries** and **Profile**. Use the **Profile** field at the bottom of the sidebar to switch between people.
+
+A new plan is saved automatically when it passes every check (allergies, diet, cooking times, budget). If it cannot pass, nothing is saved and the Meal plan page says why, with the details folded away.
 
 **Command line:**
 
@@ -242,6 +246,6 @@ docs/stage2/                 Implementation report
 - MealIQ provides meal-planning assistance, not medical, allergy-treatment or professional dietary advice. Always check ingredients and labels yourself.
 - Allergies and diet rules are hard constraints in planning, but they cover only the tags in the ingredient catalogue.
 - Prices are public averages, not store checkout prices, and some ingredients have none.
-- Plans use one serving per meal, so high calorie targets may not be reached; the app reports this.
+- Portions are one or two servings per meal, so a very high calorie target may still not be reached on some days; the app reports this.
 - Recipe search covers the curated collection and saved generated recipes; there is no external recipe provider.
 - AI proposals are always validated and need your confirmation before they change anything.

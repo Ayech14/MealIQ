@@ -11,7 +11,7 @@ MealIQ is an AI agent for meal planning and grocery optimization. It serves a ho
 The application is written in Java 21 with Maven, as the instructor required on October 30, 2026. It replaces a first Python implementation started in Period 1 (see Section 4, C01).
 
 **Interfaces.** Both interfaces call the same `MealPlanningFacade` in-process:
-- **GUI:** a JavaFX desktop app (`./mealiq-gui`). Its first tab is an Assistant conversation, followed by Profile, Pantry, Recipes, Plan and Groceries tabs.
+- **GUI:** a JavaFX desktop app (`./mealiq-gui`) with a sidebar of pages. It opens on Home, where the agent's check-up proposes the next step, followed by Ask the agent, Meal plan, Pantry, Recipes, Groceries and Profile.
 - **CLI:** a picocli command line (`./mealiq`). Commands: `ask`, `profile`, `pantry`, `recipes`, `plan`, `grocery`, `ingredients`, `setup`.
 
 **AI integration.**
@@ -30,13 +30,13 @@ The application is written in Java 21 with Maven, as the instructor required on 
 - **Recipes:** 30 curated seed recipes built only from catalogue ingredients.
 - **Storage:** PostgreSQL through hand-written JDBC repositories, with H2 in PostgreSQL mode for tests.
 
-**Working functionality.** All 13 Stage 1 features (F01-F13) and one new feature (N01, the Assistant) work in the CLI and the GUI. Every AI feature was run against the real OpenAI API and a real PostgreSQL database during development (Section 6).
+**Working functionality.** All 13 Stage 1 features (F01-F13) and two new features (N01, the Assistant; N02, the agent check-up on Home) work in the CLI and the GUI. Every AI feature was run against the real OpenAI API and a real PostgreSQL database during development (Section 6).
 
 **Limitations and incomplete parts:**
 - **No external recipe provider.** `ExternalRecipeAdapter` from Stage 1 is not implemented: recipe search covers the 30 curated recipes plus recipes the AI generates and the user saves (C13).
 - **Partial prices.** About half the catalogue has no Statistics Canada price, so cost estimates are lower bounds shown as `$x+`. The budget is enforced only when known prices alone exceed it (C17).
-- **One serving per meal.** Plans use one serving per meal, so days often fall short of high calorie targets. This is reported as a warning, never hidden.
-- **Plan generation can fail on tight constraints.** With strict per-day time limits and few matching recipes, a plan can still fail validation after its one retry. Nothing is saved and every violation is listed.
+- **Portions of one or two servings.** Portions are sized deterministically up to two servings per meal (C32), so a very high calorie target can still be missed on some days. This is reported as a warning, never hidden.
+- **Plan generation can fail on tight constraints.** The agent now sees, for each time-limited day, only the recipes that fit (C33), but with very few matching recipes a plan can still fail validation after its one retry. Nothing is saved and every violation is listed.
 - **Untested GUI handlers.** JavaFX event handlers have no automated tests. The facade operations they call are tested, and every screen was rendered and inspected (Section 6).
 - **Launch scripts.** `./mealiq` and `./mealiq-gui` are shell scripts for macOS and Linux. On Windows, the README shows the equivalent `java` command.
 
@@ -47,10 +47,10 @@ Package prefix: `io.github.ayech14.mealiq`. Every feature is reached through `ap
 | ID and name | Stage 1 | Status | Implemented classes/files and responsibilities | Key methods | Patterns | Type | Video |
 |---|---|---|---|---|---|---|---|
 | F01 User goals and preferences | F01 | Implemented | `ProfileService` validates ranges and contradictions, saves, publishes changes; `UserProfile`; `DietRules` (supported diets, known allergens); `JdbcProfileRepository` | `updateProfile`, `validate`, `preferenceWarnings`, `publish` | Facade, Observer | Deterministic | pending |
-| F02 Pantry inventory management | F02 | Implemented | `PantryService` builds and stores items, publishes `PANTRY_CHANGED`; `Pantry` (`availableQuantity`, `shortfall`, `take`); `JdbcPantryRepository` | `makeItem`, `updateItem`, `removeItem`, `expiredItems` | Facade, Observer | Deterministic | pending |
+| F02 Pantry inventory management | F02 | Implemented | `PantryService` matches everyday names to catalogue ingredients, builds and stores items, publishes `PANTRY_CHANGED`; `Pantry` (`availableQuantity`, `shortfall`, `take`); `JdbcPantryRepository` | `matchIngredients`, `makeItem`, `updateItem`, `removeItem`, `expiredItems` | Facade, Observer | Deterministic | pending |
 | F03 Recipe search and recommendation | F03 | Modified (C13) | `AgentController.recommendRecipe` builds the context; `MealPlanningAgent.recommendRecipes` runs the tool loop; `ToolManager`, `RecipeTool`; `PlanningStrategy` ranks; `ConstraintValidator` re-checks every result | `recommendRecipes`, `runToolLoop`, `rankRecipes`, `validateRestrictions` | Strategy, Factory Method, Adapter, Facade | Hybrid | pending |
 | F04 AI recipe generation | F04 | Implemented | `MealPlanningAgent.generateRecipe` with a schema listing only allowed catalogue ingredients; `PromptBuilder.buildRecipePrompt`; deterministic checks with one retry; `AgentController` re-validates; saved as `GENERATED` | `generateRecipe`, `recipeProblems`, `saveGeneratedRecipe` | Adapter, Facade | Hybrid | pending |
-| F05 Weekly meal-plan generation | F05 | Implemented | `MealPlanningAgent.createPlanProposal` gathers candidates per meal type, ranks them and lets the LLM fill slots; `ProposalValidator` + `ConstraintValidator.validatePlan`; one retry with violations; `MealPlanService.createFromProposal` | `generateWeeklyPlan`, `createPlanProposal`, `validate`, `validatePlan` | Strategy, Factory Method, Facade, Adapter | Hybrid | pending |
+| F05 Weekly meal-plan generation | F05 | Implemented | `MealPlanningAgent.createPlanProposal` gathers candidates per meal type (widening over-narrow searches), ranks them and lets the LLM fill slots from per-day lists; `PortionService.sizePortions`; `ProposalValidator` + `ConstraintValidator.validatePlan`; one retry with violations; `MealPlanService.createFromProposal` | `generateWeeklyPlan`, `createPlanProposal`, `sizePortions`, `validate`, `validatePlan` | Strategy, Factory Method, Facade, Adapter | Hybrid | pending |
 | F06 Nutrition analysis | F06 | Implemented | `NutritionService` scales per-100 g USDA values by grams; `NutritionTool` exposes it to the agent; daily totals shown against targets | `calculateNutrition`, `dailyTotals`, `analyze` | Facade | Deterministic | pending |
 | F07 Grocery-list generation | F07 | Implemented | `GroceryService.generateList` sums every meal's needs, combines units safely, subtracts usable pantry stock once; `GroceryTool` | `generateList`, `consolidate`, `refreshForPlan`, `project` | Facade | Deterministic | pending |
 | F08 Grocery-list optimization | F08 | Implemented | `GroceryService.optimizeList` prices items with `StatCanPriceDataSource`; `BudgetService.evaluate` gives the shortfall and cost drivers; over budget leads to `AgentController.resolveBudgetConflict` (cheaper meals, previewed) | `optimizeList`, `evaluate`, `resolveBudgetConflict`, `proposeChange` | Adapter, Facade, Command | Hybrid | pending |
@@ -60,6 +60,7 @@ Package prefix: `io.github.ayech14.mealiq`. Every feature is reached through `ap
 | F12 Budget-aware planning | F12 | Implemented | `BudgetStrategy` ranks by known cost; `BudgetService.estimateCost` uses pantry stock once; plans over budget on known prices are rejected | `rank`, `estimateCost`, `evaluate`, `validatePlan` | Strategy, Factory Method | Hybrid | pending |
 | F13 Dynamic plan adaptation | F13 | Implemented | `MealPlanImpactObserver` and `GroceryListImpactObserver` react to published changes; `PlanImpactAssessor` finds affected meals; `MealPlanningAgent.proposeAdaptation` replaces only those | `publish`, `onPlanRelevantChange`, `assessImpact`, `recordImpact`, `getPendingImpact`, `adaptPlan` | Observer, Command, Facade | Hybrid | pending |
 | N01 Assistant (typed requests) | New | New (C30) | `MealPlanningAgent.interpretRequest` maps a message to one of 12 actions with arguments; `MealPlanningFacade.ask` runs the matching use case; pantry and profile updates wait for `confirmUpdate`; `AssistantView`, `AskCommand` | `interpretRequest`, `ask`, `confirmUpdate` | Facade, Adapter | AI-based routing over hybrid features | pending |
+| N02 Agent check-up (Home) | New | New (C35) | `MealPlanningFacade.checkup` looks at the profile, plan, pending impacts, pantry expiry and budget and returns `Checkup` with suggestions; each suggestion carries the request the agent runs if the user accepts; `HomeView` | `checkup` | Facade, Observer (reads recorded impacts) | Deterministic detection, AI-based action after confirmation | pending |
 
 **How the classes collaborate.**
 
@@ -197,6 +198,11 @@ Each change is recorded as Original design -> Implemented change -> Reason -> Im
 | C29 | `MealPlanningGUI` with show methods | JavaFX app with tabs; `showPlan`, `showChangePreview` in `PlanView`, `showGroceryList` in `GroceryView`; background worker for AI calls | JavaFX structure; the window must not freeze during AI calls | `GuiContext`, `Ui`, `MealIQDesktop` launcher |
 | C30 | Not in Stage 1 | New feature N01, the Assistant: `MealPlanningAgent.interpretRequest`, `AssistantRequest` (12 actions), `MealPlanningFacade.ask`/`confirmUpdate`, `AssistantView` (first GUI tab), `mealiq ask` | User testing found the form-based GUI hard to use and not agent-like; one typed request can now drive every feature | Adds an AI routing step in front of existing use cases; all checks and confirmations unchanged |
 | C31 | `ConversationMemory` retrieval not specified | Keeps the newest entries per profile in memory; keyword match, else the most recent | Sufficient for follow-up requests in one session | Memory does not persist across CLI processes |
+| C32 | One serving per planned meal | New `PortionService` sizes each meal at 1 or 2 servings after the LLM chooses recipes, moving each day closer to its calorie and protein targets while known costs stay within budget | A real 7-day plan for 3000 kcal and 160 g protein could not get near the target with one serving per meal; portion sizing is arithmetic, which the LLM must not do (D01) | `AgentController.generateWeeklyPlan` calls it before validation; CLI and GUI show "x2" portions |
+| C33 | Candidates per meal type only | The planning prompt lists, for each time-limited day, only the candidates that fit its limit; quick candidates are always included; the LLM is told not to filter searches by pantry items; when its searches find too few recipes, the agent adds a broad search (and a time-limited one) automatically | In a real run the LLM added every pantry item as an `include` filter (2-4 candidates left), and placed 40-minute recipes on 20-minute days, so the plan was rejected twice | The same 7-day plan passed on the first attempt in a real run |
+| C34 | Pantry needs exact catalogue names | `PantryService.matchIngredients` maps everyday names: plurals ("eggs") to one ingredient, general names ("beef") to every kind; the GUI asks which kind, filters the list as you type, and hands unknown names to the agent; the assistant asks which kind instead of guessing; the CLI error lists the kinds | User testing: "beef" was rejected and the list did not narrow while typing | Only exact or plural names are saved without a question |
+| C35 | Not in Stage 1 | New feature N02: `MealPlanningFacade.checkup` and `Checkup` (today's meals, pantry and grocery status, suggestions), shown on the GUI Home page; accepting a suggestion sends its request to the agent | User testing: the app felt like a chatbot that waits to be asked; an agent should notice problems (plan no longer fits, expired items, over budget) and propose the fix | Detection is deterministic; every change still goes through the agent's preview and confirmation (D03) |
+| C36 | `MealPlanningGUI` (tabs, C29) | Sidebar navigation with a Home page and a shared stylesheet (`mealiq.css`); the Plan page shows day cards, a clear status after generating (saved automatically when every check passes, or not saved, with details folded away) and the change actions on one card | User testing: the plan screen was confusing (no visible save step, about 30 lines of output in a text box) and the look was not engaging | `GuiSnapshots` renders all seven pages |
 
 ## 5. AI tools and collaboration log
 
@@ -217,6 +223,7 @@ Each change is recorded as Original design -> Implemented change -> Reason -> Im
 | Grocery prices | Budget features needed real prices | Proposed Statistics Canada table 18-10-0245-01, asked before downloading, built a reproducible script and left mismatched units unpriced | Approved the download | 63 priced ingredients, citable |
 | Agent quality from real runs | Real OpenAI runs during development | Found and fixed: unknown prices making all costs unknown, the same dish four times in a plan, candidate lists hiding vegetarian dinners, "a dozen eggs" stored as 144 | Reviewed the runs and the fixes | Fixes C16, C21, and the assistant schema (C30) |
 | GUI usability | Hands-on test with screenshots: database error on the pantry, free-text allergies, a dead end in recipe search, "doesn't feel like AI" | Fixed the defects; offered three directions and the cost of each | Chose fixes plus an Assistant tab | New feature N01, checkboxes, friendly errors |
+| Plan failures and agent feel | Second hands-on test: a 7-day plan rejected twice, "beef" rejected, a confusing plan screen, a request for a sidebar and home page, and "an AI agent, not a chatbot" | Traced the failures in the agent steps to over-narrow searches, missing per-day time filtering and fixed portions; redesigned the GUI and added a proactive check-up | Reported the problems with screenshots and decided the order of work | C32-C36, new feature N02; the same plan passed on its first attempt |
 
 ## 6. Development and verification summary
 
@@ -230,7 +237,7 @@ Each change is recorded as Original design -> Implemented change -> Reason -> Im
 
 ### Checks performed
 
-- **Automated tests:** 355 JUnit 5 tests (one PostgreSQL test class is skipped unless a test database is configured). They cover domain values and units, repositories (as contract tests run on H2 and PostgreSQL), the catalogue and price data, every service and validator, the strategies, the commands, the agent loop driven by `ScriptedLLMClient` (valid, invalid and malformed tool calls, the step limit, filters the LLM cannot widen, fallbacks), the controller and facade flows, and the CLI commands end to end. The build compiles with `-Xlint:all` and no warnings.
+- **Automated tests:** 369 JUnit 5 tests (one PostgreSQL test class is skipped unless a test database is configured). They cover domain values and units, repositories (as contract tests run on H2 and PostgreSQL), the catalogue and price data, every service and validator, the strategies, the commands, the agent loop driven by `ScriptedLLMClient` (valid, invalid and malformed tool calls, the step limit, filters the LLM cannot widen, fallbacks), the controller and facade flows, and the CLI commands end to end. The build compiles with `-Xlint:all` and no warnings.
 - **Real runs:** every AI feature was run through the CLI against the real OpenAI API and PostgreSQL 16:
   - recipe recommendation
   - generation
@@ -240,7 +247,9 @@ Each change is recorded as Original design -> Implemented change -> Reason -> Im
   - adaptation after a tighter time limit and after running out of an ingredient
   - priced grocery lists
   - a full Assistant conversation from an empty database
-- **GUI:** every screen was rendered off-screen with test data (`GuiSnapshots`) and inspected, and the real app was launched against PostgreSQL.
+  - a 7-day plan with 20-minute limits on Friday to Sunday, 3000 kcal and 160 g protein, which passed on its first attempt with portions sized up (C32, C33)
+  - "I have 2 pounds of beef" through the Assistant, which asked whether it was ground beef or beef sirloin (C34)
+- **GUI:** every page was rendered off-screen with test data (`GuiSnapshots`) and inspected, and the real app was launched against PostgreSQL without errors. Clicking through the pages by hand was done by the team, not by an automated test.
 
 ### Important defects found and corrected
 
@@ -252,10 +261,12 @@ Each change is recorded as Original design -> Implemented change -> Reason -> Im
 - Using the pantry before saving a profile caused a database error. A profile is now created automatically (C10).
 - "A dozen eggs" was stored as 12 dozen, and "rice" was not matched. Assistant pantry lines are now limited to catalogue names, with explicit amount rules (C30).
 - A recipe search with no matches ended without a next step. Generation is now offered.
+- A 7-day plan was rejected twice: searches filtered by pantry items left 2-4 candidates, and 40-minute recipes were placed on 20-minute days (C33). One serving per meal could not reach 3000 kcal (C32).
+- "beef" was rejected in the pantry because only exact catalogue names were accepted (C34).
 
 ### Remaining limitations
 
-See Section 1. In addition, `ConversationMemory` is per process, and plan generation with very tight per-day time limits and few matching recipes can still be rejected after its retry.
+See Section 1. In addition, `ConversationMemory` is per process, so a follow-up such as "ground beef" to the agent's question works in the GUI session but not across separate CLI commands.
 
 ## 7. Demonstration index
 
@@ -275,3 +286,4 @@ See Section 1. In addition, `ConversationMemory` is per process, and plan genera
 | F12 Budget-aware planning | GUI and CLI | pending |
 | F13 Dynamic plan adaptation | GUI and CLI | pending |
 | N01 Assistant | GUI and CLI | pending |
+| N02 Agent check-up | GUI | pending |
