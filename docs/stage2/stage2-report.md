@@ -159,7 +159,7 @@ Six patterns from Stage 1 are implemented. All files are under `src/main/java/io
   - `llm/LLMClient` is the target. `ProviderLLMAdapter` is the adapter, and the OpenAI Java SDK client is the adaptee. SDK types, errors and refusals are mapped to `LLMException` kinds. `ScriptedLLMClient` is a test implementation of the same target.
   - `integration/PriceDataSource` is the target, and `StatCanPriceDataSource` adapts the Statistics Canada price table, converting units with catalogue weights.
 
-**Updated diagrams.** The UML class and sequence diagrams in `docs/stage1/diagrams` are being updated to the implemented classes listed in this report.
+**Updated diagrams.** The use-case, class and sequence diagrams in `docs/stage1/diagrams` (UMLet sources and PNG exports) now show the Java implementation: JavaFX and picocli on the facade with no HTTP layer, the OpenAI adapter, the Statistics Canada price adapter, `PortionService`, `PlanImpactAssessor`, `CompositeCommand`, the assistant and check-up types, the two history repositories, and the new features N01 and N02.
 
 ## 4. Changes and rationale
 

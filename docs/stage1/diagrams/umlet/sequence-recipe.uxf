@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <diagram program="umlet" version="15.1">
   <zoom_level>10</zoom_level>
   <help_text>fontsize=12
@@ -8,85 +8,84 @@
     <coordinates>
       <x>10</x>
       <y>10</y>
-      <w>5242</w>
-      <h>2540</h>
+      <w>4620</w>
+      <h>3566</h>
     </coordinates>
-    <panel_attributes>title=SD05 - Find or Generate Recipe   (UC03; F03, F04, F06, F11, F12)\nGUI calls reach the facade through MealPlanningApi (HTTP, as in SD01), the CLI calls it in-process
+    <panel_attributes>title=SD05 - Find or Generate Recipe   (UC03; F03, F04, F06, F11, F12)\nThe page calls the facade in-process; the CLI (RecipesCommand find / generate) and the assistant call the same operations
 obj=Meal Planner~U ACTOR
-obj=:MealPlanningGUI~GUI
+obj=:RecipesView\n«JavaFX page»~GUI
 obj=:MealPlanningFacade~F
 obj=:AgentController~AC
 obj=:MealPlanningAgent~AG
 obj=:ToolManager~TM
 obj=:RecipeTool~RT
 obj=:RecipeRepository~RR
-obj=:ExternalRecipeAdapter\n«RecipeDataSource»~RDS
-obj=Recipe Provider API\n«external»~RAPI
 obj=:PlanningStrategyFactory~SF
 obj=strategy:\nPlanningStrategy~ST
 obj=:PromptBuilder~PB
 obj=:ProviderLLMAdapter\n«LLMClient»~LLM
+obj=:IngredientRepository~IR
 obj=:ConstraintValidator~CV
-obj=:NutritionService~NS
 
 U-&gt;&gt;&gt;GUI : 1: "Quick high-protein\ndinner, max 20 min"
-GUI-&gt;&gt;&gt;F : 2: recommendRecipe(query); on=F
-F-&gt;&gt;&gt;AC : 3: recommendRecipe(query); on=AC
+GUI-&gt;&gt;&gt;F : 2: recommendRecipe(profileId,\nrequest, filters, mode); on=F
+F-&gt;&gt;&gt;AC : 3: recommendRecipe(request,\nfilters); on=AC
 AC-&gt;&gt;&gt;AC + : 4:\nbuildContext(\nrequest)
 tick=1
-AC-&gt;&gt;&gt;AG : 5: recommendRecipes(\ncontext, query); on=AG
-AG-&gt;&gt;&gt;LLM : 6: generateStructured(prompt, NextAction schema); on=LLM
-LLM.&gt;AG : 7: tool call: recipeSearch(query); off=LLM
+AC-&gt;&gt;&gt;AG : 5: recommendRecipes(\ncontext, filters); on=AG
+AG-&gt;&gt;&gt;LLM : 6: generateStructured(prompt, next_action schema, INSTRUCTIONS); on=LLM
+LLM.&gt;AG : 7: call_tool: recipeSearch(args); off=LLM
 text=AG:one step of the tool\nloop shown in SD01
 AG-&gt;&gt;&gt;TM : 8: isValidCall(toolName,\nargs); on=TM
 TM.&gt;AG : 9: true; off=TM
-AG-&gt;&gt;&gt;TM : 10: execute(toolName, args); on=TM
-TM-&gt;&gt;&gt;RT : 11: execute(args); on=RT
-RT-&gt;&gt;&gt;RT + : 12:\nsearchRecipes(\nquery)
+AG-&gt;&gt;&gt;TM : 10: execute(toolName, args, context); on=TM
+TM-&gt;&gt;&gt;RT : 11: execute(args, context); on=RT
+RT-&gt;&gt;&gt;RR : 12: search(query); on=RR
+RR.&gt;RT : 13: curated and saved\nrecipes; off=RR
+RT.&gt;TM : 14: ToolResult(recipes allowed\nfor the profile); off=RT
+TM.&gt;AG : 15: ToolResult; off=TM
+AG-&gt;&gt;&gt;AG + : 16:\nrankRecipes(\ncandidates,\ncontext)
 tick=1
-RT-&gt;&gt;&gt;RR : 13: search(query); on=RR
-RR.&gt;RT : 14: local recipes; off=RR
-combinedFragment=opt~O RT RAPI; RR:[too few local matches]
-RT-&gt;&gt;&gt;RDS : 15: find(query); on=RDS
-RDS-&gt;&gt;&gt;RAPI : 16: searchRecipes(params); on=RAPI
-RAPI.&gt;RDS : 17: provider results; off=RAPI
-RDS.&gt;RT : 18: List&lt;Recipe&gt; (toRecipe mapping); off=RDS
---=O
-RT.&gt;TM : 19: ToolResult(candidates); off=RT
-TM.&gt;AG : 20: ToolResult; off=TM
-AG-&gt;&gt;&gt;AG + : 21:\nrankRecipes(\ncandidates,\ncontext)
-tick=1
-AG-&gt;&gt;&gt;SF : 22: strategyFor(context); on=SF
-SF-&gt;&gt;&gt;SF + : 23:\ncreateStrategy(\nmode)
-tick=1
-SF-&gt;&gt;&gt;ST : 24: configure(profile)
-SF.&gt;AG : 25: strategy; off=SF
-AG-&gt;&gt;&gt;ST : 26: rank(candidates, context); on=ST
-ST.&gt;AG : 27: ranked list; off=ST
-combinedFragment=alt~A AG LLM; TM:[no compatible candidate, or custom recipe requested]
-AG-&gt;&gt;&gt;AG + : 28:\ngenerateRecipe(\ncontext,query)
-tick=1
-AG-&gt;&gt;&gt;PB : 29: buildRecipePrompt(context, query); on=PB
-PB.&gt;AG : 30: prompt; off=PB
-AG-&gt;&gt;&gt;LLM : 31: generateStructured(prompt, Recipe schema); on=LLM
-LLM.&gt;AG : 32: recipe data; off=LLM
-AG.&gt;AC : 33: Recipe (source =\nGENERATED)
-..=A; TM:[compatible candidates found]
-AG.&gt;AC : 34: ranked recipes with\nrationale; off=AG
---=A
-combinedFragment=loop~L AC NS; AG:[each recipe to return]
-AC-&gt;&gt;&gt;CV : 35: validateRestrictions(recipe, profile); on=CV
-CV.&gt;AC : 36: ValidationResult (allergens, dislikes, time); off=CV
-AC-&gt;&gt;&gt;NS : 37: calculateNutrition(recipe, servings); on=NS
-NS.&gt;AC : 38: NutritionSummary (complete flag); off=NS
+AG-&gt;&gt;&gt;SF : 17: strategyFor(context); on=SF
+SF-&gt;&gt;&gt;ST : 18: configure(profile)
+SF.&gt;AG : 19: strategy; off=SF
+AG-&gt;&gt;&gt;ST : 20: rank(candidates, context); on=ST
+ST.&gt;AG : 21: ranked list; off=ST
+AG-&gt;&gt;&gt;PB : 22: buildRecommendationPrompt(context, filters, ranked, ...); on=PB
+PB.&gt;AG : 23: prompt; off=PB
+AG-&gt;&gt;&gt;LLM : 24: generateStructured(prompt, recipe_recommendation schema, INSTRUCTIONS); on=LLM
+LLM.&gt;AG : 25: chosen names and rationale; off=LLM
+AG.&gt;AC : 26: RecipeRecommendation(recipes,\nrationale, toolCalls); off=AG
+combinedFragment=loop~L AC CV; AG:[each recommended recipe]
+AC-&gt;&gt;&gt;CV : 27: validateRestrictions(recipe, profile); on=CV
+CV.&gt;AC : 28: ValidationResult (allergens, diet, dislikes); off=CV
 --=L
-combinedFragment=alt~B GUI NS; F:[at least one valid recipe]
-AC.&gt;F : 39: AgentResponse(SUCCESS,\nrecipes, rationale)
-..=B; F:[generated recipe invalid, or nothing compatible]
-AC.&gt;F : 40: AgentResponse(\nCONFLICT, trade-offs); off=AC
+combinedFragment=alt~B GUI CV; F:[at least one recipe passes]
+AC.&gt;F : 29: AgentResponse(SUCCESS,\nrecipes, rationale)
+..=B; F:[nothing fits]
+AC.&gt;F : 30: AgentResponse(CONFLICT,\nreasons); off=AC
+F.&gt;GUI : 31: AgentResponse
+GUI.&gt;U : 32: "Nothing in the recipe collection\nfits. Ask the AI to write one?"
+U-&gt;&gt;&gt;GUI : 33: Yes
+GUI-&gt;&gt;&gt;F : 34: generateRecipe(profileId,\nrequest, filters)
+F-&gt;&gt;&gt;AC : 35: generateRecipe(request, query); on=AC
+AC-&gt;&gt;&gt;AG : 36: generateRecipe(context, query); on=AG
+AG-&gt;&gt;&gt;IR : 37: findAll(); on=IR
+IR.&gt;AG : 38: catalogue ingredients (allowed\nones become the schema enum); off=IR
+combinedFragment=loop~G AG LLM; TM:[attempt &lt;= 2 and the recipe still has problems]
+AG-&gt;&gt;&gt;PB : 39: buildRecipePrompt(context, query, previousProblems); on=PB
+PB.&gt;AG : 40: prompt; off=PB
+AG-&gt;&gt;&gt;LLM : 41: generateStructured(prompt, generated_recipe schema, INSTRUCTIONS); on=LLM
+LLM.&gt;AG : 42: recipe from catalogue ingredients only; off=LLM
+--=G
+AG.&gt;AC : 43: RecipeDraft (source = GENERATED,\nnutrition from the catalogue); off=AG
+AC-&gt;&gt;&gt;CV : 44: validateRestrictions(recipe, profile); on=CV
+CV.&gt;AC : 45: ValidationResult; off=CV
+AC.&gt;F : 46: AgentResponse(NEEDS_CONFIRMATION,\nrecipe kept in pendingRecipes); off=AC
+text=F:saveGeneratedRecipe(id)\nstores it only after the\nuser presses Save
 --=B
-F.&gt;GUI : 41: AgentResponse; off=F
-GUI.&gt;U : 42: recipes with time, cost,\nand nutrition</panel_attributes>
-    <additional_attributes></additional_attributes>
+F.&gt;GUI : 47: AgentResponse; off=F
+GUI.&gt;U : 48: recipes with time, cost\nand nutrition</panel_attributes>
+    <additional_attributes />
   </element>
 </diagram>

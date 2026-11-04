@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <diagram program="umlet" version="15.1">
   <zoom_level>10</zoom_level>
   <help_text>fontsize=12
@@ -8,83 +8,84 @@
     <coordinates>
       <x>10</x>
       <y>10</y>
-      <w>5442</w>
-      <h>2720</h>
+      <w>5610</w>
+      <h>3334</h>
     </coordinates>
-    <panel_attributes>title=SD03 - Modify Meal Plan Using Natural Language   (UC08; F06, F07, F09, F10, F11, F12)\nGUI calls reach the facade through MealPlanningApi (HTTP, as in SD01), the CLI calls it in-process
+    <panel_attributes>title=SD03 - Modify Meal Plan Using Natural Language   (UC08; F06, F07, F09, F10, F11, F12)\nThe page calls the facade in-process; the CLI (PlanCommand modify) and the assistant call the same operations
 obj=Meal Planner~U ACTOR
-obj=:MealPlanningGUI~GUI
+obj=:PlanView\n«JavaFX page»~GUI
 obj=:MealPlanningFacade~F
 obj=:AgentController~AC
-obj=:ConversationMemory~MEM
 obj=:MealPlanningAgent~AG
+obj=:ConversationMemory~MEM
 obj=:PromptBuilder~PB
 obj=:ProviderLLMAdapter\n«LLMClient»~LLM
-obj=External LLM API\n«external»~EXT
+obj=:OpenAIClient\n«external»~EXT
 obj=:ProposalValidator~PV
 obj=:ConstraintValidator~CV
 obj=:MealPlanService~MPS
 obj=cmd:\nReplaceMealCommand~CMD
 obj=plan:MealPlan~MP
 obj=:MealPlanRepository~MPR
+obj=:PlanChangeRepository~PCR
 obj=:GroceryService~GS
 
 U-&gt;&gt;&gt;GUI : 1: "Make Wednesday's\ndinner vegetarian"
-GUI-&gt;&gt;&gt;F : 2: modifyPlan(planId,\ninstruction); on=F
-F-&gt;&gt;&gt;MPS : 3: getPlan(planId); on=MPS
+GUI-&gt;&gt;&gt;F : 2: modifyPlan(profileId,\ninstruction, mode); on=F
+F-&gt;&gt;&gt;MPS : 3: getActivePlan(profileId); on=MPS
 MPS.&gt;F : 4: plan; off=MPS
-F-&gt;&gt;&gt;AC : 5: interpretModification(plan,\ninstruction); on=AC
-AC-&gt;&gt;&gt;AC + : 6:\nbuildContext(\nrequest)
+F-&gt;&gt;&gt;AC : 5: interpretModification(plan,\ninstruction, mode); on=AC
+AC-&gt;&gt;&gt;AC + : 6:\nbuild context\nwith the plan
 tick=1
 AC-&gt;&gt;&gt;AG : 7: proposeChange(context, instruction); on=AG
 AG-&gt;&gt;&gt;MEM : 8: retrieveRelevantContext(\nprofileId, instruction); on=MEM
-MEM.&gt;AG : 9: prior confirmed decisions; off=MEM
-AG-&gt;&gt;&gt;PB : 10: buildChangePrompt(\ncontext, instruction); on=PB
+MEM.&gt;AG : 9: earlier decisions; off=MEM
+text=AG:tool loop as in SD01:\nrecipeSearch for fitting\ncandidates, then rankRecipes()
+AG-&gt;&gt;&gt;PB : 10: buildChangePrompt(\ncontext, instruction, candidates); on=PB
 PB.&gt;AG : 11: prompt; off=PB
-combinedFragment=loop~R AG EXT; PB:[until schema-valid output, max 2 attempts]
-AG-&gt;&gt;&gt;LLM : 12: generateStructured(prompt, PlanChange schema); on=LLM
-LLM-&gt;&gt;&gt;EXT : 13: createStructuredResponse(\nrequest); on=EXT
-EXT.&gt;LLM : 14: response, or timeout /\nprovider error; off=EXT
-LLM.&gt;AG : 15: change data, or LLMError (mapProviderError); off=LLM
---=R
-AG.&gt;AC : 16: PlanChange (target meals, REPLACE_MEAL, rationale); off=AG
-AC-&gt;&gt;&gt;PV : 17: validate(change, context); on=PV
-PV.&gt;AC : 18: ValidationResult; off=PV
-combinedFragment=alt~A1 GUI CV; F:[target ambiguous]
-AC.&gt;F : 19: AgentResponse(\nNEEDS_CLARIFICATION,\nquestion)
-..=A1; F:[provider failed or change infeasible]
-AC.&gt;F : 20: AgentResponse(FAILED\nor CONFLICT, alternatives)
+AG-&gt;&gt;&gt;LLM : 12: generateStructured(prompt, plan_change schema, INSTRUCTIONS); on=LLM
+LLM-&gt;&gt;&gt;EXT : 13: responses().create(\nparams); on=EXT
+EXT.&gt;LLM : 14: answer, or timeout /\nprovider error; off=EXT
+LLM.&gt;AG : 15: replace / clarify / no_change, or LLMException (mapProviderError); off=LLM
+AG.&gt;AC : 16: ChangeAttempt(PlanChange REPLACE_MEAL, toolCalls); off=AG
+combinedFragment=alt~A1 GUI CV; F:[clarification needed]
+AC.&gt;F : 17: AgentResponse(\nNEEDS_CLARIFICATION,\nquestion)
+..=A1; F:[provider failed, or the change breaks a rule]
+AC.&gt;F : 18: AgentResponse(FAILED\nor CONFLICT, reasons)
 ..=A1; F:[valid]
+AC-&gt;&gt;&gt;PV : 19: validate(change, context); on=PV
+PV.&gt;AC : 20: ValidationResult; off=PV
 AC-&gt;&gt;&gt;CV : 21: validateChange(change, context); on=CV
-text=CV:checks via\nvalidateRestrictions()\nand validateTime()
+text=CV:validateRestrictions()\nand validateTime()
 CV.&gt;AC : 22: ValidationResult; off=CV
-AC-&gt;&gt;&gt;AC + : 23:\nhold inpending\nChanges
+AC-&gt;&gt;&gt;AC + : 23:\nhold in\npendingChanges
 tick=1
 AC.&gt;F : 24: AgentResponse(\nNEEDS_CONFIRMATION,\nchange); off=AC
 --=A1
 F.&gt;GUI : 25: AgentResponse; off=F
-GUI.&gt;U : 26: preview, clarification\nquestion, or alternatives
+GUI.&gt;U : 26: preview, question,\nor reasons
 combinedFragment=alt~A2 U GS; GUI:[user confirms]
-U-&gt;&gt;&gt;GUI : 27: Confirm
+U-&gt;&gt;&gt;GUI : 27: Apply
 GUI-&gt;&gt;&gt;F : 28: executeChange(planId,\nchange); on=F
 F-&gt;&gt;&gt;AC : 29: confirmChange(planId,\nchange); on=AC
 AC-&gt;&gt;&gt;MPS : 30: executeChange(planId, change); on=MPS
-MPS-&gt;&gt;&gt;MPS + : 31:\ncreateCommand(\nchange)
+MPS-&gt;&gt;&gt;MPS + : 31:\ncreateCommand(\nchange, plan)
 tick=1
 MPS-&gt;&gt;&gt;CMD : 32: execute(plan); on=CMD
 CMD-&gt;&gt;&gt;MP : 33: replaceMeal(mealId,\nrecipe)
-CMD.&gt;MPS : 34: previous recipe kept for\nundo(); off=CMD
+CMD.&gt;MPS : 34: previous recipe kept\nfor undo(); off=CMD
 MPS-&gt;&gt;&gt;MPR : 35: save(plan)
-MPS.&gt;AC : 36: updated MealPlan; off=MPS
-AC-&gt;&gt;&gt;MEM : 37: recordDecision(profileId,\ndecision)
-AC-&gt;&gt;&gt;GS : 38: refreshForPlan(plan); on=GS
-GS.&gt;AC : 39: refreshed GroceryList; off=GS
-AC.&gt;F : 40: AgentResponse(SUCCESS,\nplan, groceryList); off=AC
-F.&gt;GUI : 41: AgentResponse; off=F
-GUI.&gt;U : 42: updated plan, nutrition,\nand grocery list
+MPS-&gt;&gt;&gt;PCR : 36: append(planId,\nAppliedChange)
+MPS.&gt;AC : 37: updated MealPlan; off=MPS
+AC-&gt;&gt;&gt;AG : 38: recordDecision(profileId,\n"Applied: ...")
+AC-&gt;&gt;&gt;GS : 39: refreshForPlan(plan); on=GS
+GS.&gt;AC : 40: refreshed GroceryList; off=GS
+AC.&gt;F : 41: AgentResponse(SUCCESS,\nplan, groceryList); off=AC
+F.&gt;GUI : 42: AgentResponse; off=F
+GUI.&gt;U : 43: updated plan and\nshopping list
 ..=A2; GUI:[user cancels]
 text=GUI:no command is executed,\nthe active plan is unchanged
 --=A2</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
 </diagram>

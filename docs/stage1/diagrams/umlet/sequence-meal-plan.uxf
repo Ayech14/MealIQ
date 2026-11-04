@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <diagram program="umlet" version="15.1">
   <zoom_level>10</zoom_level>
   <help_text>fontsize=12
@@ -8,13 +8,12 @@
     <coordinates>
       <x>10</x>
       <y>10</y>
-      <w>6251</w>
-      <h>2970</h>
+      <w>6270</w>
+      <h>4436</h>
     </coordinates>
-    <panel_attributes>title=SD01 - Generate Weekly Meal Plan   (UC04; F01, F03, F04, F05, F06, F11, F12)
+    <panel_attributes>title=SD01 - Generate Weekly Meal Plan   (UC04; F01, F03, F05, F06, F11, F12)\nThe page calls the facade in-process on a background worker; the CLI (PlanCommand) and the assistant call the same operation
 obj=Meal Planner~U ACTOR
-obj=:MealPlanningGUI~GUI
-obj=:MealPlanningApi~API
+obj=:PlanView\n«JavaFX page»~GUI
 obj=:MealPlanningFacade~F
 obj=:AgentController~AC
 obj=:MealPlanningAgent~AG
@@ -24,7 +23,8 @@ obj=:ToolManager~TM
 obj=:RecipeTool~RT
 obj=:PromptBuilder~PB
 obj=:ProviderLLMAdapter\n«LLMClient»~LLM
-obj=External LLM API\n«external»~EXT
+obj=:OpenAIClient\n«external»~EXT
+obj=:PortionService~POR
 obj=:ProposalValidator~PV
 obj=:ConstraintValidator~CV
 obj=:NutritionService~NS
@@ -32,76 +32,81 @@ obj=:BudgetService~BS
 obj=:MealPlanService~MPS
 obj=:MealPlanRepository~MPR
 
-U-&gt;&gt;&gt;GUI : 1: Generate plan (start date,\ndays, mode)
-GUI-&gt;&gt;&gt;API : 2: postPlan(request) via\nHTTP; on=API
-API-&gt;&gt;&gt;F : 3: generateWeeklyPlan(\nrequest); on=F
-F-&gt;&gt;&gt;AC : 4: generateWeeklyPlan(\nrequest); on=AC
-AC-&gt;&gt;&gt;AC + : 5:\nbuildContext(\nrequest)
+U-&gt;&gt;&gt;GUI : 1: Generate plan (start date,\ndays, focus, note)
+GUI-&gt;&gt;&gt;F : 2: generateWeeklyPlan(\nrequest); on=F
+F-&gt;&gt;&gt;AC : 3: generateWeeklyPlan(\nrequest); on=AC
+AC-&gt;&gt;&gt;AC + : 4:\nbuildContext(\nrequest)
 tick=1
 combinedFragment=loop~L AC BS; AG:[attempt &lt;= 2 and proposal not yet valid]
-AC-&gt;&gt;&gt;AG : 6: createPlanProposal(\ncontext); on=AG
-AG-&gt;&gt;&gt;SF : 7: strategyFor(context); on=SF
-SF-&gt;&gt;&gt;SF + : 8:\ncreateStrategy(\nmode)
+AC-&gt;&gt;&gt;AG : 5: createPlanProposal(\ncontext); on=AG
+AG-&gt;&gt;&gt;SF : 6: strategyFor(context); on=SF
+SF-&gt;&gt;&gt;SF + : 7:\ncreateStrategy(\nmode)
 tick=1
-SF-&gt;&gt;&gt;ST : 9: configure(profile)
-SF.&gt;AG : 10: NutritionGoal / Budget /\nTimeAware strategy; off=SF
-AG-&gt;&gt;&gt;TM : 11: availableTools(); on=TM
-TM.&gt;AG : 12: recipeSearch, nutrition, grocery, substitution; off=TM
-combinedFragment=loop~T AG EXT; SF:[step &lt;= maxToolSteps and LLM has not signalled "ready to plan"]
-AG-&gt;&gt;&gt;PB : 13: buildToolSelectionPrompt(context, goal, tools, results); on=PB
-PB.&gt;AG : 14: prompt; off=PB
-AG-&gt;&gt;&gt;LLM : 15: generateStructured(prompt, NextAction schema); on=LLM
-LLM-&gt;&gt;&gt;EXT : 16: createStructuredResponse(\nrequest); on=EXT
-EXT.&gt;LLM : 17: structured response; off=EXT
-LLM.&gt;AG : 18: next action: tool call, or "ready to plan"; off=LLM
+SF-&gt;&gt;&gt;ST : 8: configure(profile)
+SF.&gt;AG : 9: NutritionGoal / Budget /\nTimeAware strategy; off=SF
+AG-&gt;&gt;&gt;TM : 10: describeTools(); on=TM
+TM.&gt;AG : 11: recipeSearch, nutritionAnalysis, groceryList, substituteIngredient; off=TM
+combinedFragment=loop~T AG EXT; SF:[step &lt;= maxToolSteps and the LLM has not chosen "finish"]
+AG-&gt;&gt;&gt;PB : 12: buildToolSelectionPrompt(context, goal, filters, ...); on=PB
+PB.&gt;AG : 13: prompt; off=PB
+AG-&gt;&gt;&gt;LLM : 14: generateStructured(prompt, next_action schema, INSTRUCTIONS); on=LLM
+LLM-&gt;&gt;&gt;EXT : 15: responses().create(\nparams); on=EXT
+EXT.&gt;LLM : 16: strict JSON answer; off=EXT
+LLM.&gt;AG : 17: next action: call_tool or finish; off=LLM
 combinedFragment=alt~D AG EXT; SF:[valid tool call, e.g. recipeSearch]
-AG-&gt;&gt;&gt;TM : 19: isValidCall(toolName, args); on=TM
-TM.&gt;AG : 20: true; off=TM
-AG-&gt;&gt;&gt;TM : 21: execute(toolName, args); on=TM
-TM-&gt;&gt;&gt;RT : 22: execute(args); on=RT
-RT-&gt;&gt;&gt;RT + : 23:\nsearchRecipes(\nquery)
+AG-&gt;&gt;&gt;TM : 18: isValidCall(toolName, args); on=TM
+TM.&gt;AG : 19: true; off=TM
+AG-&gt;&gt;&gt;TM : 20: execute(toolName, args, context); on=TM
+TM-&gt;&gt;&gt;RT : 21: execute(args, context); on=RT
+RT-&gt;&gt;&gt;RT + : 22:\nsearchRecipes(\nquery)
 tick=1
-RT.&gt;TM : 24: ToolResult(candidates); off=RT
-TM.&gt;AG : 25: ToolResult; off=TM
-AG-&gt;&gt;&gt;ST : 26: rank(candidates, context); on=ST
-ST.&gt;AG : 27: ranked candidates added to results; off=ST
-..=D; SF:[LLM asks for a custom recipe for a slot]
-ref=AG EXT : SD05 Find or Generate Recipe - generateRecipe(context, query)
+RT.&gt;TM : 23: ToolResult(candidates, summary); off=RT
+TM.&gt;AG : 24: ToolResult (recorded as a ToolCall); off=TM
 ..=D; SF:[unknown tool or invalid arguments]
-text=AG:call is not executed, the error\nis added to results for the next\nstep
-..=D; SF:["ready to plan"]
+text=AG:not executed, callProblems()\nare returned to the LLM as\nthe next observation
+..=D; SF:["finish"]
 text=AG:tool phase ends
 --=D
 --=T
-AG-&gt;&gt;&gt;PB : 28: buildPlanningPrompt(context, ranked); on=PB
-PB.&gt;AG : 29: prompt; off=PB
-AG-&gt;&gt;&gt;LLM : 30: generateStructured(prompt, PlanningProposal schema); on=LLM
-LLM.&gt;AG : 31: proposal data (provider call as above); off=LLM
-AG.&gt;AC : 32: PlanningProposal (meals,\nrationale, conflicts); off=AG
-AC-&gt;&gt;&gt;PV : 33: validate(proposal, context); on=PV
-PV.&gt;AC : 34: ValidationResult (schema, recipe ids, slot count); off=PV
-AC-&gt;&gt;&gt;CV : 35: validatePlan(proposal, context); on=CV
-text=CV:checks via\nvalidateRestrictions()\nand validateTime()
-CV-&gt;&gt;&gt;NS : 36: calculateNutrition(meals); on=NS
-NS.&gt;CV : 37: NutritionSummary; off=NS
-CV-&gt;&gt;&gt;BS : 38: estimateCost(meals, pantry); on=BS
-BS.&gt;CV : 39: estimated cost; off=BS
-CV.&gt;AC : 40: ValidationResult; off=CV
-text=AC:violations are added to\ncontext for the next attempt
+combinedFragment=opt~O AG RT; SF:[fewer than 8 candidates for a meal type, or too few that fit a day's time limit]
+AG-&gt;&gt;&gt;TM : 25: execute("recipeSearch", (mealType, maxMinutes), context); on=TM
+TM.&gt;AG : 26: ToolResult (broad or time-limited search added by the agent); off=TM
+--=O
+AG-&gt;&gt;&gt;ST : 27: rank(candidates, context); on=ST
+ST.&gt;AG : 28: top 8 per meal type, plus quick ones for each time limit; off=ST
+AG-&gt;&gt;&gt;PB : 29: buildPlanningPrompt(context, candidates, ...); on=PB
+PB.&gt;AG : 30: prompt with per-day lists of candidates that fit; off=PB
+AG-&gt;&gt;&gt;LLM : 31: generateStructured(prompt, plan_proposal schema, INSTRUCTIONS); on=LLM
+LLM.&gt;AG : 32: recipe name per slot and rationale (provider call as above); off=LLM
+AG.&gt;AC : 33: PlanAttempt(proposal, toolCalls); off=AG
+AC-&gt;&gt;&gt;POR : 34: sizePortions(proposal, context); on=POR
+POR-&gt;&gt;&gt;NS : 35: calculateNutrition(meals of each day); on=NS
+NS.&gt;POR : 36: NutritionSummary; off=NS
+POR-&gt;&gt;&gt;BS : 37: estimateCost(meals, pantry); on=BS
+BS.&gt;POR : 38: CostEstimate; off=BS
+POR.&gt;AC : 39: proposal with 1 or 2 servings per meal (closer to targets, within budget); off=POR
+AC-&gt;&gt;&gt;PV : 40: validate(proposal, context); on=PV
+PV.&gt;AC : 41: ValidationResult (recipes, slots, meal types); off=PV
+AC-&gt;&gt;&gt;CV : 42: validatePlan(proposal, context); on=CV
+text=CV:validateRestrictions(),\nvalidateTime(), variety
+CV-&gt;&gt;&gt;NS : 43: calculateNutrition(meals); on=NS
+NS.&gt;CV : 44: NutritionSummary; off=NS
+CV-&gt;&gt;&gt;BS : 45: estimateCost(meals, pantry); on=BS
+BS.&gt;CV : 46: CostEstimate; off=BS
+CV.&gt;AC : 47: ValidationResult; off=CV
+text=AC:violations are added to\nthe context for the retry
 --=L
-combinedFragment=alt~A GUI MPR; API:[proposal valid]
-AC-&gt;&gt;&gt;MPS : 41: createFromProposal(proposal); on=MPS
-MPS-&gt;&gt;&gt;MPR : 42: save(plan)
-MPS.&gt;AC : 43: MealPlan; off=MPS
-AC.&gt;F : 44: AgentResponse(SUCCESS,\nplan, rationale)
-..=A; API:[still invalid after 2 attempts]
-AC.&gt;F : 45: AgentResponse(\nCONFLICT, violations,\nalternatives); off=AC
-text=MPS:no plan is persisted,\ntrade-offs are explained
+combinedFragment=alt~A GUI MPR; F:[proposal valid]
+AC-&gt;&gt;&gt;MPS : 48: createFromProposal(request, proposal); on=MPS
+MPS-&gt;&gt;&gt;MPR : 49: save(plan)
+MPS.&gt;AC : 50: MealPlan (ACTIVE, previous\nplan archived); off=MPS
+AC.&gt;F : 51: AgentResponse(SUCCESS,\nplan, rationale, agentSteps)
+..=A; F:[still invalid after 2 attempts]
+AC.&gt;F : 52: AgentResponse(CONFLICT,\nviolations); off=AC
+text=MPS:no plan is saved,\nthe reasons are listed
 --=A
-F.&gt;API : 46: AgentResponse; off=F
-API.&gt;GUI : 47: JSON response; off=API
-GUI.&gt;U : 48: weekly calendar,\nnutrition totals, warnings
-text=GUI:the CLI (MealPlanningCLI) calls\nthe same facade operation\nin-process</panel_attributes>
-    <additional_attributes></additional_attributes>
+F.&gt;GUI : 53: AgentResponse; off=F
+GUI.&gt;U : 54: "Plan saved" with day cards,\nor "No plan was saved" with details</panel_attributes>
+    <additional_attributes />
   </element>
 </diagram>

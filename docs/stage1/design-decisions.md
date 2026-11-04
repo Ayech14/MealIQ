@@ -20,7 +20,7 @@ Allergies and dietary restrictions are hard constraints. Meals-per-day structure
 
 ### D05 - Provider-neutral external integrations
 
-The Stage 2 plan integrates an external LLM API through an OpenAI-oriented `ProviderLLMAdapter`, using an OpenAI GPT model with structured-output support; the model version is pinned in configuration and can be changed without code changes. `LLMClient`, `RecipeDataSource`, and provider adapters prevent external API/SDK types from entering domain code. This supports portability, controlled fakes, failure handling, and provider replacement without an architecture rewrite.
+The Stage 2 plan integrates an external LLM API through an OpenAI-oriented `ProviderLLMAdapter`, using an OpenAI GPT model with structured-output support; the model version is pinned in configuration and can be changed without code changes. `LLMClient`, `PriceDataSource`, and their adapters prevent external API/SDK types from entering domain code. This supports portability, controlled fakes, failure handling, and provider replacement without an architecture rewrite.
 
 ### D06 - Event-driven impact detection within the application boundary
 
@@ -43,7 +43,7 @@ Repository interfaces, injected provider adapters, typed tool results, strategy 
 **Matching rules.**
 
 - Curated recipes reference catalogue ingredients by ID, so they need no matching.
-- External recipes are mapped by `ExternalRecipeAdapter.toRecipe()`, which matches each ingredient name through `IngredientRepository.findByName()`. If any ingredient cannot be matched, the recipe is excluded from results: its allergens, nutrition, and cost cannot be verified.
+- External recipes were to be mapped by an `ExternalRecipeAdapter`, matching each ingredient name through `IngredientRepository.findByName()` and excluding any recipe with an unmatched ingredient, because its allergens, nutrition, and cost could not be verified. The implementation has no external recipe source: every recipe comes from the curated catalogue or AI generation, so all of them use catalogue ingredients.
 - Generated recipes must use catalogue ingredient names supplied in the prompt. An unmatched ingredient fails validation and triggers the single retry described in F04.
 
 **Incomplete data.**

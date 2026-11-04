@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <diagram program="umlet" version="15.1">
   <zoom_level>10</zoom_level>
   <help_text>fontsize=12
@@ -8,12 +8,12 @@
     <coordinates>
       <x>10</x>
       <y>10</y>
-      <w>4810</w>
-      <h>2700</h>
+      <w>5280</w>
+      <h>3450</h>
     </coordinates>
-    <panel_attributes>title=SD04 - Adapt Meal Plan After a Pantry or Constraint Change   (UC02, UC09; F02, F09, F11, F12, F13)\nGUI calls reach the facade through MealPlanningApi (HTTP, as in SD01), the CLI calls it in-process
+    <panel_attributes>title=SD04 - Adapt Meal Plan After a Pantry or Constraint Change   (UC02, UC09; F02, F09, F11, F12, F13)\nThe page calls the facade in-process; the Home check-up (N02), the CLI and the assistant reach the same adaptPlan operation
 obj=Meal Planner~U ACTOR
-obj=:MealPlanningGUI~GUI
+obj=:MealPlanningGUI\n(Pantry and Meal plan pages)~GUI
 obj=:MealPlanningFacade~F
 obj=:PantryService~PS
 obj=pantry:Pantry~P
@@ -22,72 +22,73 @@ obj=:GroceryListImpactObserver~GLO
 obj=:GroceryService~GS
 obj=:MealPlanImpactObserver~MPO
 obj=:MealPlanService~MPS
+obj=:PlanImpactAssessor~PIA
+obj=:PlanImpactRepository~PIR
 obj=:AgentController~AC
 obj=:MealPlanningAgent~AG
-obj=:ToolManager~TM
 obj=:ProviderLLMAdapter\n«LLMClient»~LLM
 obj=:ConstraintValidator~CV
 
-U-&gt;&gt;&gt;GUI : 1: "I ran out of eggs" (set\neggs to 0)
-GUI-&gt;&gt;&gt;F : 2: updatePantry(profileId,\nitem); on=F
-F-&gt;&gt;&gt;PS : 3: updateItem(profileId,\nitem); on=PS
-PS-&gt;&gt;&gt;P : 4: updateItem(item)
-PS-&gt;&gt;&gt;PR : 5: save(pantry)
-PS-&gt;&gt;&gt;PS + : 6:\npublish(event)
+U-&gt;&gt;&gt;GUI : 1: "eggs, 0" (ran out)
+GUI-&gt;&gt;&gt;F : 2: matchIngredients("eggs"); on=F
+F.&gt;GUI : 3: egg (one match, a general\nname such as "beef" lists kinds); off=F
+GUI-&gt;&gt;&gt;F : 4: updatePantry(profileId,\nitem); on=F
+F-&gt;&gt;&gt;PS : 5: updateItem(profileId,\nitem); on=PS
+PS-&gt;&gt;&gt;P : 6: updateItem(item)
+PS-&gt;&gt;&gt;PR : 7: save(pantry)
+PS-&gt;&gt;&gt;PS + : 8:\npublish(event)
 tick=1
 text=PS:event = PlanRelevantChange\n(PANTRY_CHANGED)
-PS-&gt;&gt;&gt;GLO : 7: onPlanRelevantChange(event); on=GLO
-GLO-&gt;&gt;&gt;GS : 8: markAffectedListStale(\nevent)
+PS-&gt;&gt;&gt;GLO : 9: onPlanRelevantChange(event); on=GLO
+GLO-&gt;&gt;&gt;GS : 10: markAffectedListStale(\nevent)
 off=GLO
-PS-&gt;&gt;&gt;MPO : 9: onPlanRelevantChange(event); on=MPO
-MPO-&gt;&gt;&gt;MPS : 10: getActivePlan(profileId); on=MPS
-MPS.&gt;MPO : 11: plan; off=MPS
-MPO-&gt;&gt;&gt;MPS : 12: assessImpact(plan,\nevent); on=MPS
-MPS.&gt;MPO : 13: PlanImpact (meals that\nuse eggs); off=MPS
-combinedFragment=opt~O MPO MPS; MPS:[not impact.isEmpty()]
-MPO-&gt;&gt;&gt;MPS : 14: recordImpact(plan,\nimpact)
---=O
+PS-&gt;&gt;&gt;MPO : 11: onPlanRelevantChange(event); on=MPO
+MPO-&gt;&gt;&gt;MPS : 12: getActivePlan(profileId); on=MPS
+MPS.&gt;MPO : 13: plan; off=MPS
+MPO-&gt;&gt;&gt;MPS : 14: assessImpact(plan,\nevent); on=MPS
+MPS-&gt;&gt;&gt;PIA : 15: assess(plan, cause list); on=PIA
+PIA.&gt;MPS : 16: PlanImpact (meals that\nuse eggs); off=PIA
+MPS.&gt;MPO : 17: PlanImpact; off=MPS
+MPO-&gt;&gt;&gt;MPS : 18: recordImpact(plan,\nimpact); on=MPS
+MPS-&gt;&gt;&gt;PIR : 19: record(planId, cause)\nif the impact is not empty
+off=MPS
 off=MPO
-text=MPO:no LLM call happens inside\nthe event: the pantry update\nreturns immediately
-PS.&gt;F : 15: updated Pantry; off=PS
-F-&gt;&gt;&gt;MPS : 16: getActivePlan(profileId); on=MPS
-MPS.&gt;F : 17: plan with pending PlanImpact; off=MPS
-F.&gt;GUI : 18: pantry and impact notice; off=F
-GUI.&gt;U : 19: affected meals, "Adapt\nplan?"
-combinedFragment=opt~P U CV; GUI:[user chooses Adapt plan]
-U-&gt;&gt;&gt;GUI : 20: Adapt plan
-GUI-&gt;&gt;&gt;F : 21: adaptPlan(planId); on=F
-F-&gt;&gt;&gt;MPS : 22: getPendingImpact(planId); on=MPS
-MPS.&gt;F : 23: PlanImpact; off=MPS
-F-&gt;&gt;&gt;AC : 24: adaptPlan(plan, impact); on=AC
-AC-&gt;&gt;&gt;AG : 25: proposeAdaptation(\ncontext, impact); on=AG
-combinedFragment=loop~T AG LLM; TM:[step &lt;= maxToolSteps and no final PlanChange yet]
-AG-&gt;&gt;&gt;LLM : 26: generateStructured(prompt, NextAction-or-PlanChange schema); on=LLM
-LLM.&gt;AG : 27: recipeSearch call, or final PlanChange; off=LLM
-combinedFragment=alt~D AG LLM; TM:[valid tool call]
-AG-&gt;&gt;&gt;TM : 28: execute(toolName, args); on=TM
-TM.&gt;AG : 29: ToolResult(replacement\ncandidates); off=TM
-..=D; TM:[final PlanChange]
-text=AG:loop ends
---=D
+text=MPO:no LLM call inside the event:\nthe pantry update returns at once
+PS.&gt;F : 20: updated Pantry; off=PS
+F-&gt;&gt;&gt;MPS : 21: getPendingImpact(planId); on=MPS
+MPS-&gt;&gt;&gt;PIA : 22: assess(plan, recorded causes); on=PIA
+PIA.&gt;MPS : 23: PlanImpact (recomputed from\nthe current state); off=PIA
+MPS.&gt;F : 24: PlanImpact; off=MPS
+F.&gt;GUI : 25: AgentResponse(SUCCESS,\nconflicts); off=F
+GUI.&gt;U : 26: "This affects your meal plan",\nthe plan page shows the same notice
+combinedFragment=opt~P U CV; GUI:[user chooses "Let the agent adapt it" (the pantry banner and the Home check-up send the same request through the assistant)]
+U-&gt;&gt;&gt;GUI : 27: Let the agent adapt it
+GUI-&gt;&gt;&gt;F : 28: adaptPlan(profileId); on=F
+F-&gt;&gt;&gt;MPS : 29: getPendingImpact(planId); on=MPS
+MPS.&gt;F : 30: PlanImpact; off=MPS
+F-&gt;&gt;&gt;AC : 31: adaptPlan(plan, impact); on=AC
+AC-&gt;&gt;&gt;AG : 32: proposeAdaptation(\ncontext, impact); on=AG
+combinedFragment=loop~T AG LLM; MPS:[tool loop as in SD01, then one plan_change answer]
+AG-&gt;&gt;&gt;LLM : 33: generateStructured(prompt, schema, INSTRUCTIONS); on=LLM
+LLM.&gt;AG : 34: recipeSearch call, finish, or replacements; off=LLM
 --=T
-AG.&gt;AC : 30: PlanChange (affected\nmeals only); off=AG
-AC-&gt;&gt;&gt;CV : 31: validateChange(change, context); on=CV
-CV.&gt;AC : 32: ValidationResult; off=CV
-AC-&gt;&gt;&gt;AC + : 33:\nhold inpending\nChanges
+AG.&gt;AC : 35: ChangeAttempt (affected\nmeals only); off=AG
+AC-&gt;&gt;&gt;CV : 36: validateChange(change, context); on=CV
+CV.&gt;AC : 37: ValidationResult; off=CV
+AC-&gt;&gt;&gt;AC + : 38:\nhold in\npendingChanges
 tick=1
-AC.&gt;F : 34: AgentResponse(NEEDS_CONFIRMATION or CONFLICT); off=AC
-F.&gt;GUI : 35: proposed changes; off=F
-GUI.&gt;U : 36: preview of adapted\nmeals
-combinedFragment=alt~A U CV; GUI:[user confirms]
-U-&gt;&gt;&gt;GUI : 37: Confirm
-GUI-&gt;&gt;&gt;F : 38: executeChange(planId,\nchange)
-text=F:continues as SD03 messages\n29-42:\nconfirmChange,\nexecuteChange,\nrefreshForPlan (list refreshed)
+AC.&gt;F : 39: AgentResponse(NEEDS_CONFIRMATION or CONFLICT); off=AC
+F.&gt;GUI : 40: proposed changes; off=F
+GUI.&gt;U : 41: preview of adapted\nmeals
+combinedFragment=alt~A U CV; GUI:[user applies]
+U-&gt;&gt;&gt;GUI : 42: Apply
+GUI-&gt;&gt;&gt;F : 43: executeChange(planId,\nchange)
+text=F:continues as in SD03:\nconfirmChange, executeChange,\nrefreshForPlan (list refreshed)
 ..=A; GUI:[no feasible adaptation, or user declines]
-text=GUI:current plan kept and marked\nunresolved,\ngrocery list stays stale until\nrefreshed
+text=GUI:current plan kept, the impact\nstays pending and is shown\nagain on the Home check-up
 --=A
 --=P
 text=GUI:ProfileService.updateProfile()\npublishes PROFILE_CHANGED,\nBUDGET_CHANGED, or\nTIME_LIMIT_CHANGED through\nthe same observers</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
 </diagram>

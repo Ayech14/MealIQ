@@ -88,7 +88,7 @@ JavaFX GUI                     picocli CLI
 
 ## Interfaces, tools, and external resources
 
-`ToolManager` exposes the tools available to the agent: `RecipeTool`, `NutritionTool`, `GroceryTool`, and `SubstitutionTool`. Tool results are internal typed results rather than free-form text. `RecipeDataSource` and `ExternalRecipeAdapter` isolate recipe-provider differences; analogous price/catalog adapters may provide indicative cost data. The database and external APIs are resources accessed through interfaces, allowing controlled fakes in tests.
+`ToolManager` exposes the tools available to the agent: `RecipeTool`, `NutritionTool`, `GroceryTool`, and `SubstitutionTool`. Tool results are internal typed results rather than free-form text. `PriceDataSource` and `StatCanPriceDataSource` isolate the price data (the external recipe adapter of the original design was not built; recipes come from the catalogue and AI generation). The database and external APIs are resources accessed through interfaces, allowing controlled fakes in tests.
 
 ## Scope and assumptions
 

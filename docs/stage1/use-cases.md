@@ -3,8 +3,8 @@
 **Actors.**
 
 - **Meal Planner** (primary): the individual who plans meals and groceries.
-- **External LLM API** («system», supporting): proposes plans, recipes, and changes. Supporting actors provide services to MealIQ but never start a use case.
-- **Recipe / Price Data Provider** («system», supporting): supplies external recipes and indicative prices.
+- **External LLM API** («system», supporting): the OpenAI Responses API with structured output. It proposes plans, recipes, and changes. Supporting actors provide services to MealIQ but never start a use case.
+- **Price data** («data source», supporting): Statistics Canada average retail prices, packaged with the application. Recipes come from the curated catalogue and AI generation (no external recipe provider).
 
 The JavaFX GUI and the picocli CLI are boundary components inside the system, not actors. Both call `MealPlanningFacade` in-process.
 
@@ -28,6 +28,8 @@ The Meal Planner can also start UC03, UC05, UC07, and UC09 directly.
 | UC07 Substitute ingredient or resolve budget conflict | F08, F09, F11, F12 | SD02 (budget path), SD03 (confirmation path) |
 | UC08 Modify meal plan in natural language | F06-F12 | SD03 |
 | UC09 Adapt affected plan | F02, F09-F13 | SD04 |
+| N01 Ask the agent in plain language (added in the implementation) | starts UC01-UC09 | SD01-SD05 after the routing step |
+| N02 Review the agent check-up (added in the implementation) | F02, F07-F09, F13 | - (deterministic read, then N01) |
 
 UC01 and UC05 are single-service operations: the facade makes one validated service call. They share the boundary and facade structure shown in SD04 and SD01, so they have no separate sequence diagram.
 
@@ -64,12 +66,12 @@ UC01 and UC05 are single-service operations: the facade makes one validated serv
 | Field | Description |
 |---|---|
 | Primary actor | Meal Planner |
-| Supporting actors | Recipe / Price Data Provider, External LLM API |
+| Supporting actors | Price data, External LLM API |
 | Goal | Receive compatible recipe recommendations, or a custom generated recipe. |
-| Preconditions | A profile exists. A recipe source and an LLM adapter are configured. |
+| Preconditions | A profile exists. The recipe catalogue is loaded and an LLM adapter is configured. |
 | Trigger | The user searches recipes, asks for a recommendation, or asks for a generated recipe. |
 | Main success scenario | 1. The user submits criteria (`RecipeQuery`).<br>2. `AgentController.recommendRecipe()` builds a `PlanningContext` from the profile and pantry.<br>3. `MealPlanningAgent.recommendRecipes()` calls `RecipeTool` through `ToolManager`.<br>4. `RecipeTool.searchRecipes()` queries `RecipeRepository`.<br>5. The agent ranks the candidates with the strategy from `PlanningStrategyFactory`.<br>6. For each returned recipe, `ConstraintValidator.validateRestrictions()` checks allergens, dislikes, and time, and `NutritionService.calculateNutrition()` adds nutrition.<br>7. The interface shows the ranked recipes with rationale, time, cost, and nutrition. |
-| Alternative / exception flows | 4a. Too few local matches: `ExternalRecipeAdapter` queries the external provider. If the provider fails, only local results are used and the user is told.<br>5a. No compatible candidate, or a custom recipe was requested: `generateRecipe()` asks the LLM for a schema-constrained recipe through `PromptBuilder` and `ProviderLLMAdapter`, then continues at step 6.<br>6a. A generated recipe breaks a restriction or is malformed after one retry: it is rejected and the trade-offs are explained. |
+| Alternative / exception flows | 4a. Too few matches: the agent may refine the search; if nothing fits, the user is offered a generated recipe (5a).<br>5a. No compatible candidate, or a custom recipe was requested: `generateRecipe()` asks the LLM for a schema-constrained recipe through `PromptBuilder` and `ProviderLLMAdapter`, then continues at step 6.<br>6a. A generated recipe breaks a restriction or is malformed after one retry: it is rejected and the trade-offs are explained. |
 | Postconditions | Only validated recipes are shown. No plan state changes. |
 | Related features | F03, F04, F06, F09, F11, F12 |
 
@@ -78,7 +80,7 @@ UC01 and UC05 are single-service operations: the facade makes one validated serv
 | Field | Description |
 |---|---|
 | Primary actor | Meal Planner |
-| Supporting actors | External LLM API, Recipe / Price Data Provider |
+| Supporting actors | External LLM API, Price data |
 | Goal | Create a multi-day plan with the requested meals per day that satisfies the user's constraints. |
 | Preconditions | A profile exists. A planning period and mode are supplied. |
 | Trigger | The user selects "Generate plan" or runs `mealiq plan generate`. |
@@ -105,7 +107,7 @@ UC01 and UC05 are single-service operations: the facade makes one validated serv
 | Field | Description |
 |---|---|
 | Primary actor | Meal Planner |
-| Supporting actors | Recipe / Price Data Provider |
+| Supporting actors | Price data |
 | Goal | Get a combined, pantry-aware shopping list with a budget estimate. |
 | Preconditions | An active plan and a pantry exist. |
 | Trigger | The user selects "Generate" or "Optimize" on the grocery screen. |
@@ -155,3 +157,31 @@ UC01 and UC05 are single-service operations: the facade makes one validated serv
 | Alternative / exception flows | 3a. The impact is empty: nothing is recorded or shown.<br>4a. The user does not choose to adapt: the impact stays recorded and the plan is flagged as affected.<br>5a. No feasible adaptation exists: the plan is kept, marked unresolved, and its conflicts are listed.<br>7a. The user declines: the plan stays as it is and the grocery list remains marked stale until refreshed. |
 | Postconditions | Affected meals are updated after confirmation, or are marked unresolved. Unaffected meals are never changed. |
 | Related features | F02, F09, F10, F11, F12, F13 |
+
+## N01 - Ask the agent in plain language
+
+| Field | Description |
+|---|---|
+| Primary actor | Meal Planner |
+| Supporting actors | External LLM API |
+| Goal | Start any MealIQ task from one typed request instead of a form. |
+| Preconditions | None. A request that needs a plan or profile explains what is missing. |
+| Trigger | The user types a message on the "Ask the agent" page, uses a Home suggestion, or runs `mealiq ask "..."`. |
+| Main success scenario | 1. `MealPlanningFacade.ask()` calls `AgentController.interpretRequest()`.<br>2. `MealPlanningAgent.interpretRequest()` returns an `AssistantRequest` with one of twelve actions (recipes, new recipe, plan, change plan, substitute, adapt, cheaper, groceries, pantry, profile, show plan, answer). The structured-output schema limits pantry ingredients, diets, and allergies to supported values.<br>3. The facade runs the matching use case (UC01-UC09) through the same operations the forms use.<br>4. Pantry and profile updates are previewed and saved only after `confirmUpdate()`; plan changes are previewed and confirmed as in UC08.<br>5. The interface shows the reply, the result, and the agent's steps. |
+| Alternative / exception flows | 2a. The request is a question, or a general food fits several catalogue ingredients ("beef"): the agent answers or asks which kind, and nothing changes.<br>2b. The provider fails: a `FAILED` reply is shown and nothing changes.<br>3a. The use case reports a conflict: the reasons are shown and nothing is saved. |
+| Postconditions | The same results as the use case that was run, after the same validation and confirmation. |
+| Related features | All features reached through UC01-UC09 |
+
+## N02 - Review the agent check-up
+
+| Field | Description |
+|---|---|
+| Primary actor | Meal Planner |
+| Supporting actors | None (the LLM is used only if the user accepts a suggestion) |
+| Goal | See today's meals and what needs attention, and act on it with one click. |
+| Preconditions | None. |
+| Trigger | The user opens the Home page, or data changes while it is open. |
+| Main success scenario | 1. `MealPlanningFacade.checkup()` reads the profile, active plan, pending `PlanImpact`, pantry expiry dates, grocery list, and `BudgetStatus`. No LLM call is made.<br>2. It returns a `Checkup` with today's meals and nutrition, pantry and shopping counts, and suggestions, most urgent first: missing profile, plan no longer fits, no current plan, expired items, items expiring within three days, over budget, no shopping list.<br>3. The user presses a suggestion's button. It opens a page or sends the suggestion's request to the agent (N01). |
+| Alternative / exception flows | 2a. Nothing needs attention: an "All good" message is shown.<br>3a. The user ignores the suggestions: nothing changes. |
+| Postconditions | Nothing is changed by the check-up itself. Any change goes through N01 and its preview and confirmation. |
+| Related features | F02, F07, F08, F09, F13 |

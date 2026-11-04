@@ -8,7 +8,7 @@ Each feature traces from requirement to use case, classes, methods, sequence dia
 |---|---|---|---|---|---|---|---|
 | F01 | User goals and preferences | Deterministic | UC01 | `MealPlanningFacade`, `ProfileService`, `UserProfile`, `ProfileRepository` | `updateProfile()`, `save()`, `publish()` | SD04 (profile-change path) | Facade, Observer |
 | F02 | Pantry inventory management | Deterministic | UC02 | `MealPlanningFacade`, `PantryService`, `Pantry`, `PantryItem`, `PantryRepository` | `updatePantry()`, `updateItem()`, `availableQuantity()`, `publish()` | SD04 | Facade, Observer |
-| F03 | Recipe search and recommendation | Hybrid | UC03 | `AgentController`, `MealPlanningAgent`, `ToolManager`, `RecipeTool`, `RecipeRepository`, `ExternalRecipeAdapter`, `PlanningStrategy` | `recommendRecipe()`, `recommendRecipes()`, `searchRecipes()`, `find()`, `rankRecipes()`, `rank()` | SD05, SD01 | Strategy, Factory Method, Adapter, Facade |
+| F03 | Recipe search and recommendation | Hybrid | UC03 | `AgentController`, `MealPlanningAgent`, `ToolManager`, `RecipeTool`, `RecipeRepository`, `PlanningStrategy` | `recommendRecipe()`, `recommendRecipes()`, `searchRecipes()`, `search()`, `rankRecipes()`, `rank()` | SD05, SD01 | Strategy, Factory Method, Adapter, Facade |
 | F04 | AI recipe generation | Hybrid | UC03 | `MealPlanningAgent`, `PromptBuilder`, `LLMClient`, `ProviderLLMAdapter`, `ConstraintValidator`, `NutritionService` | `generateRecipe()`, `buildRecipePrompt()`, `generateStructured()`, `validateRestrictions()`, `calculateNutrition()` | SD05 | Adapter, Facade |
 | F05 | Weekly meal-plan generation | Hybrid | UC04 | `AgentController`, `MealPlanningAgent`, `PlanningStrategyFactory`, `PromptBuilder`, `ToolManager`, `ProposalValidator`, `ConstraintValidator`, `MealPlanService`, `MealPlanRepository` | `generateWeeklyPlan()`, `createPlanProposal()`, `strategyFor()`, `createStrategy()`, `buildToolSelectionPrompt()`, `isValidCall()`, `execute()`, `validatePlan()`, `createFromProposal()` | SD01 | Strategy, Factory Method, Facade, Adapter |
 | F06 | Nutrition analysis | Deterministic | UC05 | `NutritionService`, `NutritionTool`, `NutritionSummary`, `ConstraintValidator` | `calculateNutrition()`, `dailyTotals()`, `analyze()` | SD01, SD05 | Facade |
@@ -65,11 +65,10 @@ All features are reached through `MealPlanningFacade`, which is why Facade appea
 - `MealPlanningAgent`: lets the LLM choose the retrieval tool, applies the strategy through `rankRecipes()`, and has the LLM explain the result.
 - `ToolManager`: dispatches the named tool.
 - `RecipeTool`: retrieves candidates.
-- `RecipeRepository`: provides curated recipes.
-- `ExternalRecipeAdapter`: provides external recipes behind `RecipeDataSource`.
+- `RecipeRepository`: provides curated and saved generated recipes.
 - `PlanningStrategyFactory` / `PlanningStrategy`: create and configure the deterministic ranking policy (`strategyFor()`, `rank()`).
 
-**Important methods:** `AgentController.recommendRecipe()`, `MealPlanningAgent.recommendRecipes()`, `ToolManager.execute()`, `RecipeTool.searchRecipes()`, `RecipeRepository.search()`, `RecipeDataSource.find()`, `MealPlanningAgent.rankRecipes()`, `PlanningStrategy.rank()`.
+**Important methods:** `AgentController.recommendRecipe()`, `MealPlanningAgent.recommendRecipes()`, `ToolManager.execute()`, `RecipeTool.searchRecipes()`, `RecipeRepository.search()`, `MealPlanningAgent.rankRecipes()`, `PlanningStrategy.rank()`.
 
 **Execution.** The agent calls the recipe tool through `ToolManager`. The tool queries the repository first and the external adapter only when there are too few matches. The agent then ranks candidates with the strategy chosen for the planning mode. **AI:** tool selection and the explanation. **Deterministic:** retrieval, filtering, strategy ranking, and `ConstraintValidator.validateRestrictions()` on each result. If nothing fits, near matches are returned with their violated constraint, or generation (F04) is offered.
 
@@ -147,7 +146,7 @@ All features are reached through `MealPlanningFacade`, which is why Facade appea
 **Classes involved**
 
 - `GroceryService`: combines duplicates and attaches prices.
-- `PriceDataSource` / `ExternalPriceAdapter`: provide indicative prices.
+- `PriceDataSource` / `StatCanPriceDataSource`: provide Statistics Canada average retail prices.
 - `BudgetService`: produces `BudgetStatus` with the estimate, shortfall, and cost drivers.
 - `AgentController`: starts conflict resolution.
 - `MealPlanningAgent` / `SubstitutionTool`: propose cheaper alternatives.

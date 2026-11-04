@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <diagram program="umlet" version="15.1">
   <zoom_level>10</zoom_level>
   <help_text>fontsize=14
@@ -9,12 +9,12 @@
       <x>470</x>
       <y>100</y>
       <w>730</w>
-      <h>1210</h>
+      <h>1480</h>
     </coordinates>
     <panel_attributes>*MealIQ*
-(React GUI and Typer CLI share MealPlanningFacade)
+(JavaFX GUI and picocli CLI share MealPlanningFacade)
 valign=top</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>Relation</id>
@@ -276,7 +276,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC01  Configure profile and constraints
 (F01, F11, F12, F13)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLUseCase</id>
@@ -288,7 +288,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC09  Adapt affected plan
 (F02, F09-F13)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLUseCase</id>
@@ -300,7 +300,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC02  Manage pantry
 (F02, F13)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLUseCase</id>
@@ -312,7 +312,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC08  Modify meal plan in natural language
 (F06-F12)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLUseCase</id>
@@ -324,7 +324,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC03  Find or generate a recipe
 (F03, F04, F06, F09, F11, F12)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLUseCase</id>
@@ -336,7 +336,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC04  Generate weekly meal plan
 (F01, F03-F06, F11, F12)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLUseCase</id>
@@ -348,7 +348,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC05  Analyze nutrition
 (F06)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLUseCase</id>
@@ -360,7 +360,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC06  Generate and optimize grocery list
 (F02, F07, F08, F12)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLUseCase</id>
@@ -372,7 +372,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>UC07  Substitute ingredient or resolve budget conflict
 (F08, F09, F11, F12)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>Text</id>
@@ -384,18 +384,18 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>fontsize=18
 *MealIQ - UML Use-Case Diagram*</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>Text</id>
     <coordinates>
       <x>20</x>
       <y>48</y>
-      <w>1100</w>
+      <w>1300</w>
       <h>26</h>
     </coordinates>
-    <panel_attributes>Primary actor on the left; supporting external systems on the right. Feature IDs (F01-F13) under each use case show coverage.</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <panel_attributes>Primary actor on the left; supporting systems on the right. Feature IDs (F01-F13) under each use case show coverage; N01 and N02 were added in the implementation.</panel_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLActor</id>
@@ -407,7 +407,7 @@ valign=top</panel_attributes>
     </coordinates>
     <panel_attributes>Meal Planner
 (primary user)</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLActor</id>
@@ -418,9 +418,10 @@ valign=top</panel_attributes>
       <h>130</h>
     </coordinates>
     <panel_attributes>«system»
-External LLM API
-(OpenAI planned)</panel_attributes>
-    <additional_attributes></additional_attributes>
+OpenAI API
+(Responses API,
+structured output)</panel_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLActor</id>
@@ -430,16 +431,16 @@ External LLM API
       <w>200</w>
       <h>130</h>
     </coordinates>
-    <panel_attributes>«system»
-Recipe / Price
-Data Provider</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <panel_attributes>«data source»
+Statistics Canada
+retail prices</panel_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLNote</id>
     <coordinates>
       <x>20</x>
-      <y>1340</y>
+      <y>1610</y>
       <w>425</w>
       <h>80</h>
     </coordinates>
@@ -447,20 +448,78 @@ Data Provider</panel_attributes>
 not actors: both reach these use cases through the
 same MealPlanningFacade (no duplicated business logic).
 bg=#FFFDE7</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
   </element>
   <element>
     <id>UMLNote</id>
     <coordinates>
-      <x>1230</x>
-      <y>1340</y>
-      <w>454</w>
-      <h>80</h>
+      <x>1150</x>
+      <y>1610</y>
+      <w>534</w>
+      <h>100</h>
     </coordinates>
-    <panel_attributes>Supporting actors never initiate a use case. The LLM API
+    <panel_attributes>Supporting actors never initiate a use case. The OpenAI API
 proposes plans, recipes, and changes; MealIQ validates them
-deterministically before anything is saved.
+deterministically before anything is saved. Prices are packaged
+Statistics Canada data; recipes come from the catalogue and AI.
 bg=#FFFDE7</panel_attributes>
-    <additional_attributes></additional_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLUseCase</id>
+    <coordinates>
+      <x>600</x>
+      <y>1322</y>
+      <w>470</w>
+      <h>76</h>
+    </coordinates>
+    <panel_attributes>N01  Ask the agent in plain language
+(starts UC01-UC09 from one typed request)</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>UMLUseCase</id>
+    <coordinates>
+      <x>600</x>
+      <y>1450</y>
+      <w>470</w>
+      <h>76</h>
+    </coordinates>
+    <panel_attributes>N02  Review the agent check-up
+(Home page; proposes UC04, UC06, UC07, UC09)</panel_attributes>
+    <additional_attributes />
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>175</x>
+      <y>670</y>
+      <w>445</w>
+      <h>710</h>
+    </coordinates>
+    <panel_attributes>lt=-</panel_attributes>
+    <additional_attributes>20.0;20.0;425.0;690.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>175</x>
+      <y>670</y>
+      <w>445</w>
+      <h>838</h>
+    </coordinates>
+    <panel_attributes>lt=-</panel_attributes>
+    <additional_attributes>20.0;20.0;425.0;818.0</additional_attributes>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1050</x>
+      <y>360</y>
+      <w>485</w>
+      <h>1020</h>
+    </coordinates>
+    <panel_attributes>lt=-</panel_attributes>
+    <additional_attributes>20;1000.0;465.0;20.0</additional_attributes>
   </element>
 </diagram>

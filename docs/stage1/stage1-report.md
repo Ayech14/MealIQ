@@ -84,7 +84,7 @@ There are thirteen features, F01-F13: preferences, pantry, recipe search, recipe
 | Command | Previewable, auditable, reversible plan changes | `PlanChangeCommand`, `ReplaceMealCommand`, `SubstituteIngredientCommand`, `UpdatePlanConstraintCommand`, `MealPlanService` (invoker), `MealPlan` (receiver) |
 | Observer | Reacting to pantry and profile changes without coupling the services that publish them | `PlanRelevantChangePublisher`, `PantryService`, `ProfileService`, `PlanImpactObserver`, `MealPlanImpactObserver`, `GroceryListImpactObserver` |
 | Facade | One application boundary shared by the GUI and the CLI | `MealPlanningFacade`, `MealPlanningGUI`, `MealPlanningCLI` |
-| Adapter | Isolating provider-specific LLM, recipe, and price APIs | `LLMClient` / `ProviderLLMAdapter`, `RecipeDataSource` / `ExternalRecipeAdapter`, `PriceDataSource` / `ExternalPriceAdapter` |
+| Adapter | Isolating the provider-specific LLM API and price data | `LLMClient` / `ProviderLLMAdapter` (OpenAI), `PriceDataSource` / `StatCanPriceDataSource`; the external recipe adapter of the original design was not built |
 
 For each pattern, [design-patterns.md](design-patterns.md) gives the problem, participants and roles, rationale, what would be harder without it, and where it appears in the UML.
 
@@ -94,17 +94,17 @@ For each pattern, [design-patterns.md](design-patterns.md) gives the problem, pa
 
 Source: [use-case-diagram.uxf](diagrams/umlet/use-case-diagram.uxf).
 
-- **Actors.** The Meal Planner is the primary actor. The External LLM API and the Recipe / Price Data Provider are supporting «system» actors.
-- **Use cases.** There are nine, each labelled with the features it covers.
+- **Actors.** The Meal Planner is the primary actor. The External LLM API (OpenAI) is a supporting «system» actor, and the packaged Statistics Canada price data is a supporting data source. N01 (Ask the agent) and N02 (agent check-up) were added in the implementation.
+- **Use cases.** There are nine from the design, each labelled with the features it covers, plus N01 and N02.
 - **Relationships.** UC04 «include»s UC03 and UC05. UC07 «extend»s UC06 when over budget. UC09 «extend»s UC01 and UC02 when a change affects the active plan.
 
 [use-cases.md](use-cases.md) describes each use case with ID, name, actors, goal, preconditions, trigger, numbered main success scenario, alternative and exception flows, postconditions, and related features.
 
 ## 5. Class diagrams
 
-The class model has 81 classes, interfaces, and enumerations in thirteen packages. All views come from the same model, so names, members, and relationships are identical across them.
+The class model has 94 classes, interfaces, records, and enumerations in thirteen packages, updated to the Java implementation (simple accessors are omitted, and `Optional` results are shown as `[0..1]`). All views come from the same model, so names, members, and relationships are identical across them.
 
-**Complete class diagram.** Every class with typed attributes, operations, visibility, stereotypes, multiplicities, associations, aggregation and composition, generalization, and realization. Cross-package dependency arrows are left to the focused views to keep it readable.
+**Complete class diagram.** Every class with typed attributes, operations, visibility, stereotypes, multiplicities, associations, aggregation and composition, generalization, and realization. Relationships that cross between the focused views are left to those views to keep it readable.
 
 ![MealIQ complete class diagram](diagrams/png/class-diagram-complete.png)
 
@@ -112,13 +112,13 @@ Source: [class-diagram-complete.uxf](diagrams/umlet/class-diagram-complete.uxf).
 
 The four focused views below show the same model at a readable scale. Classes detailed in another view appear as dashed context boxes, and together the focused views draw every relationship, including all dependencies.
 
-**Architecture, agent, and integrations:** GUI, API, CLI, facade, controller, agent, tools, memory, prompt builder, LLM adapter, and recipe and price adapters.
+**Architecture, agent, and integrations:** JavaFX GUI (`GuiContext`, `HomeView` and the other pages), picocli CLI, facade, controller, agent, tools, memory, prompt builder, LLM adapter with a scripted test client, and the price adapter.
 
 ![MealIQ architecture class diagram](diagrams/png/class-diagram.png)
 
 Source: [class-diagram.uxf](diagrams/umlet/class-diagram.uxf).
 
-**Services and design patterns:** deterministic services and validators with the Strategy, Factory Method, Observer, and Command structures.
+**Services and design patterns:** deterministic services and validators, including `PortionService` and `PlanImpactAssessor`, with the Strategy, Factory Method, Observer, and Command structures.
 
 ![MealIQ services and patterns class diagram](diagrams/png/class-diagram-services.png)
 
@@ -130,7 +130,7 @@ Source: [class-diagram-services.uxf](diagrams/umlet/class-diagram-services.uxf).
 
 Source: [class-diagram-domain.uxf](diagrams/umlet/class-diagram-domain.uxf).
 
-**Agent contracts and persistence:** request, context, proposal, change, impact, validation, and response types, and the repository interfaces.
+**Agent contracts and persistence:** request, context, proposal, change, impact, validation, response, assistant (`AssistantRequest`), and check-up (`Checkup`) types, and the repository interfaces with their JDBC implementations.
 
 ![MealIQ contracts and persistence class diagram](diagrams/png/class-diagram-values.png)
 
@@ -146,15 +146,15 @@ Each diagram shows:
 - deterministic services, domain objects, and repositories;
 - external APIs.
 
-Messages are numbered and returns are shown, with activation bars and `alt` / `opt` / `loop` / `ref` fragments for alternative and error flows. Every call uses an operation defined in the class diagram. SD01 shows the full path from `MealPlanningGUI` to `MealPlanningFacade`; the original diagrams also show the `MealPlanningApi` HTTP layer, which Stage 2 removed. The sequence diagrams use wide layouts, with 15-19 lifelines depending on the interaction.
+Messages are numbered and returns are shown, with activation bars and `alt` / `opt` / `loop` fragments for alternative and error flows. Every call uses an operation defined in the class diagram. Each diagram starts at the JavaFX page that calls `MealPlanningFacade` in-process; the `MealPlanningApi` HTTP layer of the original design was removed in Stage 2. The sequence diagrams use wide layouts, with 14-19 lifelines depending on the interaction.
 
 | Diagram | Use case(s) | Features | Main alternative / error flows |
 |---|---|---|---|
-| SD01 Generate weekly meal plan | UC04 (+ UC03, UC05) | F01, F03-F06, F11, F12 | `loop` re-plan on violations; nested `loop` LLM-driven tool selection with `alt` valid call / custom recipe (`ref` SD05) / invalid call / ready; `alt` save versus `CONFLICT` |
-| SD02 Generate and optimize grocery list | UC06, UC07 | F07, F08, F09, F12 | `loop` over requirements and prices; `alt` within budget versus substitution proposal (LLM-driven tool loop) |
-| SD03 Modify plan in natural language | UC08 (+ UC07 confirmation) | F06, F07, F09-F12 | `loop` LLM retry; `alt` clarification / failure / valid; `alt` confirm versus cancel |
+| SD01 Generate weekly meal plan | UC04 (+ UC03, UC05) | F01, F03, F05, F06, F11, F12 | `loop` re-plan on violations; nested `loop` LLM-driven tool selection with `alt` valid call / invalid call / finish; `opt` automatic broad or time-limited search; deterministic portion sizing; `alt` save versus `CONFLICT` |
+| SD02 Generate and optimize grocery list | UC06, UC07 | F07, F08, F09, F12 | `loop` over requirements and prices; `alt` within budget versus cheaper-plan proposal (LLM-driven tool loop) |
+| SD03 Modify plan in natural language | UC08 (+ UC07 confirmation) | F06, F07, F09-F12 | `alt` clarification / failure or rule violation / valid; `alt` confirm versus cancel |
 | SD04 Adapt after pantry or constraint change | UC02, UC09 (UC01 path noted) | F02, F09, F11-F13 | observers only record the impact (no LLM call inside the event); `opt` user chooses to adapt, with tool `loop`; `alt` confirm versus no feasible adaptation |
-| SD05 Find or generate recipe | UC03 | F03, F04, F06, F11, F12 | `opt` external provider; `alt` generate versus ranked results; `loop` validation; `alt` success versus conflict |
+| SD05 Find or generate recipe | UC03 | F03, F04, F06, F11, F12 | `loop` restriction check; `alt` recommended recipes versus nothing fits, then AI generation with a `loop` of at most two attempts |
 
 UC01 and UC05 are single facade-to-service calls with the same boundary structure, so their behaviour is covered by the profile-change path noted in SD04 and the `NutritionService` calls in SD01 and SD05.
 

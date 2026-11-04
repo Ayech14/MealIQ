@@ -71,7 +71,7 @@ CLI command names below are the planned command surface for Stage 2.
 | Input | `RecipeQuery` together with the user's profile and pantry. |
 | Output | Ranked compatible recipes, with the reason each was chosen and any excluded or near-match recipes. |
 | AI involvement | Hybrid. Retrieval, filtering, and ranking are deterministic: the selected `PlanningStrategy` scores and orders the candidates. The LLM chooses the retrieval tool and its arguments, and explains why the top recipes fit. |
-| Expected workflow | `AgentController.recommendRecipe()` builds a `PlanningContext`. `MealPlanningAgent.recommendRecipes()` calls `RecipeTool` through `ToolManager`. `RecipeTool.searchRecipes()` queries `RecipeRepository` and, when local results are insufficient, `ExternalRecipeAdapter`. The agent then calls `rankRecipes()`, and every returned recipe is checked by `ConstraintValidator.validateRestrictions()` (SD05). |
+| Expected workflow | `AgentController.recommendRecipe()` builds a `PlanningContext`. `MealPlanningAgent.recommendRecipes()` calls `RecipeTool` through `ToolManager`. `RecipeTool.searchRecipes()` queries `RecipeRepository` (curated and saved recipes; the external recipe adapter of the original design was not built). The agent then calls `rankRecipes()`, and every returned recipe is checked by `ConstraintValidator.validateRestrictions()` (SD05). |
 | Error / alternative cases | If no recipe fits exactly, near matches are returned with the constraint each violates, or generation (F04) is offered. If the external provider fails, results are limited to the local repository and the user is told. External recipes whose ingredients cannot all be matched to the ingredient catalogue are excluded (D09). |
 
 ## F04 - AI recipe generation
