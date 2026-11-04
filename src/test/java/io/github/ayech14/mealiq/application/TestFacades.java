@@ -35,8 +35,17 @@ public final class TestFacades {
     public static final int MAX_TOOL_STEPS = 4;
 
     /** Every ingredient costs $1.00 per 100 g, or per unit when it has no weight. */
-    public static final PriceDataSource FLAT_PRICES = (Ingredient ingredient, Quantity quantity) -> Optional.of(
-            BigDecimal.valueOf(ingredient.toGrams(quantity).orElse(quantity.amount() * 100) / 100));
+    public static final PriceDataSource FLAT_PRICES = new PriceDataSource() {
+        @Override
+        public Optional<BigDecimal> estimatePrice(Ingredient ingredient, Quantity quantity) {
+            return Optional.of(BigDecimal.valueOf(ingredient.toGrams(quantity).orElse(quantity.amount() * 100) / 100));
+        }
+
+        @Override
+        public String describe() {
+            return "test prices of $1.00 per 100 g";
+        }
+    };
 
     private TestFacades() {
     }
