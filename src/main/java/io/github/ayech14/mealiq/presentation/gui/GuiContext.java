@@ -40,6 +40,8 @@ final class GuiContext {
     private final StringProperty status = new SimpleStringProperty("Ready.");
     private final List<Runnable> dataListeners = new ArrayList<>();
     private String profileName = "default";
+    private Consumer<String> navigator = page -> { };
+    private Consumer<String> agent = message -> { };
 
     GuiContext(MealPlanningFacade facade) {
         this.facade = facade;
@@ -60,6 +62,26 @@ final class GuiContext {
     void profileName(String name) {
         profileName = name == null || name.isBlank() ? "default" : name.strip();
         dataChanged();
+    }
+
+    /** The shell registers how to open a page by name ("home", "plan", ...). */
+    void navigator(Consumer<String> open) {
+        navigator = open;
+    }
+
+    void navigate(String page) {
+        navigator.accept(page);
+    }
+
+    /** The assistant registers how to send it a message. */
+    void agent(Consumer<String> send) {
+        agent = send;
+    }
+
+    /** Opens the assistant and sends it {@code message}, as if the user had typed it. */
+    void askAgent(String message) {
+        navigate("assistant");
+        agent.accept(message);
     }
 
     BooleanProperty busy() {

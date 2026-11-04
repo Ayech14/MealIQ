@@ -41,9 +41,6 @@ final class AssistantView {
     static final List<String> SUGGESTIONS = List.of(
             "Plan 3 days of quick meals", "Suggest a high-protein dinner under 30 minutes", "I ran out of eggs",
             "I'm vegetarian and allergic to peanuts", "Make my plan cheaper", "What do I need to buy?");
-    private static final String USER_STYLE = "-fx-background-color: #d9ebff; -fx-background-radius: 12;";
-    private static final String AGENT_STYLE = "-fx-background-color: #ffffff; -fx-background-radius: 12; "
-            + "-fx-border-color: #dddddd; -fx-border-radius: 12;";
 
     private final GuiContext context;
     private final VBox conversation = new VBox(12);
@@ -61,7 +58,7 @@ final class AssistantView {
         input.setPromptText("Tell MealIQ what you want, e.g. \"plan 3 cheap vegetarian days\"");
         input.setOnAction(e -> send(input.getText()));
         HBox.setHgrow(input, Priority.ALWAYS);
-        Button send = new Button("Send");
+        Button send = Ui.primary(new Button("Send"));
         send.setDefaultButton(true);
         send.setOnAction(e -> send(input.getText()));
         send.disableProperty().bind(context.busy());
@@ -69,13 +66,17 @@ final class AssistantView {
 
         FlowPane chips = new FlowPane(8, 8);
         for (String suggestion : SUGGESTIONS) {
-            Hyperlink chip = new Hyperlink(suggestion);
+            Hyperlink chip = Ui.styled(new Hyperlink(suggestion), "chip");
             chip.setOnAction(e -> send(suggestion));
             chip.disableProperty().bind(context.busy());
             chips.getChildren().add(chip);
         }
-        root.setPadding(new Insets(16));
-        root.getChildren().addAll(scroll, chips, Ui.row(8, input, send));
+        scroll.getStyleClass().add("page-scroll");
+        root.getStyleClass().add("page");
+        root.getChildren().addAll(Ui.styled(new Label("Ask the agent"), "page-title"),
+                Ui.wrapped("Say what you want. The agent picks the action, uses its tools (recipe search, nutrition, "
+                        + "groceries, substitutions) and shows you any change before making it.", "page-subtitle"),
+                scroll, chips, Ui.row(8, input, send));
         agentSays(new VBox(6, wrapped("Hi! I'm the MealIQ agent. Tell me about your diet and goals, what's in your "
                 + "pantry, or ask for recipes, a meal plan or a shopping list. I use tools to search recipes and "
                 + "check nutrition and prices, and I always show you a change before I make it."),
@@ -212,7 +213,7 @@ final class AssistantView {
 
     /** Apply and Cancel buttons; after either, they are replaced by what happened. */
     private Node choice(String yes, String no, Supplier<AgentResponse> apply, VBox card) {
-        Button accept = new Button(yes);
+        Button accept = Ui.primary(new Button(yes));
         Button decline = new Button(no);
         HBox buttons = Ui.row(8, accept, decline);
         accept.disableProperty().bind(context.busy());
@@ -231,14 +232,16 @@ final class AssistantView {
 
     private void userSays(String text) {
         Label bubble = wrapped(text);
-        bubble.setStyle(USER_STYLE + " -fx-padding: 8 12;");
+        bubble.getStyleClass().add("bubble-user");
+        bubble.setMaxWidth(560);
         HBox line = new HBox(bubble);
         line.setAlignment(Pos.CENTER_RIGHT);
         conversation.getChildren().add(line);
     }
 
     private void agentSays(VBox content) {
-        content.setStyle(AGENT_STYLE + " -fx-padding: 10 14;");
+        content.getStyleClass().add("bubble-agent");
+        content.getChildren().addFirst(Ui.styled(new Label("MealIQ agent"), "agent-name"));
         content.setMaxWidth(820);
         HBox line = new HBox(content);
         line.setAlignment(Pos.CENTER_LEFT);

@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -90,20 +89,21 @@ final class ProfileView {
         }
         form.addRow(labels.length, new Label("Max cooking minutes"), days);
 
-        Button save = new Button("Save profile");
+        Button save = Ui.primary(new Button("Save profile"));
         save.setDefaultButton(true);
         save.disableProperty().bind(context.busy());
         save.setOnAction(e -> save());
         message.setWrapText(true);
-        root.setPadding(new Insets(16));
-        root.getChildren().addAll(new Label("Allergies and diet are hard limits: MealIQ never suggests food that "
-                + "breaks them. Likes and dislikes are preferences. A planning aid, not dietary advice."), form, save,
-                message);
+        root.getStyleClass().add("page");
+        root.getChildren().addAll(Ui.styled(new Label("Profile"), "page-title"),
+                Ui.wrapped("Allergies and diet are hard limits: MealIQ never suggests food that breaks them. Likes "
+                        + "and dislikes are preferences. A planning aid, not dietary advice.", "page-subtitle"),
+                Ui.card(null, form), Ui.row(8, save), message);
         context.onDataChanged(this::load);
     }
 
     Node view() {
-        return root;
+        return Ui.scrolling(root);
     }
 
     void load() {

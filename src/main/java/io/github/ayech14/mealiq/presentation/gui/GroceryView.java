@@ -7,7 +7,6 @@ import io.github.ayech14.mealiq.domain.GroceryList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -35,13 +34,17 @@ final class GroceryView {
         table.getColumns().add(Ui.column("buy", Row::buy, 90));
         table.getColumns().add(Ui.column("price", Row::price, 80));
         table.setPlaceholder(new Label("No shopping list yet. Generate a plan, then refresh the list."));
+        Ui.fill(table);
         VBox.setVgrow(table, Priority.ALWAYS);
-        Button refresh = new Button("Refresh list and check budget");
+        Button refresh = Ui.primary(new Button("Refresh list and check budget"));
         refresh.disableProperty().bind(context.busy());
         refresh.setOnAction(e -> refresh());
         summary.setWrapText(true);
-        root.setPadding(new Insets(16));
-        root.getChildren().addAll(Ui.row(8, refresh), table, summary);
+        root.getStyleClass().add("page");
+        root.getChildren().addAll(Ui.styled(new Label("Groceries"), "page-title"),
+                Ui.wrapped("What to buy for your plan beyond what is in your pantry, priced with Statistics Canada "
+                        + "average retail prices. Unpriced items are counted, not guessed.", "page-subtitle"),
+                Ui.row(8, refresh), table, summary);
         context.onDataChanged(this::load);
     }
 

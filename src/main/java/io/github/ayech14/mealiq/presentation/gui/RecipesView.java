@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -57,9 +56,9 @@ final class RecipesView {
         request.setPromptText("Describe what you want, e.g. quick high-protein dinner");
         HBox.setHgrow(request, Priority.ALWAYS);
 
-        Button browse = new Button("Browse");
+        Button browse = Ui.ghost(new Button("Browse"));
         browse.setOnAction(e -> browse());
-        Button ask = new Button("Ask the agent");
+        Button ask = Ui.primary(new Button("Ask the agent"));
         ask.setOnAction(e -> ask());
         Button generate = new Button("Generate a new recipe");
         generate.setOnAction(e -> generate());
@@ -73,6 +72,7 @@ final class RecipesView {
         table.getColumns().add(Ui.column("protein", Row::protein, 80));
         table.getColumns().add(Ui.column("cost", Row::cost, 80));
         table.setPlaceholder(new Label("Browse, or ask the agent."));
+        Ui.fill(table);
         table.getSelectionModel().selectedItemProperty().addListener((obs, old, row) -> {
             if (row != null) {
                 UUID profileId = context.profileId();
@@ -84,11 +84,15 @@ final class RecipesView {
         split.setDividerPositions(0.55);
         VBox.setVgrow(split, Priority.ALWAYS);
         message.setWrapText(true);
-        root.setPadding(new Insets(16));
+        root.getStyleClass().add("page");
         root.getChildren().addAll(
-                Ui.row(8, new Label("Meal"), meal, maxMinutes, include, exclude, new Label("Rank by"), rank,
-                        generated, browse),
-                Ui.row(8, request, ask, generate), message, split);
+                Ui.styled(new Label("Recipes"), "page-title"),
+                Ui.wrapped("Every recipe shown fits your allergies and diet. Nutrition and cost are calculated, "
+                        + "never guessed.", "page-subtitle"),
+                Ui.card("Ask the agent", Ui.row(8, request, ask, generate)),
+                Ui.card("Browse with filters", Ui.row(8, new Label("Meal"), meal, maxMinutes, include, exclude),
+                        Ui.row(8, new Label("Rank by"), rank, generated, browse)),
+                message, split);
     }
 
     Node view() {

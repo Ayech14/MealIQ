@@ -25,7 +25,6 @@ import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Hyperlink;
-import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritableImage;
@@ -73,11 +72,10 @@ public final class GuiSnapshots {
         BorderPane[] root = new BorderPane[1];
         onFx(() -> {
             root[0] = MealPlanningGUI.build(context);
-            new Scene(root[0], 1100, 760);
+            new Scene(root[0], 1180, 800);
             context.dataChanged();
         });
         settle(context);
-        TabPane tabs = (TabPane) root[0].getCenter();
         // Two assistant turns: a pantry update that waits for Apply, then recipe suggestions.
         fixture.llm().queue(AssistantAnswers.pantryRanOut("egg"));
         Map<String, Object> finish = new HashMap<>();
@@ -102,24 +100,36 @@ public final class GuiSnapshots {
                 && h.getText().startsWith("Suggest a high-protein dinner")).findFirst()
                 .map(Hyperlink.class::cast).ifPresent(Hyperlink::fire));
         settle(context);
-        // Only the selected tab is in the scene, so open Recipes before pressing its Browse button.
+        // Only the open page is in the scene, so open Recipes before pressing its Browse button.
         onFx(() -> {
-            tabs.getSelectionModel().select(3);
+            context.navigate("recipes");
             root[0].applyCss(); // without a window, the tab's controls exist only after a layout pass
             root[0].layout();
         });
         onFx(() -> root[0].lookupAll(".button").stream().filter(n -> n instanceof Button b
                 && b.getText().equals("Browse")).findFirst().map(Button.class::cast).ifPresent(Button::fire));
         settle(context);
-        onFx(() -> tabs.lookupAll(".table-view").stream().map(t -> (TableView<?>) t)
+        onFx(() -> root[0].lookupAll(".table-view").stream().map(t -> (TableView<?>) t)
                 .filter(t -> t.getColumns().getFirst().getText().equals("Recipe")).findFirst()
                 .ifPresent(t -> t.getSelectionModel().select(1)));
         settle(context);
-        String[] names = {"assistant", "profile", "pantry", "recipes", "plan", "groceries"};
-        for (int i = 0; i < names.length; i++) {
-            int index = i;
-            onFx(() -> tabs.getSelectionModel().select(index));
-            File file = new File(folder, (i + 1) + "-" + names[i] + ".png");
+        // Show how the pantry list narrows while typing.
+        onFx(() -> {
+            context.navigate("pantry");
+            root[0].applyCss();
+            root[0].layout();
+            root[0].lookupAll(".combo-box").stream().map(n -> (javafx.scene.control.ComboBox<?>) n)
+                    .filter(c -> c.isEditable()).findFirst().ifPresent(c -> c.getEditor().setText("chicken"));
+        });
+        settle(context);
+        int number = 1;
+        for (String page : MealPlanningGUI.PAGES.keySet()) {
+            onFx(() -> {
+                context.navigate(page);
+                root[0].applyCss();
+                root[0].layout();
+            });
+            File file = new File(folder, (number++) + "-" + page + ".png");
             onFx(() -> save(root[0].snapshot(null, null), file));
             System.out.println("Wrote " + file);
         }

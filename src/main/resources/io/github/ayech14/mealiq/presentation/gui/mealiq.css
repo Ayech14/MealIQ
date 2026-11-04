@@ -1,0 +1,342 @@
+/* MealIQ desktop look: a dark green sidebar, light pages and white cards. */
+
+.root {
+    -mealiq-accent: #2e8b57;
+    -mealiq-accent-dark: #23704a;
+    -mealiq-accent-soft: #e6f4ec;
+    -mealiq-page: #f3f6f4;
+    -mealiq-text: #1d2421;
+    -mealiq-muted: #66736d;
+    -mealiq-line: #dfe6e2;
+    -mealiq-warning: #8a5a00;
+    -mealiq-warning-soft: #fff4dc;
+    -mealiq-danger: #a8322a;
+    -mealiq-danger-soft: #fdeceb;
+    -fx-accent: -mealiq-accent;
+    -fx-focus-color: -mealiq-accent;
+    -fx-faint-focus-color: #2e8b5722;
+    -fx-font-size: 13px;
+    -fx-text-fill: -mealiq-text;
+}
+
+/* ---- shell ---- */
+
+.app {
+    -fx-background-color: -mealiq-page;
+}
+
+.sidebar {
+    -fx-background-color: #17251e;
+    -fx-padding: 18 12 14 12;
+    -fx-spacing: 4;
+    -fx-pref-width: 196;
+    -fx-min-width: 196;
+}
+
+.brand {
+    -fx-text-fill: white;
+    -fx-font-size: 21px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 8 0 8;
+}
+
+.brand-tagline {
+    -fx-text-fill: #9fb8ab;
+    -fx-font-size: 11px;
+    -fx-padding: 0 8 14 8;
+}
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #d3e2da;
+    -fx-font-size: 14px;
+    -fx-alignment: center-left;
+    -fx-padding: 9 12 9 12;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-max-width: infinity;
+}
+
+.nav-button:hover {
+    -fx-background-color: #24382e;
+}
+
+.nav-button:selected {
+    -fx-background-color: -mealiq-accent;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.sidebar-label {
+    -fx-text-fill: #9fb8ab;
+    -fx-font-size: 11px;
+}
+
+.sidebar .text-field {
+    -fx-background-color: #24382e;
+    -fx-text-fill: white;
+    -fx-prompt-text-fill: #8aa497;
+    -fx-background-radius: 6;
+}
+
+.sidebar .button {
+    -fx-background-color: #24382e;
+    -fx-text-fill: #d3e2da;
+    -fx-background-radius: 6;
+}
+
+.status-bar {
+    -fx-padding: 6 20 8 20;
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+}
+
+.status-bar .label {
+    -fx-text-fill: -mealiq-muted;
+}
+
+/* ---- pages ---- */
+
+.page {
+    -fx-padding: 22 26 12 26;
+    -fx-spacing: 14;
+    -fx-background-color: -mealiq-page;
+}
+
+.page-scroll, .page-scroll > .viewport {
+    -fx-background-color: -mealiq-page;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.page-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -mealiq-text;
+}
+
+.page-subtitle {
+    -fx-text-fill: -mealiq-muted;
+    -fx-font-size: 13px;
+}
+
+.card {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: -mealiq-line;
+    -fx-border-radius: 12;
+    -fx-padding: 16;
+    -fx-spacing: 10;
+    -fx-effect: dropshadow(gaussian, #0000000f, 10, 0, 0, 2);
+}
+
+.card-title {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -mealiq-text;
+}
+
+.muted {
+    -fx-text-fill: -mealiq-muted;
+}
+
+.stat-value {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -mealiq-text;
+}
+
+.stat-label {
+    -fx-text-fill: -mealiq-muted;
+    -fx-font-size: 12px;
+}
+
+/* ---- buttons ---- */
+
+.button {
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.button.primary {
+    -fx-background-color: -mealiq-accent;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 7 16 7 16;
+}
+
+.button.primary:hover {
+    -fx-background-color: -mealiq-accent-dark;
+}
+
+.button.ghost {
+    -fx-background-color: -mealiq-accent-soft;
+    -fx-text-fill: -mealiq-accent-dark;
+}
+
+.button.ghost:hover {
+    -fx-background-color: #d4ecdf;
+}
+
+.chip {
+    -fx-background-color: white;
+    -fx-border-color: -mealiq-line;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+    -fx-padding: 5 12 5 12;
+    -fx-text-fill: -mealiq-accent-dark;
+    -fx-cursor: hand;
+}
+
+.chip:hover {
+    -fx-background-color: -mealiq-accent-soft;
+}
+
+/* ---- banners ---- */
+
+.banner {
+    -fx-background-radius: 10;
+    -fx-padding: 12 14 12 14;
+    -fx-spacing: 6;
+}
+
+.banner.success {
+    -fx-background-color: -mealiq-accent-soft;
+    -fx-border-color: #b8dfc9;
+    -fx-border-radius: 10;
+}
+
+.banner.warning {
+    -fx-background-color: -mealiq-warning-soft;
+    -fx-border-color: #f1d9a6;
+    -fx-border-radius: 10;
+}
+
+.banner.error {
+    -fx-background-color: -mealiq-danger-soft;
+    -fx-border-color: #f2c4c0;
+    -fx-border-radius: 10;
+}
+
+.banner-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.banner.success .banner-title {
+    -fx-text-fill: -mealiq-accent-dark;
+}
+
+.banner.warning .banner-title {
+    -fx-text-fill: -mealiq-warning;
+}
+
+.banner.error .banner-title {
+    -fx-text-fill: -mealiq-danger;
+}
+
+/* ---- meals ---- */
+
+.meal-tag {
+    -fx-background-radius: 6;
+    -fx-padding: 2 8 2 8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-min-width: 72;
+    -fx-alignment: center;
+}
+
+.meal-tag.breakfast {
+    -fx-background-color: #fff1d6;
+    -fx-text-fill: #8a5a00;
+}
+
+.meal-tag.lunch {
+    -fx-background-color: #e3f0fb;
+    -fx-text-fill: #1f5f8b;
+}
+
+.meal-tag.dinner {
+    -fx-background-color: #efe6f8;
+    -fx-text-fill: #5e3a87;
+}
+
+.meal-tag.snack {
+    -fx-background-color: #e6f4ec;
+    -fx-text-fill: #23704a;
+}
+
+.day-card .card-title {
+    -fx-font-size: 14px;
+}
+
+.day-total {
+    -fx-text-fill: -mealiq-muted;
+    -fx-font-size: 12px;
+}
+
+.recipe-link {
+    -fx-text-fill: -mealiq-text;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+}
+
+.recipe-link:hover {
+    -fx-underline: true;
+}
+
+.portion {
+    -fx-text-fill: -mealiq-accent-dark;
+    -fx-font-weight: bold;
+}
+
+/* ---- assistant ---- */
+
+.bubble-user {
+    -fx-background-color: -mealiq-accent;
+    -fx-background-radius: 14 14 4 14;
+    -fx-padding: 9 13 9 13;
+    -fx-text-fill: white;
+}
+
+.bubble-agent {
+    -fx-background-color: white;
+    -fx-background-radius: 14 14 14 4;
+    -fx-border-color: -mealiq-line;
+    -fx-border-radius: 14 14 14 4;
+    -fx-padding: 10 14 10 14;
+}
+
+.agent-name {
+    -fx-text-fill: -mealiq-accent-dark;
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+}
+
+/* ---- tables and inputs ---- */
+
+.table-view {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-border-color: -mealiq-line;
+    -fx-border-radius: 10;
+    -fx-padding: 2;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #f7faf8;
+    -fx-background-radius: 10 10 0 0;
+}
+
+.text-field, .combo-box, .date-picker, .spinner {
+    -fx-background-radius: 7;
+}
+
+.titled-pane > .title {
+    -fx-background-color: transparent;
+    -fx-padding: 4 0 4 0;
+}
+
+.titled-pane > .title > .text {
+    -fx-fill: -mealiq-muted;
+}
