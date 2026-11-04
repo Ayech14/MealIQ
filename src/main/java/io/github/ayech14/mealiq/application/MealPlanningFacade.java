@@ -237,6 +237,14 @@ public class MealPlanningFacade {
         return pantryService.expiredItems(profileId);
     }
 
+    /**
+     * Catalogue ingredients for a name as people say it: one for an exact or plural name
+     * ("eggs"), several for a general one ("beef": ground beef, beef sirloin), none if unknown.
+     */
+    public List<Ingredient> matchIngredients(String text) {
+        return pantryService.matchIngredients(text);
+    }
+
     /** Catalogue ingredients whose name contains {@code text} (all of them when blank), by name. */
     public List<Ingredient> searchIngredients(String text) {
         String needle = text == null ? "" : text.strip().toLowerCase(Locale.ROOT);

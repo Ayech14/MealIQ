@@ -228,7 +228,10 @@ public class PromptBuilder {
             - adapt: fix the plan after pantry or profile changes
             - cheaper: make the current plan cheaper
             - groceries: make or show the shopping list and budget check
-            - pantry: set what the user has at home (pantry lines; amount 0 means they ran out)
+            - pantry: set what the user has at home (pantry lines; amount 0 means they ran out). If the \
+            user names a general food that fits several catalogue ingredients (e.g. "beef": ground beef or \
+            beef sirloin; "chicken": chicken breast, chicken thigh or ground chicken), choose answer instead \
+            and ask which kind they have, listing those options.
             - profile: anything the user says about themselves: goals, diet, allergies, likes, dislikes, \
             calories, protein, meals per day, budget, or that they have no restrictions
             - show_plan: show the current plan

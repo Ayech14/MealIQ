@@ -152,4 +152,43 @@ class PantryServiceTest {
             assertEquals(1, observer.events.size());
         }
     }
+
+    @Nested
+    class EverydayNames {
+
+        private List<String> names(String text) {
+            return service.matchIngredients(text).stream().map(Ingredient::name).toList();
+        }
+
+        @Test
+        void aGeneralNameListsEveryKind() {
+            assertEquals(List.of("beef sirloin", "ground beef"), names("beef"));
+            assertTrue(names("chicken").containsAll(List.of("chicken breast", "chicken thigh", "ground chicken")));
+        }
+
+        @Test
+        void exactAndPluralNamesGiveOneIngredient() {
+            assertEquals(List.of("egg"), names("Eggs"));
+            assertEquals(List.of("egg"), names("egg"), "egg white and eggplant are not eggs");
+            assertEquals(List.of("ground beef"), names("  ground   beef "));
+        }
+
+        @Test
+        void unknownNamesMatchNothing() {
+            assertEquals(List.of(), names("unobtainium"));
+            assertEquals(List.of(), names(" "));
+        }
+
+        @Test
+        void pluralNamesCanBeSaved() {
+            assertEquals("egg", item("eggs", 6, "unit").ingredient().name());
+        }
+
+        @Test
+        void aGeneralNameIsRejectedWithTheKindsToChooseFrom() {
+            InvalidInputException error = assertThrows(InvalidInputException.class, () -> item("beef", 450, "g"));
+            assertEquals("'beef' is not in the ingredient catalogue; did you mean beef sirloin, ground beef?",
+                    error.errors().get("ingredient"));
+        }
+    }
 }

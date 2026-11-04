@@ -14,8 +14,11 @@ import io.github.ayech14.mealiq.persistence.IngredientRepository;
 import io.github.ayech14.mealiq.persistence.PantryRepository;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,9 +49,13 @@ public class PantryService implements PlanRelevantChangePublisher {
     /** Builds a PantryItem from interface input, reporting every bad field together (UC02 3a). */
     public PantryItem makeItem(String ingredientName, double amount, String unit, LocalDate expiryDate) {
         Map<String, String> errors = new LinkedHashMap<>();
-        Optional<Ingredient> ingredient = ingredientRepository.findByName(ingredientName);
+        List<Ingredient> matches = matchIngredients(ingredientName);
+        Optional<Ingredient> ingredient = matches.size() == 1 && sameName(matches.getFirst(), ingredientName)
+                ? Optional.of(matches.getFirst()) : Optional.empty();
         if (ingredient.isEmpty()) {
-            errors.put("ingredient", "'" + ingredientName + "' is not in the ingredient catalogue");
+            errors.put("ingredient", "'" + ingredientName + "' is not in the ingredient catalogue"
+                    + (matches.isEmpty() ? "" : "; did you mean " + String.join(", ",
+                            matches.stream().map(Ingredient::name).toList()) + "?"));
         }
         if (amount < 0 || Double.isNaN(amount)) {
             errors.put("quantity", "cannot be negative");
@@ -60,6 +67,54 @@ public class PantryService implements PlanRelevantChangePublisher {
             throw new InvalidInputException(errors);
         }
         return new PantryItem(ingredient.get(), Quantity.of(amount, unit), expiryDate);
+    }
+
+    /**
+     * Catalogue ingredients for a name as people say it. An exact name, or its singular
+     * ("eggs", "tomatoes"), gives that one ingredient. Otherwise every ingredient whose name
+     * contains all the words is returned, so "beef" gives ground beef and beef sirloin, and
+     * the user (or the agent) picks one. Empty when nothing matches.
+     */
+    public List<Ingredient> matchIngredients(String text) {
+        String wanted = normalize(text);
+        if (wanted.isEmpty()) {
+            return List.of();
+        }
+        List<Ingredient> all = ingredientRepository.findAll();
+        for (String form : List.of(wanted, singular(wanted))) {
+            Optional<Ingredient> exact = all.stream().filter(i -> i.name().equals(form)).findFirst();
+            if (exact.isPresent()) {
+                return List.of(exact.get());
+            }
+        }
+        List<String> words = Arrays.stream(wanted.split(" ")).map(PantryService::singular).toList();
+        return all.stream().filter(i -> {
+            List<String> nameWords = Arrays.asList(i.name().split(" "));
+            return words.stream().allMatch(w -> nameWords.stream().anyMatch(n -> singular(n).equals(w)));
+        }).sorted(Comparator.comparing(Ingredient::name)).toList();
+    }
+
+    private static boolean sameName(Ingredient ingredient, String text) {
+        String wanted = normalize(text);
+        return ingredient.name().equals(wanted) || ingredient.name().equals(singular(wanted));
+    }
+
+    private static String normalize(String text) {
+        return text == null ? "" : text.strip().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+    }
+
+    /** A plain English singular: "tomatoes" -> "tomato", "eggs" -> "egg"; other words stay. */
+    static String singular(String word) {
+        if (word.endsWith("oes") || word.endsWith("ches") || word.endsWith("shes")) {
+            return word.substring(0, word.length() - 2);
+        }
+        if (word.endsWith("ies") && word.length() > 4) {
+            return word.substring(0, word.length() - 3) + "y";
+        }
+        if (word.endsWith("s") && !word.endsWith("ss") && word.length() > 3) {
+            return word.substring(0, word.length() - 1);
+        }
+        return word;
     }
 
     /**
