@@ -62,13 +62,12 @@ This report is the entry point to the Stage 1 package. Each section summarises o
 
 **Architecture and technology.**
 
-- React + TypeScript GUI, which reaches the backend over HTTP through `MealPlanningApi` (FastAPI).
-- Python Typer CLI, which calls the facade in-process.
+- JavaFX desktop GUI and picocli CLI, which both call the facade in-process (Stage 2 replaced the planned React GUI, FastAPI layer and Typer CLI when Java became required; see the Stage 2 report).
 - `MealPlanningFacade`, the single shared application boundary.
 - `AgentController`, `MealPlanningAgent`, tools, memory, and the LLM adapter.
 - Deterministic services and validators.
-- SQLAlchemy repositories over PostgreSQL.
-- Pydantic for request and structured-output validation, and pytest planned for Stage 3.
+- JDBC repositories over PostgreSQL.
+- Strict JSON schemas for structured-output validation, and JUnit 5 tests.
 
 Details are in [project-overview.md](project-overview.md).
 
@@ -84,7 +83,7 @@ There are thirteen features, F01-F13: preferences, pantry, recipe search, recipe
 | Factory Method | Creating the right strategy without coupling the agent to concrete classes | `PlanningStrategyFactory`, `DefaultPlanningStrategyFactory` |
 | Command | Previewable, auditable, reversible plan changes | `PlanChangeCommand`, `ReplaceMealCommand`, `SubstituteIngredientCommand`, `UpdatePlanConstraintCommand`, `MealPlanService` (invoker), `MealPlan` (receiver) |
 | Observer | Reacting to pantry and profile changes without coupling the services that publish them | `PlanRelevantChangePublisher`, `PantryService`, `ProfileService`, `PlanImpactObserver`, `MealPlanImpactObserver`, `GroceryListImpactObserver` |
-| Facade | One application boundary shared by the GUI and the CLI | `MealPlanningFacade`, `MealPlanningApi`, `MealPlanningCLI` |
+| Facade | One application boundary shared by the GUI and the CLI | `MealPlanningFacade`, `MealPlanningGUI`, `MealPlanningCLI` |
 | Adapter | Isolating provider-specific LLM, recipe, and price APIs | `LLMClient` / `ProviderLLMAdapter`, `RecipeDataSource` / `ExternalRecipeAdapter`, `PriceDataSource` / `ExternalPriceAdapter` |
 
 For each pattern, [design-patterns.md](design-patterns.md) gives the problem, participants and roles, rationale, what would be harder without it, and where it appears in the UML.
@@ -147,7 +146,7 @@ Each diagram shows:
 - deterministic services, domain objects, and repositories;
 - external APIs.
 
-Messages are numbered and returns are shown, with activation bars and `alt` / `opt` / `loop` / `ref` fragments for alternative and error flows. Every call uses an operation defined in the class diagram. SD01 shows the full HTTP path (`MealPlanningGUI` → `MealPlanningApi` → `MealPlanningFacade`); the other diagrams note that path in their titles. The sequence diagrams use wide layouts, with 15-19 lifelines depending on the interaction.
+Messages are numbered and returns are shown, with activation bars and `alt` / `opt` / `loop` / `ref` fragments for alternative and error flows. Every call uses an operation defined in the class diagram. SD01 shows the full path from `MealPlanningGUI` to `MealPlanningFacade`; the original diagrams also show the `MealPlanningApi` HTTP layer, which Stage 2 removed. The sequence diagrams use wide layouts, with 15-19 lifelines depending on the interaction.
 
 | Diagram | Use case(s) | Features | Main alternative / error flows |
 |---|---|---|---|
@@ -214,7 +213,7 @@ Source: [sequence-recipe.uxf](diagrams/umlet/sequence-recipe.uxf).
 - local event-driven impact detection, with no LLM call inside event handling;
 - test seams designed in from the start.
 
-It also outlines the Stage 3 plan: pytest for deterministic components and KUMA behavioural tests for the agent. Scope and assumptions are in [project-overview.md](project-overview.md#scope-and-assumptions).
+It also outlines the Stage 3 plan: JUnit for deterministic components and KUMA behavioural tests for the agent. Scope and assumptions are in [project-overview.md](project-overview.md#scope-and-assumptions).
 
 ## 9. Consistency checks
 
@@ -223,7 +222,7 @@ These checks were performed on the Stage 1 artifacts.
 | Check | Result | Evidence |
 |---|---|---|
 | At least 10 meaningful features | 13 features, F01-F13 | Feature specifications |
-| GUI and CLI provide the major functionality without duplicated logic | Both reach `MealPlanningFacade`; the GUI through `MealPlanningApi` | Architecture class view, SD01 |
+| GUI and CLI provide the major functionality without duplicated logic | Both call `MealPlanningFacade` in-process | Architecture class view, SD01 |
 | AI/LLM integrated with meaningful agent behaviour | LLM-chosen tool use, planning, generation, memory, adaptation | `MealPlanningAgent`, `ToolManager`, `ConversationMemory`; SD01-SD05 |
 | At least five meaningful design patterns | Six | Design patterns, services and patterns view |
 | Every feature maps to a use case, classes, methods, a sequence diagram, and patterns | All 13 rows complete | Traceability table |

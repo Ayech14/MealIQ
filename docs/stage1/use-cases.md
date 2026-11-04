@@ -6,7 +6,7 @@
 - **External LLM API** («system», supporting): proposes plans, recipes, and changes. Supporting actors provide services to MealIQ but never start a use case.
 - **Recipe / Price Data Provider** («system», supporting): supplies external recipes and indicative prices.
 
-The React GUI and the Typer CLI are boundary components inside the system, not actors. GUI requests reach `MealPlanningFacade` through the FastAPI `MealPlanningApi`; CLI commands call the facade in-process.
+The JavaFX GUI and the picocli CLI are boundary components inside the system, not actors. Both call `MealPlanningFacade` in-process.
 
 **Relationships (shown in the [use-case diagram](diagrams/png/use-case-diagram.png)).**
 

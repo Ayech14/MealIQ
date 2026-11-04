@@ -1,6 +1,6 @@
 # Detailed feature specifications
 
-MealIQ has thirteen features, F01-F13. Every feature is available in the planned React GUI and the planned Python Typer CLI. GUI requests reach `MealPlanningFacade` through the FastAPI `MealPlanningApi`. CLI commands call the same facade in-process, so neither interface contains business logic.
+MealIQ has thirteen features, F01-F13. Every feature is available in the JavaFX GUI and the picocli CLI. Both call `MealPlanningFacade` in-process, so neither interface contains business logic.
 
 **AI involvement** uses three categories:
 

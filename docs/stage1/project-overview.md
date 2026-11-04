@@ -41,29 +41,26 @@ Provider isolation supports portability, avoids provider SDK leakage into domain
 
 ## Proposed technology stack
 
-The following is an implementation plan, not implemented software.
+Updated for the Stage 2 Java implementation; each change from the original design is recorded in [the Stage 2 report](../stage2/stage2-report.md#4-changes-and-rationale).
 
-| Layer | Proposed technology | Design rationale |
+| Layer | Technology | Design rationale |
 |---|---|---|
-| Frontend | React + TypeScript | Supports interactive calendar, pantry, recipe, grocery, profile, and plan-change views with typed UI models. |
-| Backend/API | Python + FastAPI | `MealPlanningApi` provides a typed, documented HTTP boundary for the GUI in front of `MealPlanningFacade`. |
-| CLI | Python + Typer | Exposes the major MealIQ use cases through a scriptable command interface without duplicating business logic. |
+| GUI | Java 21 + JavaFX desktop app | Assistant conversation, profile, pantry, recipe, plan and grocery views; calls the facade in-process. |
+| CLI | Java + picocli | Exposes the major MealIQ use cases through a scriptable command interface without duplicating business logic. |
 | Database | PostgreSQL | Fits relational profiles, inventory, recipes, plans, grocery lists, and change records. |
-| ORM/data access | SQLAlchemy | Implements repository persistence boundaries and transaction-oriented data access. |
-| Validation/data models | Pydantic | Validates API DTOs and schema-constrained LLM proposals before domain processing. |
-| LLM integration | External provider API behind `LLMClient` / `ProviderLLMAdapter` | Keeps agent/domain code provider-neutral and testable. |
-| Recipe and price sources | Repository plus provider adapters | Supports curated local data and later external data sources through stable internal contracts. |
-| Testing | pytest | Supports Stage 3 unit, integration, fake-adapter, and deterministic-service tests. |
+| Data access | Hand-written JDBC repositories (H2 in PostgreSQL mode for tests) | Implements repository persistence boundaries and transaction-oriented data access. |
+| Validation/data models | Java records + `JsonSchema` (strict structured output) | Validates schema-constrained LLM answers before domain processing. |
+| LLM integration | OpenAI Java SDK behind `LLMClient` / `ProviderLLMAdapter` | Keeps agent/domain code provider-neutral and testable. |
+| Recipe and price sources | Curated recipe catalogue; Statistics Canada prices behind `PriceDataSource` | Curated local data through stable internal contracts. |
+| Testing | JUnit 5 with a scripted `LLMClient` | Unit, integration, fake-adapter, and deterministic-service tests. |
 
 No queue, cache, message broker, or additional infrastructure is part of the Stage 1 design because the current requirements do not require it.
 
 ## Overall architecture
 
 ```text
-React GUI (browser)          Python Typer CLI
-     |  HTTP/JSON                   |
-MealPlanningApi (FastAPI)           |  in-process call
-     |                              |
+JavaFX GUI                     picocli CLI
+     |  in-process call             |  in-process call
      +------ MealPlanningFacade ----+
               | application services
     AgentController / ProfileService / PantryService / MealPlanService
@@ -74,10 +71,10 @@ MealPlanningApi (FastAPI)           |  in-process call
               |
           LLMClient <- ProviderLLMAdapter <- External LLM API
               |
- deterministic validators and services ---- SQLAlchemy repositories ---- PostgreSQL
+ deterministic validators and services ---- JDBC repositories ---- PostgreSQL
 ```
 
-`MealPlanningFacade` is the shared application boundary for GUI and CLI use cases. The browser-based GUI reaches it through `MealPlanningApi`, the FastAPI route layer, which only translates HTTP requests and responses. The Python CLI calls the facade in-process, so it needs no running HTTP server. Neither path contains business logic. Application services coordinate domain operations; repositories isolate persistence; the agent proposes decisions through stable tool and LLM interfaces; deterministic services calculate and validate facts.
+`MealPlanningFacade` is the shared application boundary for GUI and CLI use cases. Both the JavaFX GUI and the CLI call it in-process; the HTTP layer (`MealPlanningApi`) planned for a browser GUI was not needed for a desktop GUI and was removed. Neither path contains business logic. Application services coordinate domain operations; repositories isolate persistence; the agent proposes decisions through stable tool and LLM interfaces; deterministic services calculate and validate facts.
 
 ## Responsibility split
 

@@ -52,13 +52,13 @@ MealIQ applies six course patterns to identifiable design problems. The patterns
 
 ## Facade - shared application boundary
 
-**Design problem.** The React GUI and Typer CLI require access to the same coordinated use cases without duplicating orchestration or knowing agent, repository, and service internals.
+**Design problem.** The JavaFX GUI and picocli CLI require access to the same coordinated use cases without duplicating orchestration or knowing agent, repository, and service internals.
 
-**Participants and roles.** `MealPlanningFacade` is the facade. `MealPlanningCLI` is a direct client; `MealPlanningGUI` is a client through `MealPlanningApi`, the FastAPI route layer, which forwards requests unchanged. `AgentController`, profile/pantry/meal-plan services, and grocery services form the subsystem behind the facade. FastAPI route handlers are delivery adapters that call the facade.
+**Participants and roles.** `MealPlanningFacade` is the facade. `MealPlanningCLI` and `MealPlanningGUI` are direct clients that call it in-process. `AgentController`, profile/pantry/meal-plan services, and grocery services form the subsystem behind the facade. (The HTTP layer `MealPlanningApi` from the original design was removed in Stage 2; see the Stage 2 report, C02.)
 
 **Rationale.** The facade presents operations such as `generateWeeklyPlan`, `modifyPlan`, and `generateOptimizedGroceryList` through one stable application interface. Without it, two interfaces could evolve independent business rules or couple directly to the agent and repositories.
 
-**UML evidence.** Class diagrams: architecture view (`MealPlanningCLI` and `MealPlanningApi` associated only with `MealPlanningFacade`, which associates with the controller and services). Sequence diagrams: every SD routes the boundary through `:MealPlanningFacade`.
+**UML evidence.** Class diagrams: architecture view (`MealPlanningCLI` and `MealPlanningGUI` associated only with `MealPlanningFacade`, which associates with the controller and services). Sequence diagrams: every SD routes the boundary through `:MealPlanningFacade`.
 
 ## Adapter - external LLM and data providers
 

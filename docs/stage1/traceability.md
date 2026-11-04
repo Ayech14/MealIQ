@@ -20,7 +20,7 @@ Each feature traces from requirement to use case, classes, methods, sequence dia
 | F12 | Budget-aware planning | Hybrid | UC01, UC04, UC06 | `BudgetStrategy`, `BudgetService`, `ConstraintValidator`, `GroceryService` | `rank()`, `estimateCost()`, `evaluate()`, `validatePlan()` | SD01, SD02 | Strategy, Factory Method |
 | F13 | Dynamic plan adaptation | Hybrid | UC09 | `PlanRelevantChangePublisher`, `PantryService`, `ProfileService`, `MealPlanImpactObserver`, `GroceryListImpactObserver`, `MealPlanService`, `MealPlanningFacade`, `AgentController`, `MealPlanningAgent` | `publish()`, `onPlanRelevantChange()`, `assessImpact()`, `recordImpact()`, `markAffectedListStale()`, `adaptPlan()`, `proposeAdaptation()` | SD04 | Observer, Command, Facade |
 
-All features are reached through `MealPlanningFacade`, which is why Facade appears in most rows. GUI requests pass through `MealPlanningApi`; CLI requests call the facade directly.
+All features are reached through `MealPlanningFacade`, which is why Facade appears in most rows. The GUI and the CLI both call the facade directly. The implemented classes for each feature are mapped in the [Stage 2 report](../stage2/stage2-report.md#2-feature-to-implementation-mapping).
 
 ## Feature realization
 
@@ -95,7 +95,7 @@ All features are reached through `MealPlanningFacade`, which is why Facade appea
 
 **Classes involved**
 
-- `MealPlanningApi` / `MealPlanningFacade`: receive the `PlanRequest`.
+- `MealPlanningFacade`: receives the `PlanRequest`.
 - `AgentController`: builds context, runs validation, and decides between saving and reporting a conflict.
 - `MealPlanningAgent`: plans in several steps; runs the LLM-driven tool loop, then requests the final proposal.
 - `PlanningStrategyFactory`: creates the strategy for the requested `PlanningMode`.

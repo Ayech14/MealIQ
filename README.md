@@ -1,186 +1,247 @@
 # MealIQ
 
-> **AI meal planning and grocery optimization for real-world constraints.**
+> **An AI agent for meal planning and grocery optimization under real-world constraints.**
 
-MealIQ is a planned AI-agent-based meal-planning system for individuals who want to organize meals and groceries around nutrition goals, dietary restrictions, allergies, pantry inventory, budget, and available cooking time. It is designed as a practical planning assistant, not a medical or clinical nutrition service.
+MealIQ plans meals and groceries around your nutrition goals, allergies and diet, food likes and dislikes, what is already in your pantry, a weekly budget, and how much time you have to cook each day. You tell it what you want, in your own words or through its screens. Its agent searches recipes with tools, ranks them with deterministic strategies, proposes a plan or a change, and applies it only after you confirm.
 
-**Project status:** Stage 1 - software and agent design complete. The repository currently contains design documentation and version-controlled UML sources; no production frontend, backend, CLI, database, or LLM integration has been implemented.
+MealIQ is a planning aid, not medical or dietary advice.
+
+EECS3311 Software Design course project, York University.
 
 ## Contents
 
-- [Problem and users](#problem-and-users)
-- [Why an agent](#why-an-agent)
-- [Core capabilities](#core-capabilities)
-- [Example planning scenario](#example-planning-scenario)
-- [How MealIQ works](#how-mealiq-works)
-- [AI and external-provider integration](#ai-and-external-provider-integration)
-- [Architecture and interfaces](#architecture-and-interfaces)
-- [Technology plan](#technology-plan)
+- [What it does](#what-it-does)
+- [Why it is an agent](#why-it-is-an-agent)
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [Running MealIQ](#running-mealiq)
+- [Example session](#example-session)
+- [Architecture](#architecture)
 - [Design patterns](#design-patterns)
-- [Project stages](#project-stages)
-- [Design documentation](#design-documentation)
+- [Data sources](#data-sources)
+- [Tests](#tests)
 - [Repository layout](#repository-layout)
+- [Documentation](#documentation)
 - [Responsible use and limitations](#responsible-use-and-limitations)
 
-## Problem and users
+## What it does
 
-Meal planning becomes a constraint-satisfaction problem when personal goals, allergies, disliked foods, ingredients already at home, a weekly budget, and uneven day-to-day cooking time all matter at once. Recipe browsing alone does not calculate shortages, consolidate a grocery list, explain trade-offs, or safely adapt a plan after circumstances change.
-
-MealIQ serves an individual household meal planner who wants a coherent weekly plan and practical grocery list without repeatedly reconciling these details by hand. The system keeps the person in control: plan changes and substitutions are previewed before they alter an active plan.
-
-## Why an agent
-
-MealIQ is not a one-shot recipe chatbot. Its planned `MealPlanningAgent` interprets natural-language requests, retrieves relevant facts through tools, chooses a planning policy, proposes structured changes, and coordinates multi-step work such as plan generation followed by grocery projection and budget evaluation. It also responds to a changed pantry, budget, time limit, or food preference by identifying the affected portions of an existing plan.
-
-The agent proposes and explains decisions. Deterministic services calculate nutrition, quantities, and costs; validate allergies, dietary rules, time, and budget; persist approved state; and consolidate grocery items. This separation makes decisions auditable and keeps arithmetic and hard constraints outside LLM generation.
-
-## Core capabilities
-
-| ID | Capability | Planned outcome |
+| ID | Feature | What you get |
 |---|---|---|
-| F01 | User goals and preferences | A reusable profile of goals, dietary restrictions, allergies, likes/dislikes, meals per day, budget, and time limits. |
-| F02 | Pantry inventory management | Current ingredient quantities, units, and optional expiry information. |
-| F03 | Recipe search and recommendation | Compatible, ranked recipes using pantry, nutrition, dietary, time, and budget context. |
-| F04 | AI recipe generation | A validated structured recipe when retrieval cannot satisfy a request. |
-| F05 | Weekly meal-plan generation | A multi-day meal plan with rationale and visible constraint conflicts. |
-| F06 | Nutrition analysis | Deterministic calories, protein, carbohydrate, and fat summaries. |
-| F07 | Grocery-list generation | Pantry-aware ingredient shortages for a selected plan. |
-| F08 | Grocery-list optimization | Consolidated quantities, price estimate, and budget status. |
-| F09 | Ingredient substitution | Constraint-aware alternatives for unavailable or unsuitable ingredients. |
-| F10 | Natural-language plan modification | Structured, previewed changes such as “make Wednesday dinner vegetarian.” |
-| F11 | Cooking-time-aware planning | Per-day or per-meal time limits respected during planning and revision. |
-| F12 | Budget-aware planning | Budget evaluated across selection, grocery planning, and substitutions. |
-| F13 | Dynamic plan adaptation | Targeted adaptation after relevant inventory, preference, time, or budget changes. |
+| F01 | Goals and preferences | Goal, calorie and protein targets, diet rules, allergies, likes, dislikes, meals per day, weekly budget, cooking minutes per weekday |
+| F02 | Pantry | What you have at home, with quantities and expiry dates; expired items are not counted |
+| F03 | Recipe search and recommendation | The agent searches, ranks by nutrition, time or cost, and explains its picks |
+| F04 | AI recipe generation | A new recipe from catalogue ingredients you can eat, previewed before saving |
+| F05 | Weekly meal plans | A validated multi-day plan with daily nutrition against your targets |
+| F06 | Nutrition analysis | Calories, protein, carbohydrates and fat from USDA data, per serving, day and plan |
+| F07 | Grocery list | What to buy for the plan after your pantry, in one line per ingredient |
+| F08 | Grocery optimization | Prices, the budget result with the exact shortfall, and cheaper meals when over budget |
+| F09 | Ingredient substitution | Allowed replacements for an ingredient across the plan |
+| F10 | Plan changes in plain words | "Make Wednesday's dinner vegetarian": previewed, confirmed, undoable |
+| F11 | Cooking-time-aware planning | Each day's time limit respected in ranking, planning and changes |
+| F12 | Budget-aware planning | Cost-aware ranking, and plans checked against the budget |
+| F13 | Plan adaptation | After a pantry or profile change, the affected meals are flagged and can be fixed |
+| N01 | Assistant | One place to ask for any of the above in your own words |
 
-## Example planning scenario
+## Why it is an agent
 
-> “I want high-protein meals this week. I have chicken, rice, eggs, Greek yogurt, and spinach; I avoid mushrooms; my grocery budget is $100; and I only have 20 minutes to cook tonight.”
+MealIQ is not a chatbot that forwards text to an LLM. Its `MealPlanningAgent`:
 
-MealIQ is designed to translate this into a structured planning context, inspect the pantry and recipe sources, rank candidates using the applicable planning strategy, calculate nutrition and missing ingredients deterministically, evaluate the grocery estimate, and return either a validated plan or a transparent explanation of a conflict. A later request such as “replace Friday's dinner with something cheaper” becomes a previewed `PlanChange`, not an unverified text response.
+- **Uses tools.** It decides which tool to call next, and with which arguments, in a bounded loop: recipe search, nutrition analysis, grocery list, ingredient substitution. Invalid tool calls are rejected and the error is fed back so the agent can correct itself.
+- **Chooses among ranked options.** It picks from candidates that deterministic planning strategies have already ranked, and explains its choice using only facts it was given.
+- **Proposes; it never applies.** Plans and changes come back as structured proposals that validators check against allergies, diet, cooking time and budget. A rejected plan is retried once with the reasons. A change is applied only after you confirm it, through a command you can undo.
+- **Reacts to change.** When your pantry or profile changes, the affected meals are flagged at once without calling the LLM, and the agent can adapt only those meals.
+- **Remembers.** It keeps earlier decisions in memory for follow-up requests.
 
-## How MealIQ works
+All arithmetic, which covers nutrition, quantities, prices and validation, is done by deterministic code, never by the LLM.
 
-```text
-GUI or CLI request
-       |
-MealPlanningFacade -> AgentController -> MealPlanningAgent
-       |                                  |
-       |                            ToolManager / LLMClient
-       |                                  |
-deterministic services <----- structured PlanningProposal or PlanChange
-       |
-validated MealPlan and GroceryList
+## Requirements
+
+- **Java 21:** a JDK. The Maven wrapper (`./mvnw`) downloads everything else on first use.
+- **Docker:** runs the PostgreSQL 16 database, through `docker compose`.
+- **An OpenAI API key:** needed for the agent features. Profile, pantry, recipe browsing, nutrition and grocery lists work without one.
+
+## Setup
+
+1. Create your local configuration from the example, which holds placeholders only:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Open `.env` and set:
+   - `LLM_API_KEY`: your OpenAI API key.
+   - `LLM_MODEL`: the model to use. The example pins `gpt-5.4-mini-2026-03-17`.
+   - `POSTGRES_PASSWORD` and `DATABASE_PASSWORD`: a local database password. Use the same value in both.
+
+   `.env` is listed in `.gitignore` and must never be committed. If a key is ever exposed, revoke it in the OpenAI dashboard and create a new one.
+
+3. Start the database, then create the tables and load the ingredient catalogue and recipes:
+
+   ```bash
+   docker compose up -d
+   ./mealiq setup
+   ```
+
+   Running `setup` again is safe: existing data is kept and the catalogue is updated in place.
+
+## Running MealIQ
+
+Run these from the project folder; the first run compiles the project.
+
+**Desktop app:**
+
+```bash
+./mealiq-gui
 ```
 
-1. The GUI sends requests through `MealPlanningApi` (FastAPI); the CLI calls `MealPlanningFacade` in-process. Both reach the same facade operations.
-2. `AgentController` gathers profile, pantry, plan, and relevant conversation context.
-3. `MealPlanningAgent` chooses a planning strategy, then runs a bounded tool loop in which the LLM decides which tool to call next; `ToolManager` validates and executes each call, and the results are fed back until the LLM is ready to propose a plan.
-4. Recipe, nutrition, grocery, and substitution tools provide constrained facts; the external LLM API assists with interpretation, planning, and decision proposals.
-5. `ProposalValidator`, `ConstraintValidator`, and deterministic services validate the proposal before `MealPlanService` applies a confirmed result.
+It opens on the **Assistant** tab, where you type what you want or pick a suggestion. The other tabs are **Profile**, **Pantry**, **Recipes**, **Plan** and **Groceries**. Use the **Profile** field at the top to switch between people.
 
-## AI and external-provider integration
+**Command line:**
 
-Stage 2 is designed to integrate an external LLM API. OpenAI is the initial planned provider: Stage 2 will use an OpenAI GPT model that supports structured (JSON-schema) outputs; the specific model version will be pinned and documented when implementation begins. The application remains portable: `MealPlanningAgent` depends only on the provider-neutral `LLMClient` interface, while `ProviderLLMAdapter` translates structured requests and responses to the selected provider API/SDK. An alternative adapter can support another provider, such as Anthropic or Gemini, without changing agent or domain logic.
-
-The LLM receives a purpose-built prompt from `PromptBuilder` plus relevant, bounded context. It returns schema-constrained data rather than directly mutating application state:
-
-```text
-LLM structured response -> PlanningProposal / PlanChange
-                         -> ProposalValidator + ConstraintValidator
-                         -> deterministic nutrition, cost, grocery, and rule checks
-                         -> confirmed command execution
+```bash
+./mealiq --help
+./mealiq ask "I'm vegetarian and allergic to peanuts"
 ```
 
-Recipe and indicative price data also enter through provider-neutral source adapters. External responses are treated as inputs to validate, not as an authority over inventory, arithmetic, or hard dietary constraints.
-
-### Agent tools
-
-| Tool | Role | Deterministic boundary |
-|---|---|---|
-| `RecipeTool` | Retrieves recipe candidates from repositories or external sources. | Filters and maps data to internal recipe objects. |
-| `NutritionTool` | Supplies meal/plan nutrient summaries. | `NutritionService` performs calculations. |
-| `GroceryTool` | Projects shortages and purchases for a plan. | `GroceryService` subtracts pantry stock and consolidates quantities. |
-| `SubstitutionTool` | Finds potential substitutions. | `ConstraintValidator` enforces restrictions, time, nutrition, and budget checks. |
-
-## Architecture and interfaces
-
-MealIQ is designed as a modular application with two interface adapters and one shared application boundary.
-
-| Layer | Planned responsibilities |
+| Command | Purpose |
 |---|---|
-| GUI | React calendar, pantry, recipe, grocery, profile, and plan-change views. |
-| CLI | Typer commands for the same major functions and natural-language modifications. |
-| API/application boundary | `MealPlanningApi` (FastAPI routes for the GUI) and `MealPlanningFacade` (shared by GUI and CLI) expose the use cases without UI-specific business logic. |
-| Agent layer | `AgentController`, `MealPlanningAgent`, `PromptBuilder`, `ConversationMemory`, `ToolManager`, `LLMClient`. |
-| Domain/services | Profile, pantry, meal-plan, nutrition, grocery, budget, validation, and command services. |
-| Data/integrations | SQLAlchemy repositories over PostgreSQL plus LLM/recipe/price provider adapters. |
+| `ask "..."` | Ask the agent in your own words; changes are confirmed with `[y/N]` (`--yes` to skip) |
+| `profile show` / `profile set ...` | Show or change goals, diet, allergies, budget and time limits |
+| `pantry list` / `pantry set INGREDIENT AMOUNT UNIT` / `pantry remove INGREDIENT` | Manage the pantry |
+| `ingredients [TEXT]` | Search the ingredient catalogue |
+| `recipes list` / `find "..."` / `generate "..."` / `show "NAME"` | Browse, ask the agent, generate, see details |
+| `plan generate` / `show` / `modify "..."` / `substitute INGREDIENT` / `cheaper` / `adapt` / `undo` / `history` | Plans and changes |
+| `grocery generate` / `grocery show` | The priced shopping list and budget check |
+| `--profile NAME` | Use another person's profile with any command |
 
-The editable UMLet files in [diagrams/umlet](docs/stage1/diagrams/umlet/) are the canonical diagram sources. Their corresponding UMLet PNG exports are in [diagrams/png](docs/stage1/diagrams/png/). The [complete class diagram](docs/stage1/diagrams/png/class-diagram-complete.png) shows the whole model grouped into packages. Four focused views (architecture, services and patterns, domain, and contracts and persistence) show the same model at a readable scale. Five sequence diagrams (SD01-SD05) and the use-case diagram complete the UML set.
+Add `--show-steps` to agent commands to see the tool calls the agent made.
 
-## Technology plan
+**Windows.** The two launch scripts are for macOS and Linux. On Windows, build the class path once with Maven and start Java directly, in PowerShell:
 
-| Area | Planned technology | Purpose |
-|---|---|---|
-| Frontend | React + TypeScript | Graphical planning, pantry, recipe, and grocery interfaces. |
-| Backend/API | Python + FastAPI | Typed HTTP API (`MealPlanningApi`) in front of the shared application facade. |
-| CLI | Python + Typer | Scriptable access to the same application use cases. |
-| Database | PostgreSQL | Durable profiles, pantry items, recipes, plans, and grocery lists. |
-| Data access | SQLAlchemy | Repository persistence mapping and transaction boundaries. |
-| Validation/data models | Pydantic | API DTO validation and structured LLM proposal models. |
-| LLM | External API through `LLMClient` / `ProviderLLMAdapter` | Provider-neutral agent reasoning and structured output. |
-| Testing | pytest | Later deterministic unit/integration tests and adapter fakes. |
+```powershell
+.\mvnw.cmd -q compile dependency:build-classpath "-Dmdep.outputFile=target/classpath.txt"
+java -cp "target/classes;$(Get-Content target/classpath.txt)" io.github.ayech14.mealiq.presentation.cli.MealPlanningCLI --help
+java -cp "target/classes;$(Get-Content target/classpath.txt)" io.github.ayech14.mealiq.presentation.gui.MealIQDesktop
+```
+
+**Stopping.** Close the app. Stop the database with `docker compose down`; your data stays in a Docker volume.
+
+## Example session
+
+```text
+$ ./mealiq ask "I'm vegetarian and allergic to peanuts, my budget is 60 dollars a week"
+Update your profile?
+  Diet: vegetarian
+  Allergies: peanut
+  Weekly budget: $60.00
+Apply? [y/N] y
+
+$ ./mealiq ask "plan 2 days of quick meals"
+  2026-11-03 breakfast: Spinach scrambled eggs on toast
+  2026-11-03 lunch: Black bean quesadillas
+  ...
+
+$ ./mealiq ask "I ran out of eggs"
+Update your pantry?
+  egg: none left
+Apply? [y/N] y
+Note: Day 1 (2026-11-03) breakfast: Spinach scrambled eggs on toast uses egg, which is no longer in your pantry.
+
+$ ./mealiq ask "fix my plan"
+Proposed change:
+  2026-11-03 breakfast: Spinach scrambled eggs on toast -> Tofu scramble
+Apply this change? [y/N] y
+```
+
+## Architecture
+
+```text
+ JavaFX GUI (presentation.gui)      picocli CLI (presentation.cli)
+                 \                       /
+                  MealPlanningFacade  (application)
+                  |                 \
+          AgentController            services: Profile, Pantry, MealPlan, Grocery,
+                  |                  Budget, Nutrition, ProposalValidator,
+          MealPlanningAgent (agent)  ConstraintValidator, PlanImpactAssessor
+           |      |        \
+     LLMClient  ToolManager  PlanningStrategyFactory -> PlanningStrategy (planning)
+   (ProviderLLM  (Recipe, Nutrition,
+    Adapter)      Grocery, Substitution tools)
+                  |
+     repositories (persistence): JDBC on PostgreSQL; H2 in tests
+```
+
+- The interfaces only collect input and show results; all rules sit behind the facade.
+- The agent depends only on the `LLMClient` interface. OpenAI SDK types stay inside `ProviderLLMAdapter`.
+- Plan changes are `PlanChangeCommand`s run by `MealPlanService`, and they are stored so undo works across sessions.
+- Pantry and profile changes notify `MealPlanImpactObserver` and `GroceryListImpactObserver`.
 
 ## Design patterns
 
-The Stage 1 design applies six patterns to concrete design problems:
-
-- **Strategy:** interchangeable nutrition-goal, budget, and time-aware recipe ranking policies.
-- **Factory Method:** a strategy factory creates the concrete strategy selected for a planning mode.
-- **Command:** previewable, auditable, undoable meal-plan changes.
-- **Observer:** pantry/profile changes notify plan- and grocery-impact observers without direct coupling.
-- **Facade:** GUI and CLI call one shared application boundary.
-- **Adapter:** LLM, recipe, and price provider APIs are translated to stable internal interfaces.
-
-Full participants and rationale are documented in [design patterns](docs/stage1/design-patterns.md).
-
-## Project stages
-
-| Stage | Scope | Status |
+| Pattern | Where | Problem it solves |
 |---|---|---|
-| Stage 1 | Features, architecture, UML, patterns, decisions, and traceability | Complete design package |
-| Stage 2 | Python/FastAPI, React, Typer, PostgreSQL, SQLAlchemy, Pydantic, and external LLM API implementation | Planned |
-| Stage 3 | pytest coverage for deterministic components and KUMA behavioral validation for the agent | Planned |
+| Strategy | `PlanningStrategy`, `NutritionGoalStrategy`, `TimeAwareStrategy`, `BudgetStrategy` | Interchangeable ranking policies for the agent |
+| Factory Method | `PlanningStrategyFactory`, `DefaultPlanningStrategyFactory` | The right strategy for a planning mode, configured for the profile |
+| Command | `PlanChangeCommand`, `ReplaceMealCommand`, `SubstituteIngredientCommand`, `UpdatePlanConstraintCommand`, `CompositeCommand` | Confirmed, undoable plan changes kept separate from AI proposals |
+| Observer | `PlanRelevantChangePublisher`, `PantryService`, `ProfileService`, `MealPlanImpactObserver`, `GroceryListImpactObserver` | Flag affected plans and lists without coupling services to them |
+| Facade | `MealPlanningFacade` | One boundary for the GUI and the CLI |
+| Adapter | `LLMClient`/`ProviderLLMAdapter`, `PriceDataSource`/`StatCanPriceDataSource` | Keep provider SDKs and data formats out of domain code |
 
-## Design documentation
+## Data sources
 
-| Artifact | Description |
-|---|---|
-| [Stage 1 report](docs/stage1/stage1-report.md) | Public index of the complete design package and consistency audit. |
-| [Project overview](docs/stage1/project-overview.md) | Problem, users, agent, LLM integration, architecture, stack, and scope. |
-| [Feature specifications](docs/stage1/feature-specifications.md) | Inputs, outputs, workflows, UI access, classifications, and alternatives for F01-F13. |
-| [Use cases](docs/stage1/use-cases.md) | Major user/system interactions and exception paths. |
-| [Design patterns](docs/stage1/design-patterns.md) | Pattern problems, participants, responsibilities, and rationale. |
-| [Traceability](docs/stage1/traceability.md) | Feature-to-use-case-to-class-to-method-to-sequence mapping and realization. |
-| [Design decisions](docs/stage1/design-decisions.md) | Architecture decisions, validation boundaries, provider portability, and testability. |
-| [UMLet source diagrams](docs/stage1/diagrams/umlet/) | Editable `.uxf` use-case diagram, complete and focused class diagrams, and sequence diagrams SD01-SD05. |
-| [Rendered diagrams](docs/stage1/diagrams/png/) | PNG exports generated by UMLet from the `.uxf` sources. |
+- **Nutrition:** USDA FoodData Central SR Legacy (2018-04), curated to 146 ingredients with per-100 g values and gram weights (`src/main/resources/catalogue/ingredients.csv`, built by `scripts/build_catalogue.py`).
+- **Prices:** Statistics Canada, *Monthly average retail prices for selected products* (table 18-10-0245-01), Canada averages for August 2026, for 63 ingredients (`catalogue/prices.csv`, built by `scripts/build_prices.py`). Ingredients without a matching product have no price, and estimates are shown as lower bounds (`$x+`).
+- **Recipes:** 30 curated recipes using only catalogue ingredients (`catalogue/recipes.json`), plus any AI-generated recipes you save.
+
+## Tests
+
+```bash
+./mvnw test
+```
+
+The JUnit 5 suite covers domain values, every service and validator, the strategies, the commands, and the agent's tool loop driven by a scripted LLM (no network). It also covers the facade flows and the CLI commands end to end. Repository tests run on an in-memory H2 database. To run them against PostgreSQL too, set `MEALIQ_TEST_DATABASE_URL` (for example `jdbc:postgresql://localhost:5432/mealiq_test`).
 
 ## Repository layout
 
 ```text
-README.md                   Project overview (this file)
-LICENSE                     MIT license
-docs/
-└── stage1/                 Stage 1 design package (report, specifications, decisions)
-    └── diagrams/
-        ├── umlet/          Editable UMLet .uxf sources
-        └── png/            UMLet PNG exports
+README.md                    This file
+pom.xml, mvnw, mvnw.cmd      Maven build and wrapper
+mealiq, mealiq-gui           Launch scripts (macOS, Linux)
+docker-compose.yml           Local PostgreSQL
+.env.example                 Configuration template (placeholders only)
+scripts/                     Data build scripts (USDA catalogue, Statistics Canada prices)
+src/main/java/io/github/ayech14/mealiq/
+    agent/                   MealPlanningAgent, tools, prompts, memory
+    application/             MealPlanningFacade, AgentController
+    commands/                Plan change commands
+    config/                  .env loading
+    contracts/               Requests, proposals, responses
+    domain/                  Profile, pantry, recipes, plans, quantities
+    events/                  Observer types
+    integration/             Price data adapter
+    llm/                     LLMClient, OpenAI adapter, JSON schemas
+    persistence/             Repositories, JDBC, catalogue loaders
+    planning/                Strategies and factory
+    presentation/cli/        Command line
+    presentation/gui/        JavaFX desktop app
+    services/                Deterministic services and validators
+src/main/resources/          Catalogue data and database schema
+src/test/java/               JUnit tests
+docs/stage1/                 Design (specifications, use cases, patterns, decisions, UML)
+docs/stage2/                 Implementation report
 ```
+
+## Documentation
+
+- [Stage 1 design](docs/stage1/stage1-report.md): features F01-F13, use cases, design patterns, design decisions D01-D09, traceability, UML.
+- [Stage 2 implementation report](docs/stage2/stage2-report.md): feature-to-class mapping, implemented patterns, every change from the design and why.
 
 ## Responsible use and limitations
 
-- MealIQ provides meal-planning assistance, not medical, allergy-treatment, or professional dietary advice.
-- Allergies and dietary restrictions are modeled as hard planning constraints, but users remain responsible for verifying ingredients, labels, cross-contamination risks, and suitability.
-- Grocery prices are estimates based on available data, not retailer checkout prices.
-- LLM-generated proposals require deterministic validation and user confirmation before plan mutation.
-- External provider availability, recipe completeness, and ingredient-data quality can limit results; missing values are surfaced rather than fabricated.
+- MealIQ provides meal-planning assistance, not medical, allergy-treatment or professional dietary advice. Always check ingredients and labels yourself.
+- Allergies and diet rules are hard constraints in planning, but they cover only the tags in the ingredient catalogue.
+- Prices are public averages, not store checkout prices, and some ingredients have none.
+- Plans use one serving per meal, so high calorie targets may not be reached; the app reports this.
+- Recipe search covers the curated collection and saved generated recipes; there is no external recipe provider.
+- AI proposals are always validated and need your confirmation before they change anything.

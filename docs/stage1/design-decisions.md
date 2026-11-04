@@ -6,13 +6,13 @@
 
 The external LLM API supports interpretation, tool selection, choosing among ranked candidates, recipe and substitution proposals, and multi-step planning. Candidate scoring itself is deterministic: the selected `PlanningStrategy` ranks candidates, and the LLM chooses among the top-ranked options and explains its choices. Deterministic services calculate nutrition, costs, quantities, and grocery consolidation; validate inputs and hard constraints; and own persistence. This prevents generated text from becoming an authority for arithmetic or durable state.
 
-### D02 - Shared facade and API boundary
+### D02 - Shared facade boundary
 
-The React GUI and the Python Typer CLI share one application boundary, `MealPlanningFacade`. The GUI runs in a browser, so it calls `MealPlanningApi`, a thin FastAPI route layer that forwards each request to the facade. The CLI is written in Python and calls the facade in-process. Interface clients only collect input and present results; use-case coordination stays in the controller, the services, and the agent. This avoids duplicated business rules and keeps GUI and CLI outcomes identical. A considered alternative, routing the CLI through HTTP as well, was rejected because it would require a running server for local scripted use without adding any business value.
+The JavaFX GUI and the picocli CLI share one application boundary, `MealPlanningFacade`, and both call it in-process. (The original design had a browser GUI behind a FastAPI layer, `MealPlanningApi`; with a desktop GUI that layer was unnecessary and was removed in Stage 2.) Interface clients only collect input and present results; use-case coordination stays in the controller, the services, and the agent. This avoids duplicated business rules and keeps GUI and CLI outcomes identical. A considered alternative, routing the CLI through HTTP as well, was rejected because it would require a running server for local scripted use without adding any business value.
 
 ### D03 - Structured proposals before state mutation
 
-`MealPlanningAgent` returns `PlanningProposal` or `PlanChange` DTOs, not direct mutations. Pydantic models are planned for transport/schema validation; `ProposalValidator`, `ConstraintValidator`, nutrition, grocery, and budget services then validate domain feasibility. A user-visible preview precedes command execution. Invalid or unconfirmed proposals leave the active plan unchanged.
+`MealPlanningAgent` returns `PlanningProposal` or `PlanChange` DTOs, not direct mutations. Strict JSON schemas (`JsonSchema`) validate the LLM's structured output; `ProposalValidator`, `ConstraintValidator`, nutrition, grocery, and budget services then validate domain feasibility. A user-visible preview precedes command execution. Invalid or unconfirmed proposals leave the active plan unchanged.
 
 ### D04 - Constraint precedence and conflict transparency
 
@@ -32,7 +32,7 @@ The agent does not call tools in a fixed order. In a bounded loop, the LLM choos
 
 ### D08 - Test seams are first-class design elements
 
-Repository interfaces, injected provider adapters, typed tool results, strategy interfaces, commands, and event observers allow isolated tests with controlled state. Stage 3 can test deterministic services with pytest and evaluate LLM behavior separately with KUMA behavioral tests.
+Repository interfaces, injected provider adapters, typed tool results, strategy interfaces, commands, and event observers allow isolated tests with controlled state. Stage 3 can test deterministic services with JUnit and evaluate LLM behavior separately with KUMA behavioral tests.
 
 ### D09 - Nutrition data provenance and ingredient matching
 
@@ -54,16 +54,16 @@ Repository interfaces, injected provider adapters, typed tool results, strategy 
 
 ## Stage 3 testability
 
-| Area | Deterministic pytest focus | Agent/KUMA behavioral focus |
+| Area | Deterministic JUnit focus | Agent/KUMA behavioral focus |
 |---|---|---|
 | Nutrition and costs | `NutritionService`/`BudgetService`: totals, servings, partial data, boundaries | Requests the appropriate facts and uses returned values. |
 | Pantry and grocery | Pantry updates, expiry exclusion, unit mismatch, shortage calculation, duplicate consolidation | Identifies list/plan effects after inventory changes. |
 | Rules | Allergy/restriction, time, budget, invalid-input, and conflict validation | Follows constraints and explains unavoidable trade-offs. |
-| Persistence and adapters | Repository contracts, SQLAlchemy mappings, adapter translation, provider error mapping with fakes | Selects tools, supplies valid arguments, and recovers from failed tools/providers. |
+| Persistence and adapters | Repository contracts (H2 and PostgreSQL), adapter translation, provider error mapping with fakes | Selects tools, supplies valid arguments, and recovers from failed tools/providers. |
 | Plan changes | Command execute/undo, no mutation on invalid change, observer notification | Clarifies ambiguous modifications and completes multi-step plan updates. |
 
 Candidate behavioral requirements include correct recipe/nutrition/grocery/substitution tool selection, use of tool results rather than fabricated values, protection of hard restrictions, clarification of an ambiguous target meal, provider/tool failure recovery, completion of a plan-plus-grocery workflow, and explicit budget/time conflict reporting. Representative cases include conflicting preferences, unavailable ingredients, malformed structured output, repeated changes, and long plan context.
 
 ## Stage boundary
 
-Stage 1 contains the design package only. The planned Stage 2 work encompasses the FastAPI backend, React interface, Typer CLI, SQLAlchemy persistence, PostgreSQL database, and external LLM API integration. Stage 3 covers deterministic automated testing and behavioral validation of the LLM-driven agent.
+Stage 1 contains the design package. Stage 2 implemented it in Java: the JavaFX GUI, the picocli CLI, JDBC persistence on PostgreSQL, and OpenAI integration (see the Stage 2 report). Stage 3 covers deterministic automated testing and behavioral validation of the LLM-driven agent.
