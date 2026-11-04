@@ -53,6 +53,7 @@ import io.github.ayech14.mealiq.services.NutritionService;
 import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.PlanImpactAssessor;
 import io.github.ayech14.mealiq.services.ProfileService;
+import io.github.ayech14.mealiq.services.PortionService;
 import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
@@ -153,7 +154,8 @@ public class MealPlanningFacade {
         MealPlanningAgent agent = AgentAssembly.agent(llm, recipes, ingredients, nutrition, budget, groceries,
                 validator, strategies, config.maxToolSteps());
         AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
-                new ProposalValidator(recipes), validator, groceries);
+                new ProposalValidator(recipes), validator, groceries,
+                new PortionService(nutrition, budget));
         return new MealPlanningFacade(new Services(profiles, pantry, mealPlans, groceries, ingredients, recipes,
                 nutrition, budget, validator, strategies, controller, clock));
     }

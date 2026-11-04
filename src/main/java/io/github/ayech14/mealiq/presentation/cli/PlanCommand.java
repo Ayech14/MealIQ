@@ -250,12 +250,22 @@ final class PlanCommand implements Runnable {
             for (PlannedMeal meal : meals) {
                 NutritionSummary n = cli.facade().recipeNutrition(meal.recipe(), meal.servings());
                 out.printf("  %-10s %-35s %5d %6s %8s%n", meal.mealType().name().toLowerCase(Locale.ROOT),
-                        meal.recipe().name(), meal.recipe().totalMinutes(), kcal(n), protein(n));
+                        dish(meal), meal.recipe().totalMinutes(), kcal(n), protein(n));
             }
             NutritionSummary total = day.getValue();
             String target = profile == null ? "" : targets(profile);
             out.printf("  %-46s %6s %8s%s%n", "Day total", kcal(total), protein(total), target);
         }
+    }
+
+    /** The recipe name, with the portion when it is more than one serving. */
+    static String dish(PlannedMeal meal) {
+        String name = meal.recipe().name();
+        if (meal.servings() == 1) {
+            return name;
+        }
+        String portion = " (x" + meal.servings() + ")";
+        return (name.length() + portion.length() > 35 ? name.substring(0, 35 - portion.length()) : name) + portion;
     }
 
     private void printDisclaimer() {

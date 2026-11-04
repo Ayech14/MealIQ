@@ -28,6 +28,7 @@ import io.github.ayech14.mealiq.services.GroceryService;
 import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NotFoundException;
 import io.github.ayech14.mealiq.services.PantryService;
+import io.github.ayech14.mealiq.services.PortionService;
 import io.github.ayech14.mealiq.services.ProfileService;
 import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.time.LocalDate;
@@ -64,12 +65,14 @@ public class AgentController {
     private final ProposalValidator proposalValidator;
     private final ConstraintValidator constraintValidator;
     private final GroceryService groceryService;
+    private final PortionService portionService;
     private final Map<UUID, PlanChange> pendingChanges = new ConcurrentHashMap<>();
     private final Map<UUID, Recipe> pendingRecipes = new ConcurrentHashMap<>();
 
     public AgentController(MealPlanningAgent agent, ProfileService profileService, PantryService pantryService,
                            MealPlanService mealPlanService, ProposalValidator proposalValidator,
-                           ConstraintValidator constraintValidator, GroceryService groceryService) {
+                           ConstraintValidator constraintValidator, GroceryService groceryService,
+                           PortionService portionService) {
         this.agent = agent;
         this.profileService = profileService;
         this.pantryService = pantryService;
@@ -77,6 +80,7 @@ public class AgentController {
         this.proposalValidator = proposalValidator;
         this.constraintValidator = constraintValidator;
         this.groceryService = groceryService;
+        this.portionService = portionService;
     }
 
     /**
@@ -103,6 +107,8 @@ public class AgentController {
                 return AgentResponse.builder(ResponseStatus.FAILED).rationale(failureMessage(e)).agentSteps(steps)
                         .build();
             }
+            // The agent chose the recipes; the portions are sized deterministically (D01).
+            attempt = new PlanAttempt(portionService.sizePortions(attempt.proposal(), context), attempt.toolCalls());
             String prefix = "Attempt " + number + ": ";
             attempt.toolCalls().forEach(call -> steps.add(prefix + call.describe()));
             result = proposalValidator.validate(attempt.proposal(), context)

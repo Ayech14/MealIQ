@@ -17,6 +17,7 @@ import io.github.ayech14.mealiq.services.NutritionService;
 import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.PlanImpactAssessor;
 import io.github.ayech14.mealiq.services.ProfileService;
+import io.github.ayech14.mealiq.services.PortionService;
 import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -75,7 +76,8 @@ public final class TestFacades {
                 new PlanImpactAssessor(profileRows, pantryRows, catalogue, validator, budget, clock));
         MealPlanningFacade.subscribeObservers(profiles, pantry, mealPlans, groceries);
         AgentController controller = new AgentController(agent, profiles, pantry, mealPlans,
-                new ProposalValidator(recipes), validator, groceries);
+                new ProposalValidator(recipes), validator, groceries,
+                new PortionService(nutrition, budget));
         MealPlanningFacade facade = new MealPlanningFacade(new MealPlanningFacade.Services(
                 profiles, pantry, mealPlans, groceries, catalogue, recipes, nutrition, budget, validator, strategies,
                 controller, clock));

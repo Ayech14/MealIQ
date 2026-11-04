@@ -34,11 +34,13 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 /**
@@ -184,22 +186,38 @@ public class MealPlanningAgent {
         List<MealType> types = slots.stream().distinct().toList();
         String goal = "Collect candidate recipes for a " + context.request().days() + "-day plan whose days each "
                 + "need: " + String.join(", ", slots.stream().map(t -> t.name().toLowerCase(Locale.ROOT)).toList())
-                + ". Call recipeSearch once per meal type (set mealType), within the cooking-time limits. "
-                + "Finish when every meal type has candidates.";
+                + ". Call recipeSearch once per meal type (set mealType), within the cooking-time limits. Do not "
+                + "add include filters for pantry items: the ranking already favours them, and include filters "
+                + "leave too few recipes. Finish when every meal type has candidates.";
         List<ToolCall> calls = new ArrayList<>(runToolLoop(context, goal, RecipeQuery.any(),
                 memory.retrieveRelevantContext(context.request().profileId(), context.request().instruction())));
 
+        Set<Integer> limits = timeLimits(context);
         Map<MealType, List<Recipe>> ranked = new EnumMap<>(MealType.class);
         for (MealType type : types) {
-            List<Recipe> found = candidatesOf(calls, type);
-            if (found.isEmpty()) {
-                // The LLM skipped this meal type; search it so the plan can still be complete.
-                String args = "{\"mealType\": \"" + type.name().toLowerCase(Locale.ROOT) + "\"}";
-                calls.add(new ToolCall(RecipeTool.NAME, args, "automatic: no candidates yet for this meal type",
+            int perDay = (int) slots.stream().filter(type::equals).count();
+            String name = type.name().toLowerCase(Locale.ROOT);
+            if (candidatesOf(calls, type).size() < CANDIDATES_PER_TYPE && !searched(calls, type, null)) {
+                // The LLM's filters found too few recipes (or none); widen the search so the plan can be complete.
+                calls.add(new ToolCall(RecipeTool.NAME, "{\"mealType\": \"" + name + "\"}",
+                        "automatic: too few " + name + " candidates from the searches above",
                         toolManager.execute(RecipeTool.NAME, Map.of("mealType", type.name()), context)));
-                found = candidatesOf(calls, type);
             }
-            ranked.put(type, rankRecipes(found, context).stream().limit(CANDIDATES_PER_TYPE).toList());
+            for (int limit : limits) {
+                if (fitting(candidatesOf(calls, type), limit).size() < perDay + 2 && !searched(calls, type, limit)) {
+                    // Too few recipes fit the shortest days: look for quick ones specifically.
+                    calls.add(new ToolCall(RecipeTool.NAME,
+                            "{\"mealType\": \"" + name + "\", \"maxMinutes\": " + limit + "}",
+                            "automatic: too few " + name + " candidates within " + limit + " minutes",
+                            toolManager.execute(RecipeTool.NAME, Map.of("mealType", type.name(), "maxMinutes", limit),
+                                    context)));
+                }
+            }
+            List<Recipe> all = rankRecipes(candidatesOf(calls, type), context);
+            Set<Recipe> shown = new LinkedHashSet<>(all.stream().limit(CANDIDATES_PER_TYPE).toList());
+            // Make sure each time-limited day still has a choice among the shown candidates.
+            limits.forEach(limit -> shown.addAll(fitting(all, limit).stream().limit(QUICK_CANDIDATES).toList()));
+            ranked.put(type, List.copyOf(shown));
         }
 
         Map<String, Object> answer = llmClient.generateStructured(
@@ -212,16 +230,61 @@ public class MealPlanningAgent {
             MealType type = MealType.valueOf(((String) entry.get("mealType")).toUpperCase(Locale.ROOT));
             String name = ((String) entry.get("recipe")).strip();
             LocalDate date = context.request().startDate().plusDays(day - 1L);
-            ranked.values().stream().flatMap(List::stream).filter(r -> r.name().equalsIgnoreCase(name))
-                    .findFirst()
+            ranked.getOrDefault(type, List.of()).stream().filter(r -> r.name().equalsIgnoreCase(name)).findFirst()
                     .ifPresentOrElse(recipe -> meals.add(new PlannedMeal(date, type, recipe, 1)),
                             () -> conflicts.add("Day " + day + " " + type.name().toLowerCase(Locale.ROOT) + ": '"
-                                    + name + "' is not one of the candidates, so the slot was left empty."));
+                                    + name + "' is not one of the " + type.name().toLowerCase(Locale.ROOT)
+                                    + " candidates, so the slot was left empty."));
         }
         ((List<?>) answer.get("conflicts")).forEach(c -> conflicts.add(String.valueOf(c)));
         PlanningProposal proposal = new PlanningProposal(meals, context.request().mode(),
                 (String) answer.get("rationale"), conflicts);
         return new PlanAttempt(proposal, calls);
+    }
+
+    /** Quick recipes always shown for each time-limited day, beyond the top-ranked ones. */
+    static final int QUICK_CANDIDATES = 5;
+
+    /** The distinct cooking-time limits of the plan's days. */
+    static Set<Integer> timeLimits(PlanningContext context) {
+        Set<Integer> limits = new TreeSet<>();
+        for (int day = 0; day < context.request().days(); day++) {
+            context.profile().maxMinutesFor(context.request().startDate().plusDays(day).getDayOfWeek())
+                    .ifPresent(limits::add);
+        }
+        return limits;
+    }
+
+    /**
+     * Whether a successful search already looked for every allowed recipe of {@code type}
+     * (within {@code maxMinutes}, if given), with no ingredient filters; then repeating it
+     * cannot find more.
+     */
+    static boolean searched(List<ToolCall> calls, MealType type, Integer maxMinutes) {
+        for (ToolCall call : calls) {
+            if (!call.toolName().equals(RecipeTool.NAME) || !call.result().success()) {
+                continue;
+            }
+            Map<String, Object> args;
+            try {
+                args = JSON.readValue(call.arguments(), new TypeReference<>() { });
+            } catch (JsonProcessingException e) {
+                continue;
+            }
+            boolean sameType = type.name().equalsIgnoreCase(String.valueOf(args.get("mealType")));
+            Object minutes = args.get("maxMinutes");
+            boolean noFilters = args.keySet().stream().allMatch(k -> k.equals("mealType") || k.equals("maxMinutes"));
+            boolean wideEnough = minutes == null
+                    || (maxMinutes != null && minutes instanceof Number n && n.intValue() >= maxMinutes);
+            if (sameType && noFilters && wideEnough) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static List<Recipe> fitting(List<Recipe> recipes, int limit) {
+        return recipes.stream().filter(r -> r.totalMinutes() <= limit).toList();
     }
 
     /** Distinct recipes of a meal type returned by successful tool calls, in the order found. */

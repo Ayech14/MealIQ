@@ -21,6 +21,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -106,16 +107,6 @@ public class PromptBuilder {
                 .append("). Each day needs exactly: ")
                 .append(slots.stream().map(t -> t.name().toLowerCase(Locale.ROOT)).collect(Collectors.joining(", ")))
                 .append(".\n");
-        List<String> limits = new ArrayList<>();
-        for (int day = 1; day <= context.request().days(); day++) {
-            OptionalInt limit = context.profile().maxMinutesFor(start.plusDays(day - 1L).getDayOfWeek());
-            if (limit.isPresent()) {
-                limits.add("day " + day + ": " + limit.getAsInt() + " min");
-            }
-        }
-        if (!limits.isEmpty()) {
-            prompt.append("COOKING-TIME LIMIT PER MEAL: ").append(String.join(", ", limits)).append('\n');
-        }
         for (MealType type : slots.stream().distinct().toList()) {
             prompt.append(type.name()).append(" CANDIDATES, best first by the ")
                     .append(context.request().mode().name().toLowerCase(Locale.ROOT).replace('_', ' '))
@@ -126,16 +117,41 @@ public class PromptBuilder {
             }
             ranked.forEach(r -> prompt.append("- ").append(facts(r, context)).append('\n'));
         }
+        // Days that share a cooking-time limit, so each slot lists only the candidates that fit it.
+        Map<Integer, List<Integer>> daysByLimit = new TreeMap<>();
+        for (int day = 1; day <= context.request().days(); day++) {
+            OptionalInt limit = context.profile().maxMinutesFor(start.plusDays(day - 1L).getDayOfWeek());
+            if (limit.isPresent()) {
+                daysByLimit.computeIfAbsent(limit.getAsInt(), k -> new ArrayList<>()).add(day);
+            }
+        }
+        if (!daysByLimit.isEmpty()) {
+            prompt.append("COOKING-TIME LIMITS PER MEAL. On these days use ONLY the candidates listed for the slot:\n");
+            daysByLimit.forEach((limit, days) -> {
+                prompt.append("- day ").append(days.stream().map(String::valueOf).collect(Collectors.joining(", ")))
+                        .append(" (max ").append(limit).append(" min):");
+                for (MealType type : slots.stream().distinct().toList()) {
+                    List<String> fit = candidates.getOrDefault(type, List.of()).stream()
+                            .filter(r -> r.totalMinutes() <= limit).map(Recipe::name).toList();
+                    prompt.append(' ').append(type.name().toLowerCase(Locale.ROOT)).append(": ")
+                            .append(fit.isEmpty() ? "(none fits)" : String.join(" | ", fit)).append(';');
+                }
+                prompt.append('\n');
+            });
+            prompt.append("Days not listed have no limit.\n");
+        }
         if (!context.violations().isEmpty()) {
             prompt.append("YOUR PREVIOUS PLAN WAS REJECTED FOR THESE REASONS; FIX THEM:\n");
             context.violations().forEach(v -> prompt.append("- ").append(v).append('\n'));
         }
         prompt.append("""
-                Build the plan: one entry per meal slot, using exact candidate names for that meal type. \
-                Respect the cooking-time limits and the grocery budget (the costs are per serving), aim for \
-                the calorie and protein targets across each day, use pantry items early, never use the same recipe \
+                Build the plan: one entry per meal slot, using an exact candidate name from that meal type's \
+                list (a dinner candidate cannot fill a lunch slot unless it is also listed under LUNCH). \
+                Respect the cooking-time limits and the grocery budget (the costs are per serving). Portions are \
+                sized after you choose (1 or 2 servings per meal), so for high calorie or protein targets prefer \
+                filling, high-protein candidates. Use pantry items early, never use the same recipe \
                 twice on one day, and vary the meals across days. In the rationale (2-4 sentences), \
-                explain the main trade-offs. List anything you could not satisfy in conflicts.""");
+                explain the main trade-offs of your recipe choices; do not discuss portion sizes. List anything you could not satisfy in conflicts.""");
         return prompt.toString();
     }
 

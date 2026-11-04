@@ -29,6 +29,7 @@ import io.github.ayech14.mealiq.services.MealPlanService;
 import io.github.ayech14.mealiq.services.NutritionService;
 import io.github.ayech14.mealiq.services.PantryService;
 import io.github.ayech14.mealiq.services.ProfileService;
+import io.github.ayech14.mealiq.services.PortionService;
 import io.github.ayech14.mealiq.services.ProposalValidator;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -88,14 +89,15 @@ class AgentControllerTest {
         MealPlanningAgent agent = new MealPlanningAgent(llm, tools, new PromptBuilder(nutrition, budget),
                 new ConversationMemory(5), new DefaultPlanningStrategyFactory(nutrition, budget), catalogue, 2);
         return new AgentController(agent, profiles, pantry, planService(), new ProposalValidator(recipes), validator,
-                groceries());
+                groceries(), new PortionService(nutrition, budget));
     }
 
     AgentController controller() {
         BudgetService budget = new BudgetService((i, q) -> Optional.empty());
         return new AgentController(AgentAssembly.agent(llm, recipes, catalogue, nutrition, budget, groceries(),
                 validator, new DefaultPlanningStrategyFactory(nutrition, budget), 3),
-                profiles, pantry, planService(), new ProposalValidator(recipes), validator, groceries());
+                profiles, pantry, planService(), new ProposalValidator(recipes), validator, groceries(),
+                new PortionService(nutrition, budget));
     }
 
     MealPlanService planService() {

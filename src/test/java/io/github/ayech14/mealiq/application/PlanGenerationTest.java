@@ -141,8 +141,8 @@ class PlanGenerationTest {
         }
         AgentResponse response = facade.generateWeeklyPlan(request(1));
         assertEquals(ResponseStatus.CONFLICT, response.status());
-        assertTrue(response.conflicts().contains("Day 1 dinner: 'Grandma's lasagna' is not one of the candidates, "
-                + "so the slot was left empty."), response.conflicts().toString());
+        assertTrue(response.conflicts().contains("Day 1 dinner: 'Grandma's lasagna' is not one of the dinner "
+                + "candidates, so the slot was left empty."), response.conflicts().toString());
     }
 
     @Test
@@ -172,5 +172,61 @@ class PlanGenerationTest {
             assertEquals(START, meal.date());
             assertEquals(1, meal.servings());
         }
+    }
+
+    @Test
+    void portionsGrowToReachAHighCalorieTarget() {
+        facade.updateProfile(facade.getProfile(profileId).dailyCalorieTarget(3000).dailyProteinTargetG(160));
+        queueSearches();
+        llm.queue(plan("Filling.", "Overnight oats", "Lentil soup", "Shrimp tacos"));
+
+        AgentResponse response = facade.generateWeeklyPlan(request(1));
+
+        assertEquals(ResponseStatus.SUCCESS, response.status(), response.conflicts().toString());
+        MealPlan plan = facade.getActivePlan(profileId).orElseThrow();
+        assertTrue(plan.meals().stream().allMatch(m -> m.servings() >= 1 && m.servings() <= 2));
+        assertTrue(plan.meals().stream().anyMatch(m -> m.servings() == 2),
+                "one serving per meal is far below 3000 kcal, so some portions grow");
+        double oneServing = plan.meals().stream()
+                .mapToDouble(m -> facade.recipeNutrition(m.recipe(), 1).calories()).sum();
+        double planned = facade.dailyNutrition(plan).get(START).calories();
+        assertTrue(planned > oneServing, planned + " > " + oneServing);
+    }
+
+    @Test
+    void portionsStayAtOneWithoutTargets() {
+        queueSearches();
+        llm.queue(plan("Ok.", "Overnight oats", "Lentil soup", "Shrimp tacos"));
+        MealPlan plan = facade.generateWeeklyPlan(request(1)).plan();
+        assertTrue(plan.meals().stream().allMatch(m -> m.servings() == 1));
+    }
+
+    @Test
+    void timeLimitedDaysListOnlyTheCandidatesThatFit() {
+        facade.updateProfile(facade.getProfile(profileId).maxCookMinutes(Map.of(DayOfWeek.TUESDAY, 25)));
+        queueSearches();
+        llm.queue(plan("Quick.", "Overnight oats", "Turkey veggie wrap", "Shrimp tacos"));
+
+        AgentResponse response = facade.generateWeeklyPlan(request(1));
+
+        assertEquals(ResponseStatus.SUCCESS, response.status(), response.conflicts().toString());
+        String prompt = llm.calls().get(4).prompt();
+        String line = prompt.lines().filter(l -> l.startsWith("- day 1 (max 25 min):")).findFirst().orElseThrow();
+        assertTrue(line.contains("Turkey veggie wrap"), line);
+        assertFalse(line.contains("Lentil soup"), "Lentil soup takes 40 min: " + line);
+    }
+
+    @Test
+    void pantryIncludeFiltersAreWidenedWithABroadSearch() {
+        llm.queue(Map.of("action", "call_tool", "tool", "recipeSearch",
+                        "arguments", "{\"mealType\": \"dinner\", \"include\": [\"shrimp\"]}", "reason", "pantry"),
+                search("breakfast"), search("lunch"), finish(),
+                plan("Ok.", "Overnight oats", "Lentil soup", "Shrimp tacos"));
+
+        AgentResponse response = facade.generateWeeklyPlan(request(1));
+
+        assertEquals(ResponseStatus.SUCCESS, response.status(), response.conflicts().toString());
+        assertTrue(response.agentSteps().stream().anyMatch(s -> s.contains("recipeSearch {\"mealType\": \"dinner\"} ->")),
+                response.agentSteps().toString());
     }
 }
