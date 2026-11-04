@@ -214,7 +214,7 @@ pom.xml, mvnw, mvnw.cmd      Maven build and wrapper
 mealiq, mealiq-gui           Launch scripts (macOS, Linux)
 docker-compose.yml           Local PostgreSQL
 .env.example                 Configuration template (placeholders only)
-scripts/                     Data build scripts (USDA catalogue, Statistics Canada prices)
+scripts/                     Data build scripts (USDA catalogue, Statistics Canada prices) and the report builder
 src/main/java/io/github/ayech14/mealiq/
     agent/                   MealPlanningAgent, tools, prompts, memory
     application/             MealPlanningFacade, AgentController
@@ -233,13 +233,13 @@ src/main/java/io/github/ayech14/mealiq/
 src/main/resources/          Catalogue data and database schema
 src/test/java/               JUnit tests
 docs/stage1/                 Design (specifications, use cases, patterns, decisions, UML)
-docs/stage2/                 Implementation report
+docs/stage2/                 Implementation report (Markdown source, Word and PDF)
 ```
 
 ## Documentation
 
 - [Stage 1 design](docs/stage1/stage1-report.md): features F01-F13, use cases, design patterns, design decisions D01-D09, traceability, UML.
-- [Stage 2 implementation report](docs/stage2/stage2-report.md): feature-to-class mapping, implemented patterns, every change from the design and why.
+- [Stage 2 implementation report](docs/stage2/stage2-report.pdf) ([Markdown source](docs/stage2/stage2-report.md)): feature-to-class mapping, implemented patterns, every change from the design and why.
 
 ## Responsible use and limitations
 

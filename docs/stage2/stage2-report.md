@@ -159,7 +159,49 @@ Six patterns from Stage 1 are implemented. All files are under `src/main/java/io
   - `llm/LLMClient` is the target. `ProviderLLMAdapter` is the adapter, and the OpenAI Java SDK client is the adaptee. SDK types, errors and refusals are mapped to `LLMException` kinds. `ScriptedLLMClient` is a test implementation of the same target.
   - `integration/PriceDataSource` is the target, and `StatCanPriceDataSource` adapts the Statistics Canada price table, converting units with catalogue weights.
 
-**Updated diagrams.** The use-case, class and sequence diagrams in `docs/stage1/diagrams` (UMLet sources and PNG exports) now show the Java implementation: JavaFX and picocli on the facade with no HTTP layer, the OpenAI adapter, the Statistics Canada price adapter, `PortionService`, `PlanImpactAssessor`, `CompositeCommand`, the assistant and check-up types, the two history repositories, and the new features N01 and N02.
+### Updated UML diagrams
+
+The use-case, class and sequence diagrams were updated to the Java implementation. They show JavaFX and picocli on the facade with no HTTP layer, the OpenAI adapter, the Statistics Canada price adapter, `PortionService`, `PlanImpactAssessor`, `CompositeCommand`, the assistant and check-up types, the two history repositories, and the new features N01 and N02. The UMLet sources and full-size PNG exports are in `docs/stage1/diagrams`; `class-diagram-complete.png` shows all 94 classes in one model.
+
+**Class diagram: architecture, agent and integrations.**
+
+![Architecture class diagram](../stage1/diagrams/png/class-diagram.png)
+
+**Class diagram: deterministic services and design patterns.**
+
+![Services and design patterns class diagram](../stage1/diagrams/png/class-diagram-services.png)
+
+**Class diagram: domain entities and value objects.**
+
+![Domain class diagram](../stage1/diagrams/png/class-diagram-domain.png)
+
+**Class diagram: agent contracts and persistence.**
+
+![Contracts and persistence class diagram](../stage1/diagrams/png/class-diagram-values.png)
+
+**Use-case diagram** (N01 and N02 added).
+
+![Use-case diagram](../stage1/diagrams/png/use-case-diagram.png)
+
+**SD01: generate a weekly meal plan** (automatic searches and portion sizing added).
+
+![SD01 sequence diagram](../stage1/diagrams/png/sequence-meal-plan.png)
+
+**SD02: generate and optimize the grocery list.**
+
+![SD02 sequence diagram](../stage1/diagrams/png/sequence-grocery.png)
+
+**SD03: modify the plan in natural language.**
+
+![SD03 sequence diagram](../stage1/diagrams/png/sequence-modification.png)
+
+**SD04: adapt the plan after a pantry or constraint change.**
+
+![SD04 sequence diagram](../stage1/diagrams/png/sequence-adaptation.png)
+
+**SD05: find or generate a recipe** (external recipe provider removed).
+
+![SD05 sequence diagram](../stage1/diagrams/png/sequence-recipe.png)
 
 ## 4. Changes and rationale
 
@@ -233,7 +275,7 @@ Each change is recorded as Original design -> Implemented change -> Reason -> Im
 |---|---|---|
 | 1: Oct 20-26 | 6 (Python implementation, replaced in Period 2) | [37e87c6](https://github.com/Ayech14/MealIQ/commit/37e87c6), [1ef239a](https://github.com/Ayech14/MealIQ/commit/1ef239a), [f6cd3e9](https://github.com/Ayech14/MealIQ/commit/f6cd3e9), [90d685e](https://github.com/Ayech14/MealIQ/commit/90d685e), [267a167](https://github.com/Ayech14/MealIQ/commit/267a167), [3a9b1af](https://github.com/Ayech14/MealIQ/commit/3a9b1af) |
 | 2: Oct 27-Nov 2 | 8 | [756701c](https://github.com/Ayech14/MealIQ/commit/756701c), [b22fc7f](https://github.com/Ayech14/MealIQ/commit/b22fc7f), [cd8f536](https://github.com/Ayech14/MealIQ/commit/cd8f536), [91af3ae](https://github.com/Ayech14/MealIQ/commit/91af3ae), [2258b50](https://github.com/Ayech14/MealIQ/commit/2258b50), [920fcb2](https://github.com/Ayech14/MealIQ/commit/920fcb2), [8d96a77](https://github.com/Ayech14/MealIQ/commit/8d96a77), [fd07f1a](https://github.com/Ayech14/MealIQ/commit/fd07f1a) |
-| 3: Nov 3-9 | 10 so far | [2941ad5](https://github.com/Ayech14/MealIQ/commit/2941ad5), [569cddf](https://github.com/Ayech14/MealIQ/commit/569cddf), [7032343](https://github.com/Ayech14/MealIQ/commit/7032343), [5ebc720](https://github.com/Ayech14/MealIQ/commit/5ebc720), [56ec44e](https://github.com/Ayech14/MealIQ/commit/56ec44e), [17faa1c](https://github.com/Ayech14/MealIQ/commit/17faa1c), [ae14036](https://github.com/Ayech14/MealIQ/commit/ae14036), [16795b1](https://github.com/Ayech14/MealIQ/commit/16795b1), [3f4d9b9](https://github.com/Ayech14/MealIQ/commit/3f4d9b9), [b0797c1](https://github.com/Ayech14/MealIQ/commit/b0797c1) |
+| 3: Nov 3-9 | 14 | [2941ad5](https://github.com/Ayech14/MealIQ/commit/2941ad5), [569cddf](https://github.com/Ayech14/MealIQ/commit/569cddf), [7032343](https://github.com/Ayech14/MealIQ/commit/7032343), [5ebc720](https://github.com/Ayech14/MealIQ/commit/5ebc720), [56ec44e](https://github.com/Ayech14/MealIQ/commit/56ec44e), [17faa1c](https://github.com/Ayech14/MealIQ/commit/17faa1c), [ae14036](https://github.com/Ayech14/MealIQ/commit/ae14036), [16795b1](https://github.com/Ayech14/MealIQ/commit/16795b1), [3f4d9b9](https://github.com/Ayech14/MealIQ/commit/3f4d9b9), [b0797c1](https://github.com/Ayech14/MealIQ/commit/b0797c1), [06e2277](https://github.com/Ayech14/MealIQ/commit/06e2277), [9b91d05](https://github.com/Ayech14/MealIQ/commit/9b91d05), [b67e319](https://github.com/Ayech14/MealIQ/commit/b67e319), [cfaddd3](https://github.com/Ayech14/MealIQ/commit/cfaddd3) |
 
 ### Checks performed
 
