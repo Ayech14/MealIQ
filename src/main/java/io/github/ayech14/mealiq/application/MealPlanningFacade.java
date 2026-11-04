@@ -4,6 +4,7 @@ import io.github.ayech14.mealiq.agent.MealPlanningAgent;
 import io.github.ayech14.mealiq.config.AppConfig;
 import io.github.ayech14.mealiq.contracts.AgentResponse;
 import io.github.ayech14.mealiq.contracts.AssistantRequest;
+import io.github.ayech14.mealiq.contracts.Checkup;
 import io.github.ayech14.mealiq.contracts.PlanChange;
 import io.github.ayech14.mealiq.contracts.PlanImpact;
 import io.github.ayech14.mealiq.contracts.PlanRequest;
@@ -19,6 +20,7 @@ import io.github.ayech14.mealiq.domain.MealPlan;
 import io.github.ayech14.mealiq.domain.NutritionSummary;
 import io.github.ayech14.mealiq.domain.Pantry;
 import io.github.ayech14.mealiq.domain.PantryItem;
+import io.github.ayech14.mealiq.domain.PlannedMeal;
 import io.github.ayech14.mealiq.domain.PlanningMode;
 import io.github.ayech14.mealiq.domain.Recipe;
 import io.github.ayech14.mealiq.domain.ResponseStatus;
@@ -60,6 +62,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -576,6 +579,80 @@ public class MealPlanningFacade {
     private MealPlan activePlanOrThrow(UUID profileId) {
         return mealPlanService.getActivePlan(profileId)
                 .orElseThrow(() -> new NotFoundException("No meal plan yet. Create one with: mealiq plan generate"));
+    }
+
+    // ---- home screen: the agent's check-up ----
+
+    /** Pantry items that expire within this many days are named as "use soon". */
+    static final int EXPIRING_DAYS = 3;
+
+    /**
+     * What the home screen shows: today's meals, pantry and shopping status, and what the
+     * agent suggests doing next, most urgent first. Nothing is changed here; accepting a
+     * suggestion sends its request to the agent, which previews any change before applying it.
+     */
+    public Checkup checkup(UUID profileId) {
+        LocalDate today = today();
+        Optional<UserProfile> profile = findProfile(profileId);
+        Optional<MealPlan> plan = mealPlanService.getActivePlan(profileId);
+        Pantry pantry = pantryService.getPantry(profileId);
+        List<PantryItem> expired = pantryService.expiredItems(profileId);
+        List<PantryItem> expiring = pantry.items().values().stream()
+                .filter(i -> i.expiryDate() != null && !i.isExpired(today)
+                        && !i.expiryDate().isAfter(today.plusDays(EXPIRING_DAYS)))
+                .sorted(Comparator.comparing(PantryItem::expiryDate)).toList();
+        boolean current = plan.isPresent() && !plan.get().endDate().isBefore(today);
+        List<PlannedMeal> todays = current ? plan.get().mealsOn(today).stream()
+                .sorted(Comparator.comparing(PlannedMeal::mealType)).toList() : List.of();
+        Optional<NutritionSummary> nutrition = todays.isEmpty() ? Optional.empty()
+                : Optional.of(nutritionService.calculateNutrition(todays));
+        Optional<GroceryList> groceries = plan.flatMap(p -> groceryService.getList(p.id()));
+        Optional<BudgetStatus> budget = groceries.flatMap(list -> profile
+                .filter(p -> p.weeklyBudget().signum() > 0)
+                .map(p -> budgetService.evaluate(list, BudgetService.budgetFor(p.weeklyBudget(), plan.get().days()))));
+        Optional<Integer> toBuy = groceries.map(list -> (int) list.items().stream()
+                .filter(i -> !i.toBuy().isZero()).count());
+
+        List<Checkup.Suggestion> suggestions = new ArrayList<>();
+        if (profile.isEmpty()) {
+            suggestions.add(new Checkup.Suggestion(Checkup.Level.WARNING, "Tell MealIQ about yourself",
+                    "Allergies and diet come first, so nothing unsafe is ever suggested.", "Open profile", null,
+                    "profile"));
+        }
+        plan.flatMap(p -> mealPlanService.getPendingImpact(p.id())).ifPresent(impact -> suggestions.add(
+                new Checkup.Suggestion(Checkup.Level.WARNING, "Your plan no longer fits",
+                        String.join(" ", impact.conflicts()), "Let the agent fix it",
+                        "Adapt my plan to my recent changes", null)));
+        if (!current) {
+            suggestions.add(new Checkup.Suggestion(Checkup.Level.TIP,
+                    plan.isPresent() ? "Your plan ended on " + plan.get().endDate() : "No meal plan yet",
+                    "The agent can plan the week around your goals, time limits, pantry and budget.",
+                    "Plan my week", "Plan 7 days of meals starting today", null));
+        }
+        if (!expired.isEmpty()) {
+            suggestions.add(new Checkup.Suggestion(Checkup.Level.WARNING, expired.size() + " pantry item(s) expired",
+                    names(expired) + ". They are no longer counted as stock.", "Review pantry", null, "pantry"));
+        }
+        if (!expiring.isEmpty()) {
+            suggestions.add(new Checkup.Suggestion(Checkup.Level.TIP, "Use soon: " + names(expiring),
+                    "Expiring within " + EXPIRING_DAYS + " days.", "Find a recipe",
+                    "Suggest a recipe that uses " + names(expiring), null));
+        }
+        budget.filter(b -> !b.withinBudget()).ifPresent(b -> suggestions.add(new Checkup.Suggestion(
+                Checkup.Level.WARNING, "Groceries are $" + b.shortfall() + " over budget",
+                "Estimated $" + b.estimate() + " against $" + b.budget() + " for this plan.", "Make it cheaper",
+                "Make my plan cheaper", null)));
+        if (current && groceries.isEmpty()) {
+            suggestions.add(new Checkup.Suggestion(Checkup.Level.TIP, "No shopping list yet",
+                    "The agent can list what to buy beyond your pantry, with prices.", "Make the list",
+                    "What do I need to buy?", null));
+        }
+        return new Checkup(profile, plan.filter(p -> current), todays, nutrition, pantry.items().size(),
+                expiring.size(), toBuy, budget, suggestions);
+    }
+
+    private static String names(List<PantryItem> items) {
+        return String.join(", ", items.stream().map(i -> i.ingredient().name()).toList());
     }
 
     /** The day a plan starting today would begin on; interfaces use it as the default start. */
